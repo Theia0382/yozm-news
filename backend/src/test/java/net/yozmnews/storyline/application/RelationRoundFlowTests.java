@@ -20,12 +20,12 @@ import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
-import net.yozmnews.evaluation.FlowHappening;
-import net.yozmnews.evaluation.FlowRelation;
 import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.RelationJudgement;
 import net.yozmnews.evaluation.RelationJudgementId;
 import net.yozmnews.evaluation.RelationQuery;
+import net.yozmnews.evaluation.StorylineHappening;
+import net.yozmnews.evaluation.StorylineRelation;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventTermCounts;
@@ -66,7 +66,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 관계 회차의 흐름 — 후보 쌍 고르기(함께 가진 사건 · 점수 · 사건 수 하한 · 다시 묻기), 요청의 순서와 서술, 맺기와 지우기, 구조 제약, 실패
- * 갈래, 판정 중에 합쳐진 스토리라인, 쌍 수의 상한을 실제 PostgreSQL 과 실제 저장소 · 사건 조회로 본다. 관계 판정(`FlowRelation`)은 시험이
+ * 갈래, 판정 중에 합쳐진 스토리라인, 쌍 수의 상한을 실제 PostgreSQL 과 실제 저장소 · 사건 조회로 본다. 관계 판정(`StorylineRelation`)은 시험이
  * 넣는다. 사건과 스토리라인은 시험이 직접 심고, 대표 기사는 사건 ID + 100000 인 기사로 답하게 한다(사건에 기사를 넣지 않는다). 말의 무게는
  * 모두 같게 한다. 회차는 시험이 고정 시계로 직접 만든다(작업 서버는 끈다).
  * <p>
@@ -151,17 +151,17 @@ class RelationRoundFlowTests {
 		// 먼저 시작한 parent 가 first 다. 서술은 기사 수가 많은 순으로 고르고 시각 순으로 싣는다 — 여기서는 시각이 같아 사건 ID 순
 		RelationQuery query = this.asked.getFirst();
 		assertThat(this.asked).hasSize(1);
-		assertThat(query.first().flowId()).isEqualTo(parent);
+		assertThat(query.first().storylineId()).isEqualTo(parent);
 		assertThat(query.first().happenings()).isEqualTo(4);
 		assertThat(query.first().firstAt()).isEqualTo(Instant.parse(EARLY));
 		assertThat(query.first().lastAt()).isEqualTo(Instant.parse(LATE));
-		assertThat(query.first().described()).extracting(FlowHappening::articleId)
+		assertThat(query.first().described()).extracting(StorylineHappening::articleId)
 			.containsExactly(article(parentEvents[0]), article(parentEvents[1]), article(parentEvents[2]),
 					article(parentEvents[3]));
 		// 요약문은 기사 수가 많은 셋 — big(5) · shared(2) · 기사 1건 가운데 ID 가 작은 것
-		assertThat(query.first().described()).extracting(FlowHappening::summarized)
+		assertThat(query.first().described()).extracting(StorylineHappening::summarized)
 			.containsExactly(true, true, true, false);
-		assertThat(query.second().flowId()).isEqualTo(child);
+		assertThat(query.second().storylineId()).isEqualTo(child);
 		assertThat(query.second().happenings()).isEqualTo(3);
 	}
 
@@ -181,7 +181,7 @@ class RelationRoundFlowTests {
 			.param("expires", NOW.plus(Duration.ofMinutes(20)).atOffset(ZoneOffset.UTC))
 			.param("id", alone)
 			.update();
-		FlowRelation unasked = answer(RelationAnswer.FIRST_LED_TO_SECOND, 0.8, 0.9, 0.9, 42);
+		StorylineRelation unasked = answer(RelationAnswer.FIRST_LED_TO_SECOND, 0.8, 0.9, 0.9, 42);
 
 		round(withRepresentatives(), unasked, TestClocks.movable(NOW).jump(Duration.ofHours(24))).run();
 
@@ -245,7 +245,7 @@ class RelationRoundFlowTests {
 		round(answer(RelationAnswer.NONE, 0.9, 0.9, 0.9, 62)).run();
 
 		assertThat(this.asked).hasSize(1);
-		assertThat(this.asked.getFirst().first().flowId()).isEqualTo(narrow);
+		assertThat(this.asked.getFirst().first().storylineId()).isEqualTo(narrow);
 		assertThat(this.termCountTerms).containsExactly(List.of("금리"));
 	}
 
@@ -269,7 +269,7 @@ class RelationRoundFlowTests {
 				return new EventTermCounts(10, counts);
 			}
 		};
-		FlowRelation recording = query -> {
+		StorylineRelation recording = query -> {
 			this.asked.add(query);
 			return judged(RelationAnswer.NONE, 0.9, 0.9, 0.9, 64);
 		};
@@ -280,7 +280,7 @@ class RelationRoundFlowTests {
 
 		// 판정할 쪽의 말은 금리 하나라 무게와 무관하게 겹침 1 — 후보다
 		assertThat(this.asked).hasSize(1);
-		assertThat(this.asked.getFirst().first().flowId()).isEqualTo(narrow);
+		assertThat(this.asked.getFirst().first().storylineId()).isEqualTo(narrow);
 		assertThat(windows)
 			.containsExactly(List.of(Instant.parse("2026-10-20T00:00:00Z"), Instant.parse("2026-11-17T00:00:00Z")));
 	}
@@ -399,7 +399,7 @@ class RelationRoundFlowTests {
 		assertThat(askedRow(a, b)).containsEntry("outcome", "REJECTED");
 		assertThat(queued()).isEmpty();
 
-		// 대표 기사가 하나도 없는 흐름 — 평가기를 부르지 않고 물을 것 없음으로 남긴다
+		// 대표 기사가 하나도 없는 스토리라인 — 평가기를 부르지 않고 물을 것 없음으로 남긴다
 		this.jdbc.sql("delete from storyline_relation_asked").update();
 		this.asked.clear();
 		this.queue.enqueue(a, NOW);
@@ -453,7 +453,7 @@ class RelationRoundFlowTests {
 		long a = storyline("[1,0]", EARLY, LATE, shared, event(EARLY, 1), event(EARLY, 1));
 		long b = storyline("[0,1]", LATE, LATE, shared, event(LATE, 1), event(LATE, 1));
 		this.queue.enqueue(a, NOW);
-		FlowRelation outage = query -> new RelationJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "잠시 실패");
+		StorylineRelation outage = query -> new RelationJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "잠시 실패");
 
 		for (int minute = 0; minute <= 180; minute++) {
 			round(withRepresentatives(), outage, TestClocks.fixed(NOW.plus(Duration.ofMinutes(minute)))).run();
@@ -495,7 +495,7 @@ class RelationRoundFlowTests {
 		long b = storyline("[0,1]", LATE, LATE, shared, event(LATE, 1), event(LATE, 1));
 		long elsewhere = storyline("[0,1]", EARLY, EARLY, event(EARLY, 1), event(EARLY, 1), event(EARLY, 1));
 		this.queue.enqueue(a, NOW);
-		FlowRelation merging = query -> {
+		StorylineRelation merging = query -> {
 			this.jdbc.sql("update storylines set merged_into = :into, merged_at = now() where id = :id")
 				.param("into", elsewhere)
 				.param("id", b)
@@ -565,7 +565,7 @@ class RelationRoundFlowTests {
 		long a = storyline("[1,0]", EARLY, LATE, shared, event(EARLY, 1), event(EARLY, 1));
 		storyline("[0,1]", LATE, LATE, shared, event(LATE, 1), event(LATE, 1));
 		this.queue.enqueue(a, NOW);
-		FlowRelation again = query -> {
+		StorylineRelation again = query -> {
 			this.queue.enqueue(a, NOW);
 			return judged(RelationAnswer.NONE, 0.9, 0.9, 0.9, 54);
 		};
@@ -690,16 +690,16 @@ class RelationRoundFlowTests {
 		assertThat(this.jdbc.sql("select count(*) from storyline_relations").query(Long.class).single()).isZero();
 	}
 
-	private RelationRound round(FlowRelation judge) {
+	private RelationRound round(StorylineRelation judge) {
 		return round(withRepresentatives(), judge);
 	}
 
-	private RelationRound round(EventDirectory events, FlowRelation judge) {
+	private RelationRound round(EventDirectory events, StorylineRelation judge) {
 		return round(events, judge, TestClocks.fixed(NOW));
 	}
 
-	private RelationRound round(EventDirectory events, FlowRelation judge, AppClock clock) {
-		FlowRelation recording = query -> {
+	private RelationRound round(EventDirectory events, StorylineRelation judge, AppClock clock) {
+		StorylineRelation recording = query -> {
 			this.asked.add(query);
 			return judge.judge(query);
 		};
@@ -758,7 +758,7 @@ class RelationRoundFlowTests {
 				""").param("storyline", storyline).param("event", event).query().singleRow();
 	}
 
-	private static FlowRelation answer(RelationAnswer top, double probability, double firstOneMatter,
+	private static StorylineRelation answer(RelationAnswer top, double probability, double firstOneMatter,
 			double secondOneMatter, long judgementId) {
 		return query -> judged(top, probability, firstOneMatter, secondOneMatter, judgementId);
 	}

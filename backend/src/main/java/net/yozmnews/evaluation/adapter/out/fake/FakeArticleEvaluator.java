@@ -29,10 +29,9 @@ import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import net.yozmnews.evaluation.domain.evaluator.HappeningText;
 import net.yozmnews.evaluation.domain.evaluator.Membership;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
-import net.yozmnews.evaluation.domain.evaluator.FlowText;
-import net.yozmnews.evaluation.domain.evaluator.HappeningText;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.Relation;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
@@ -41,6 +40,7 @@ import net.yozmnews.evaluation.domain.evaluator.RelationResult;
 import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
+import net.yozmnews.evaluation.domain.evaluator.StorylineText;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -75,13 +75,13 @@ import tools.jackson.databind.json.JsonMapper;
  * ({@value #MEMBERSHIP_FLOOR} · {@value #MEMBERSHIP_SPAN}). A 가 비면 {@value #MEMBERSHIP_FLOOR} 다</li>
  * <li>판정 입력 토큰 — 제목 · 요약과 후보마다 질문 문장의 코드 포인트 합을 2로 나눠 올린 값</li>
  * <li>판정 원본 응답 — 평가기 이름 · 버전과 사건 ID 순의 확률({@code events})을 담은 JSON</li>
- * <li>관계 판정 — 흐름의 조각은 그 흐름 서술 제목들의 조각 합집합이다. 두 흐름의 조각 집합 A · B 의 겹침은
+ * <li>관계 판정 — 스토리라인의 조각은 그 스토리라인 서술 제목들의 조각 합집합이다. 두 스토리라인의 조각 집합 A · B 의 겹침은
  * {@code |A ∩ B| / min(|A|, |B|)} 이다(한쪽이 비면 0). 답은 넘긴 문구 판의 답이다. 겹침이 0 이면 해당 없음이
- * {@value #RELATION_NONE} 이고 나머지 답이 그 나머지를 똑같이 나눈다. 겹침이 있으면 서술 사건이 적은 흐름이 많은 흐름의 부분이라는
+ * {@value #RELATION_NONE} 이고 나머지 답이 그 나머지를 똑같이 나눈다. 겹침이 있으면 서술 사건이 적은 스토리라인이 많은 스토리라인의 부분이라는
  * 답이고, 서술 사건 수가 같으면 같은 사안의 조각이라는 답(그 답이 없는 판이면 second 가 first 의 부분)이
  * {@code RELATION_FLOOR + RELATION_SPAN * 겹침}({@value #RELATION_FLOOR} · {@value #RELATION_SPAN})이고 나머지 답이 그 나머지를
  * 똑같이 나눈다</li>
- * <li>한 사안 확률 — 서술 제목이 하나면 {@value #ONE_MATTER_SINGLE}. 둘 이상이면 그 흐름의 다른 서술 제목과 조각을 하나라도 함께 가진
+ * <li>한 사안 확률 — 서술 제목이 하나면 {@value #ONE_MATTER_SINGLE}. 둘 이상이면 그 스토리라인의 다른 서술 제목과 조각을 하나라도 함께 가진
  * 제목의 비율 r 로 {@code ONE_MATTER_FLOOR + ONE_MATTER_SPAN * r}({@value #ONE_MATTER_FLOOR} · {@value #ONE_MATTER_SPAN})</li>
  * <li>관계 판정 입력 토큰 — state 와 관계 질문 · 그 판의 선택지 모두 · 한 사안 질문 둘의 코드 포인트 합을 2로 나눠 올린 값</li>
  * <li>관계 판정 원본 응답 — 평가기 이름 · 버전과 답 이름 순의 확률({@code relation}), 두 한 사안 확률({@code oneMatter})을 담은
@@ -149,10 +149,10 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 	/** 관계 판정에서 조각이 모두 겹칠 때 고른 답에 더하는 확률 */
 	static final double RELATION_SPAN = 0.4;
 
-	/** 서술 제목이 하나인 흐름의 한 사안 확률 */
+	/** 서술 제목이 하나인 스토리라인의 한 사안 확률 */
 	static final double ONE_MATTER_SINGLE = 0.9;
 
-	/** 서술 제목끼리 겹침이 없는 흐름의 한 사안 확률 */
+	/** 서술 제목끼리 겹침이 없는 스토리라인의 한 사안 확률 */
 	static final double ONE_MATTER_FLOOR = 0.1;
 
 	/** 서술 제목이 모두 다른 제목과 겹칠 때 더하는 한 사안 확률 */
@@ -250,7 +250,7 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		return new Membership(probabilities, NAME, MODEL_VERSION, tokens(texts), JSON.writeValueAsString(raw));
 	}
 
-	/** 두 흐름 서술 제목의 조각 겹침으로 판정한다 — 실패 표지는 first 의 첫 서술 제목에서 본다 */
+	/** 두 스토리라인 서술 제목의 조각 겹침으로 판정한다 — 실패 표지는 first 의 첫 서술 제목에서 본다 */
 	@Override
 	public RelationResult judgeRelation(RelationInput input) {
 		Objects.requireNonNull(input, "input");
@@ -279,12 +279,12 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 	}
 
 	/**
-	 * 그 문구 판의 답마다 확률 — 겹침이 없으면 해당 없음, 있으면 서술 사건이 적은 흐름이 많은 흐름의 부분이다. 서술 사건 수가 같으면 조각 답이
+	 * 그 문구 판의 답마다 확률 — 겹침이 없으면 해당 없음, 있으면 서술 사건이 적은 스토리라인이 많은 스토리라인의 부분이다. 서술 사건 수가 같으면 조각 답이
 	 * 있는 판에서는 같은 사안의 조각, 없는 판에서는 second 가 first 의 부분이다
 	 */
-	private static Map<RelationAnswer, Double> relation(FlowText first, FlowText second, Set<RelationAnswer> answers) {
-		Set<String> a = flowPieces(first);
-		Set<String> b = flowPieces(second);
+	private static Map<RelationAnswer, Double> relation(StorylineText first, StorylineText second, Set<RelationAnswer> answers) {
+		Set<String> a = storylinePieces(first);
+		Set<String> b = storylinePieces(second);
 		long shared = a.stream().filter(b::contains).count();
 		RelationAnswer chosen;
 		double probability;
@@ -311,9 +311,9 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		return probabilities;
 	}
 
-	/** 그 흐름이 한 사안일 확률 — 다른 서술 제목과 조각을 함께 가진 제목의 비율로 */
-	private static double oneMatter(FlowText flow) {
-		List<Set<String>> titles = flow.described().stream().map(HappeningText::title).map(FakeArticleEvaluator::pieces).toList();
+	/** 그 스토리라인이 한 사안일 확률 — 다른 서술 제목과 조각을 함께 가진 제목의 비율로 */
+	private static double oneMatter(StorylineText storyline) {
+		List<Set<String>> titles = storyline.described().stream().map(HappeningText::title).map(FakeArticleEvaluator::pieces).toList();
 		if (titles.size() == 1) {
 			return ONE_MATTER_SINGLE;
 		}
@@ -329,9 +329,9 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		return ONE_MATTER_FLOOR + ONE_MATTER_SPAN * linked / titles.size();
 	}
 
-	private static Set<String> flowPieces(FlowText flow) {
+	private static Set<String> storylinePieces(StorylineText storyline) {
 		Set<String> pieces = new HashSet<>();
-		flow.described().forEach(happening -> pieces.addAll(pieces(happening.title())));
+		storyline.described().forEach(happening -> pieces.addAll(pieces(happening.title())));
 		return pieces;
 	}
 

@@ -35,14 +35,14 @@ class JdbcRelationJudgementRepository implements RelationJudgementRepository {
 	@Override
 	public RelationJudgementId insert(RelationRecord record) {
 		long id = this.jdbc.sql("""
-				insert into flow_relation_judgements (first_flow_id, second_flow_id, described, evaluator, model_version,
+				insert into storyline_relation_judgements (first_storyline_id, second_storyline_id, described, evaluator, model_version,
 				    wording_version, raw_response, input_tokens, judged_at)
 				values (:first, :second, cast(:described as jsonb), :evaluator, :modelVersion, :wordingVersion,
 				    cast(:rawResponse as jsonb), :inputTokens, :judgedAt)
 				returning id
 				""")
-			.param("first", record.firstFlowId())
-			.param("second", record.secondFlowId())
+			.param("first", record.firstStorylineId())
+			.param("second", record.secondStorylineId())
 			.param("described", described(record))
 			.param("evaluator", record.evaluator())
 			.param("modelVersion", record.modelVersion())
@@ -62,15 +62,15 @@ class JdbcRelationJudgementRepository implements RelationJudgementRepository {
 		}
 		Long[] values = ids.stream().map(RelationJudgementId::value).distinct().toArray(Long[]::new);
 		return this.jdbc.sql("""
-				select id, first_flow_id, second_flow_id, evaluator, model_version, wording_version, input_tokens,
+				select id, first_storyline_id, second_storyline_id, evaluator, model_version, wording_version, input_tokens,
 				    raw_response::text as raw_response, judged_at
-				from flow_relation_judgements
+				from storyline_relation_judgements
 				where id = any(:ids)
 				order by id
 				""")
 			.param("ids", values)
 			.query((rs, row) -> new StoredRelationJudgement(new RelationJudgementId(rs.getLong("id")),
-					rs.getLong("first_flow_id"), rs.getLong("second_flow_id"), rs.getString("evaluator"),
+					rs.getLong("first_storyline_id"), rs.getLong("second_storyline_id"), rs.getString("evaluator"),
 					rs.getString("model_version"), rs.getString("wording_version"), rs.getInt("input_tokens"),
 					rs.getString("raw_response"), rs.getObject("judged_at", OffsetDateTime.class).toInstant()))
 			.list();

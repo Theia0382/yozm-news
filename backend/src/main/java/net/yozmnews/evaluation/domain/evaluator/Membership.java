@@ -4,11 +4,11 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 소속을 판정했다 — 후보(사건 또는 흐름)마다 확률 · docs/specs/evaluation.md §4.
+ * 소속을 판정했다 — 후보마다 확률 · docs/specs/evaluation.md §4.
  * <p>
  * 생성자는 값 하나하나만 검사한다. 물은 후보와 키가 맞는지는 부르는 쪽이 본다.
  *
- * @param probabilities 후보 ID → "예"일 확률(사건 소속이면 그 사건에 속할 확률, 흐름 소속이면 같은 사안의 전개일 확률)
+ * @param probabilities 후보 ID → "예"일 확률(사건 소속이면 그 사건에 속할 확률, 스토리라인 소속이면 같은 사안의 전개일 확률)
  * @param evaluator 평가기 이름
  * @param modelVersion 모델 버전
  * @param inputTokens 입력 토큰 수

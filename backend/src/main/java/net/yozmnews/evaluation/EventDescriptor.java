@@ -12,7 +12,7 @@ import net.yozmnews.article.ArticleId;
  */
 public record EventDescriptor(long eventId, List<ArticleId> articleIds) {
 
-	/** 후보 하나의 서술 기사 상한 — 정본(흐름 소속 판정도 쓴다). 측정 전 목표 */
+	/** 후보 하나의 서술 기사 상한 — 정본(스토리라인 소속 판정도 쓴다). 측정 전 목표 */
 	public static final int MAX_ARTICLES = 5;
 
 	/**

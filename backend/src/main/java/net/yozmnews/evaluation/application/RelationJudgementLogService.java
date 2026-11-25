@@ -61,7 +61,7 @@ class RelationJudgementLogService implements RelationJudgementLog {
 		Map<RelationJudgementId, RelationJudgementView> views = new LinkedHashMap<>();
 		for (StoredRelationJudgement stored : this.judgements.findAll(ids)) {
 			views.put(stored.id(),
-					new RelationJudgementView(stored.id(), stored.firstFlowId(), stored.secondFlowId(), stored.evaluator(),
+					new RelationJudgementView(stored.id(), stored.firstStorylineId(), stored.secondStorylineId(), stored.evaluator(),
 							stored.modelVersion(), stored.wordingVersion(), stored.inputTokens(), stored.judgedAt(),
 							reading(found, stored)));
 		}

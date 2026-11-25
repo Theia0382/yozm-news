@@ -348,7 +348,7 @@ def _load(directory: Path) -> tuple[StorylineSample, Sheet, Seeds, Labels]:
 
 
 def _relation_lines(labels: Labels, storyline: str) -> list[str]:
-    """스토리라인 하나의 관계 — 포함(하위) · 상위 · 다음(이어지는 흐름) · 앞."""
+    """스토리라인 하나의 관계 — 포함(하위) · 상위 · 다음(이어지는 스토리라인) · 앞."""
     words = {(Relation.CONTAINS, True): "포함", (Relation.CONTAINS, False): "상위",
              (Relation.FOLLOWS, True): "다음", (Relation.FOLLOWS, False): "앞"}
     lines = []

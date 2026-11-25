@@ -450,7 +450,7 @@ class StorylineQueryFlowTests {
 		assertThat(reached.get(new StorylineId(this.wide))).containsExactly(new StorylineId(this.quiet));
 		assertThat(reached.get(new StorylineId(this.narrow))).containsExactly(new StorylineId(this.quiet));
 		assertThat(reached.get(new StorylineId(merged))).containsExactly(new StorylineId(this.quiet));
-		// 대조 — 뒤 흐름에서 앞으로는 따르지 않는다
+		// 대조 — 뒤 스토리라인에서 앞으로는 따르지 않는다
 		assertThat(reached.get(new StorylineId(this.quiet))).isEmpty();
 
 		assertThat(this.directory.continuationsOf(List.of())).isEmpty();

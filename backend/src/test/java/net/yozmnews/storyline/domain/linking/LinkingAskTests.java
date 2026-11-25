@@ -38,8 +38,8 @@ class LinkingAskTests {
 	}
 
 	@Test
-	void describesNoMoreEventsThanAFlowCandidateTakes() {
-		// 서술 사건마다 대표 기사 하나 — 흐름 소속 판정의 후보는 서술 기사를 이만큼까지만 받는다
+	void describesNoMoreEventsThanACandidateTakes() {
+		// 서술 사건마다 대표 기사 하나 — 스토리라인 소속 판정의 후보는 서술 기사를 이만큼까지만 받는다
 		assertThat(LinkingAsk.DESCRIBED_EVENTS).isLessThanOrEqualTo(EventDescriptor.MAX_ARTICLES);
 	}
 

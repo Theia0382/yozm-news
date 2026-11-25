@@ -25,12 +25,12 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import net.yozmnews.evaluation.EvaluatorTiming;
 import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
-import net.yozmnews.evaluation.domain.evaluator.FlowText;
 import net.yozmnews.evaluation.domain.evaluator.HappeningText;
 import net.yozmnews.evaluation.domain.evaluator.Relation;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
 import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
+import net.yozmnews.evaluation.domain.evaluator.StorylineText;
 import net.yozmnews.evaluation.domain.jev.JevApiKey;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -56,8 +56,8 @@ class JevRelationJudgementTests {
 	private static final Instant DAY = Instant.parse("2026-11-01T03:00:00Z");
 
 	private static final RelationInput INPUT = new RelationInput(
-			new FlowText(4, DAY, DAY, List.of(new HappeningText(DAY, "특검법 통과", "재석 과반"))),
-			new FlowText(3, DAY, DAY, List.of(new HappeningText(DAY, "특검 후보 추천", null))), RelationWording.CURRENT);
+			new StorylineText(4, DAY, DAY, List.of(new HappeningText(DAY, "특검법 통과", "재석 과반"))),
+			new StorylineText(3, DAY, DAY, List.of(new HappeningText(DAY, "특검 후보 추천", null))), RelationWording.CURRENT);
 
 	private static final String STATE = "Flow A (4 happenings, 11-01 to 11-01):\n- [11-01] 특검법 통과\n  summary: 재석 과반\n\n"
 			+ "Flow B (3 happenings, 11-01 to 11-01):\n- [11-01] 특검 후보 추천";

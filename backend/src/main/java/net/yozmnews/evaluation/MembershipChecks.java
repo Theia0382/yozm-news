@@ -12,11 +12,12 @@ import net.yozmnews.article.ArticleId;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 소속 판정 두 가지(사건 소속 · 흐름 소속)의 요청 · 결과 값이 함께 쓰는 검사 — 정본 · docs/specs/evaluation.md §3 · evaluation-R37 ·
+ * 소속 판정 두 가지(사건 소속 · 스토리라인 소속)의 요청 · 결과 값이 함께 쓰는 검사 — 정본 · docs/specs/evaluation.md §3 · evaluation-R37 ·
  * evaluation-R38.
  * <p>
  * 두 판정은 질문의 뜻만 다르고 요청 · 결과의 모양과 상한이 같다. 상한은 {@link MembershipQuery#MAX_CANDIDATES} ·
- * {@link EventDescriptor#MAX_ARTICLES} 가 정본이다. 문구의 {@code noun} 은 후보의 이름(사건 · 흐름)이다.
+ * {@link EventDescriptor#MAX_ARTICLES} 가 정본이다. 요청 검사의 문구는 두 판정에 같고, 후보 하나 · 결과 검사 문구의
+ * {@code noun} 은 후보 ID 의 이름(사건 · 후보)이다.
  */
 final class MembershipChecks {
 
@@ -29,23 +30,23 @@ final class MembershipChecks {
 	 * @throws IllegalArgumentException 어길 때
 	 */
 	static <T> void query(ArticleId articleId, List<T> candidates, ToLongFunction<T> id,
-			Function<T, List<ArticleId>> articles, String noun) {
+			Function<T, List<ArticleId>> articles) {
 		Objects.requireNonNull(articleId, "articleId");
 		if (candidates.isEmpty()) {
-			throw new IllegalArgumentException("후보 " + noun + "이 없다");
+			throw new IllegalArgumentException("후보가 없다");
 		}
 		if (candidates.size() > MembershipQuery.MAX_CANDIDATES) {
 			throw new IllegalArgumentException(
-					"후보 " + noun + "은 " + MembershipQuery.MAX_CANDIDATES + "개까지다: " + candidates.size());
+					"후보는 " + MembershipQuery.MAX_CANDIDATES + "개까지다: " + candidates.size());
 		}
 		Set<Long> ids = new HashSet<>();
 		for (T candidate : candidates) {
 			long candidateId = id.applyAsLong(candidate);
 			if (!ids.add(candidateId)) {
-				throw new IllegalArgumentException("후보 " + noun + " ID 가 겹친다: " + candidateId);
+				throw new IllegalArgumentException("후보 ID 가 겹친다: " + candidateId);
 			}
 			if (articles.apply(candidate).contains(articleId)) {
-				throw new IllegalArgumentException("판정할 기사가 후보 " + noun + " " + candidateId + " 의 서술 기사다");
+				throw new IllegalArgumentException("판정할 기사가 후보 " + candidateId + " 의 서술 기사다");
 			}
 		}
 	}

@@ -8,7 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * 소속 판정의 질문 문구 — 사건 소속 · 흐름 소속의 지금 문구와 판, 질문 문장 조립.
+ * 소속 판정의 질문 문구 — 사건 소속 · 스토리라인 소속의 지금 문구와 판, 질문 문장 조립.
  * <p>
  * 지키는 규칙: evaluation-R37 · evaluation-R51
  */

@@ -27,7 +27,7 @@ public sealed interface Tidying {
 	}
 
 	/**
-	 * 같은 흐름이다 — merged 의 스토리라인들이 survivor 를 가리키게 한다(storyline-R18).
+	 * 같은 스토리라인이다 — merged 의 스토리라인들이 survivor 를 가리키게 한다(storyline-R18).
 	 *
 	 * @param merged 합쳐질 스토리라인 — ID 순, 비지 않고 survivor 를 담지 않는다
 	 */

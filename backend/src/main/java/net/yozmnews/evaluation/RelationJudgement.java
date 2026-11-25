@@ -10,7 +10,7 @@ import java.util.Objects;
 public sealed interface RelationJudgement {
 
 	/**
-	 * 판정했다 — 지금 문구 판의 답 모두의 확률과 흐름마다 한 사안의 전개일 확률.
+	 * 판정했다 — 지금 문구 판의 답 모두의 확률과 스토리라인마다 한 사안의 전개일 확률.
 	 *
 	 * @param judgement 남긴 판정 원본
 	 * @param probabilities 답 → 확률 — {@link RelationAnswer} 의 답 모두(판정은 언제나 지금 문구 판이고 그 판의 답은 모든 답이다). 합은
@@ -65,7 +65,7 @@ public sealed interface RelationJudgement {
 
 	}
 
-	/** 한쪽 흐름의 서술이 하나도 남지 않았다 — 평가기를 부르지 않았고 판정 원본이 없다 */
+	/** 한쪽 스토리라인의 서술이 하나도 남지 않았다 — 평가기를 부르지 않았고 판정 원본이 없다 */
 	record NothingToAsk() implements RelationJudgement {
 
 	}

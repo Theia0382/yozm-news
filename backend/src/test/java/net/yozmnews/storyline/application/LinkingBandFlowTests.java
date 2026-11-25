@@ -16,11 +16,11 @@ import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
-import net.yozmnews.evaluation.FlowCandidate;
-import net.yozmnews.evaluation.FlowMembership;
-import net.yozmnews.evaluation.FlowMembershipJudgement;
-import net.yozmnews.evaluation.FlowMembershipJudgementId;
-import net.yozmnews.evaluation.FlowMembershipQuery;
+import net.yozmnews.evaluation.StorylineCandidate;
+import net.yozmnews.evaluation.StorylineMembership;
+import net.yozmnews.evaluation.StorylineMembershipJudgement;
+import net.yozmnews.evaluation.StorylineMembershipJudgementId;
+import net.yozmnews.evaluation.StorylineMembershipQuery;
 import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
@@ -48,8 +48,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 잇기의 띠 판정 — 띠 안 후보를 흐름 소속 판정에 묻고 물은 기록으로 정하는 흐름을 실제 PostgreSQL 과 실제 저장소 · 사건 조회로 본다. 흐름
- * 소속 판정은 시험이 넣거나(받은 요청을 모은다) 결선된 빈(로컬 대체물 평가기)을 쓴다. 회차는 시험이 고정 시계로 직접 만든다.
+ * 잇기의 띠 판정 — 띠 안 후보를 스토리라인 소속 판정에 묻고 물은 기록으로 정하는 흐름을 실제 PostgreSQL 과 실제 저장소 · 사건 조회로 본다.
+ * 스토리라인 소속 판정은 시험이 넣거나(받은 요청을 모은다) 결선된 빈(로컬 대체물 평가기)을 쓴다. 회차는 시험이 고정 시계로 직접 만든다.
  * <p>
  * 기준: 창 14일 · 띠 [0.80, 0.95) · 확률 기준 0.50. 말의 무게는 모두 같게 한다 — 점수 = 0.89 × 코사인 + 0.11 × 겹침. 사건 [1,0] 둘은
  * 점수 1.0(위 기준 이상 — 묻지 않고 짝), [4,3] 은 [1,0] 과 코사인 0.8 · 겹침 1 이라 0.822(띠 안)이다.
@@ -95,7 +95,7 @@ class LinkingBandFlowTests {
 	RelationQueueRepository relationQueue;
 
 	@Autowired
-	FlowMembership wired;
+	StorylineMembership wired;
 
 	@Autowired
 	TransactionTemplate transaction;
@@ -110,7 +110,7 @@ class LinkingBandFlowTests {
 	@AfterEach
 	void reset() {
 		StorylineRows.clear(this.jdbc);
-		this.jdbc.sql("delete from flow_membership_judgements").update();
+		this.jdbc.sql("delete from storyline_membership_judgements").update();
 		this.representatives.clear();
 	}
 
@@ -122,8 +122,8 @@ class LinkingBandFlowTests {
 		round(asking).run();
 
 		long storyline = onlyStoryline();
-		assertThat(asking.queries).containsExactly(new FlowMembershipQuery(story.a3(),
-				List.of(new FlowCandidate(storyline, List.of(story.a1(), story.a2())))));
+		assertThat(asking.queries).containsExactly(new StorylineMembershipQuery(story.a3(),
+				List.of(new StorylineCandidate(storyline, List.of(story.a1(), story.a2())))));
 		assertThat(member(storyline, story.e3())).containsEntry("linked_by", "RULE")
 			.containsEntry("probability", 0.71)
 			.containsEntry("judgement_id", 77L);
@@ -174,7 +174,7 @@ class LinkingBandFlowTests {
 
 		long storyline = onlyStoryline();
 		assertThat(asking.queries.get(0)).isEqualTo(
-				new FlowMembershipQuery(new ArticleId(a6), List.of(new FlowCandidate(e7, List.of(new ArticleId(a7))))));
+				new StorylineMembershipQuery(new ArticleId(a6), List.of(new StorylineCandidate(e7, List.of(new ArticleId(a7))))));
 		assertThat(member(storyline, e6)).containsEntry("linked_by", "PAIR")
 			.containsEntry("probability", 0.9)
 			.containsEntry("judgement_id", 88L);
@@ -191,7 +191,7 @@ class LinkingBandFlowTests {
 	void aTransientFailureDefersTheEventWithoutWritingAnything() {
 		Story story = storyWithBandEvent();
 		Asking asking = new Asking(
-				query -> new FlowMembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "시험이 넣은 일시 실패"));
+				query -> new StorylineMembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "시험이 넣은 일시 실패"));
 
 		round(asking).run();
 
@@ -220,7 +220,7 @@ class LinkingBandFlowTests {
 	void aLongRunOfTransientFailuresKeepsTheEventQueuedUntilTheEvaluatorRecovers(CapturedOutput output) {
 		Story story = storyWithBandEvent();
 		Asking outage = new Asking(
-				query -> new FlowMembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "시험이 넣은 일시 실패"));
+				query -> new StorylineMembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "시험이 넣은 일시 실패"));
 
 		for (int minute = 0; minute <= 180; minute++) {
 			round(outage, NOW.plus(Duration.ofMinutes(minute))).run();
@@ -247,7 +247,7 @@ class LinkingBandFlowTests {
 		long a4 = article("서울 시장 선거 개표 다음 날");
 		long e4 = event("[4,3]", "2026-11-05T09:00:00Z", a4);
 		this.queue.enqueue(e4, Instant.parse("2026-11-05T09:00:00Z"), NOW);
-		Asking asking = new Asking(query -> new FlowMembershipJudgement.Failed(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE,
+		Asking asking = new Asking(query -> new StorylineMembershipJudgement.Failed(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE,
 				"시험이 넣은 사용 불가"));
 
 		round(asking).run();
@@ -264,7 +264,7 @@ class LinkingBandFlowTests {
 	void aRejectedArticleIsRecordedWithoutAProbabilityAndTheJudgementFinishes() {
 		Story story = storyWithBandEvent();
 		Asking asking = new Asking(
-				query -> new FlowMembershipJudgement.Failed(EvaluatorFailureKind.ARTICLE_REJECTED, "시험이 넣은 입력 거부"));
+				query -> new StorylineMembershipJudgement.Failed(EvaluatorFailureKind.ARTICLE_REJECTED, "시험이 넣은 입력 거부"));
 
 		round(asking).run();
 		this.queue.enqueue(story.e3(), Instant.parse("2026-11-05T06:00:00Z"), NOW);
@@ -317,7 +317,7 @@ class LinkingBandFlowTests {
 	}
 
 	@Test
-	void theWiredFlowMembershipIsCalledOutsideTheTransaction(CapturedOutput output) {
+	void theWiredStorylineMembershipIsCalledOutsideTheTransaction(CapturedOutput output) {
 		Story story = storyWithBandEvent();
 
 		// 시험 설정의 평가기는 닿지 않는 주소의 Jev 라 일시 실패를 낸다 — 판정 가능 시각이 정해졌으면 결선된 판정 공개 API 가 트랜잭션
@@ -353,22 +353,22 @@ class LinkingBandFlowTests {
 	void anAnswerIsNotRecordedForAnEventMergedMeanwhile() {
 		Story story = storyWithBandEvent();
 		// 짝(위 기준 이상)만 열고 띠 사건은 일시 실패로 남긴다 — 기록 없음
-		round(new Asking(query -> new FlowMembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "시험"))).run();
+		round(new Asking(query -> new StorylineMembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "시험"))).run();
 		long storyline = onlyStoryline();
 		LinkingOutcome.Ask ask = new LinkingOutcome.Ask(LinkingOutcome.Target.LINK, story.e3(), story.a3(), 1,
-				List.of(new LinkingOutcome.AskedFlow(storyline, List.of(story.a1()), 2)));
+				List.of(new LinkingOutcome.AskedCandidate(storyline, List.of(story.a1()), 2)));
 		StorylineLinker linker = linker();
 
 		// 대조 — 사건이 그대로면 쓴다
 		this.transaction.executeWithoutResult(
-				status -> linker.record(ask, new FlowMembershipJudgementId(83), Map.of(storyline, 0.9), NOW));
+				status -> linker.record(ask, new StorylineMembershipJudgementId(83), Map.of(storyline, 0.9), NOW));
 		assertThat(askedRows()).isEqualTo(1);
 		this.jdbc.sql("delete from storyline_link_asked").update();
 
 		// 그새 합쳐졌으면 쓰지 않는다 — 다음 시도의 따르기를 기다리지 않고 기록 단계에서 막는다(R5)
 		StorylineRows.merge(this.jdbc, story.e3(), story.e1());
 		this.transaction.executeWithoutResult(
-				status -> linker.record(ask, new FlowMembershipJudgementId(84), Map.of(storyline, 0.9), NOW));
+				status -> linker.record(ask, new StorylineMembershipJudgementId(84), Map.of(storyline, 0.9), NOW));
 		assertThat(askedRows()).isZero();
 	}
 
@@ -409,11 +409,11 @@ class LinkingBandFlowTests {
 		return event;
 	}
 
-	private LinkingRound round(FlowMembership membership) {
+	private LinkingRound round(StorylineMembership membership) {
 		return round(membership, NOW);
 	}
 
-	private LinkingRound round(FlowMembership membership, Instant at) {
+	private LinkingRound round(StorylineMembership membership, Instant at) {
 		return new LinkingRound(this.queue, this.criteria, BANDED, linker(), membership, this.transaction,
 				TestClocks.fixed(at));
 	}
@@ -442,10 +442,10 @@ class LinkingBandFlowTests {
 				new StorylineMerger(this.storylines, this.relations, this.relationQueue, this.asked, events), this.publisher);
 	}
 
-	private static FlowMembershipJudgement judged(long judgement, FlowMembershipQuery query, double probability) {
+	private static StorylineMembershipJudgement judged(long judgement, StorylineMembershipQuery query, double probability) {
 		Map<Long, Double> probabilities = new HashMap<>();
-		query.candidates().forEach(candidate -> probabilities.put(candidate.flowId(), probability));
-		return new FlowMembershipJudgement.Judged(new FlowMembershipJudgementId(judgement), probabilities);
+		query.candidates().forEach(candidate -> probabilities.put(candidate.candidateId(), probability));
+		return new StorylineMembershipJudgement.Judged(new StorylineMembershipJudgementId(judgement), probabilities);
 	}
 
 	private long onlyStoryline() {
@@ -491,19 +491,19 @@ class LinkingBandFlowTests {
 	private record Story(long e1, long e2, long e3, ArticleId a1, ArticleId a2, ArticleId a3) {
 	}
 
-	/** 받은 요청을 모으고 정해진 답을 내는 흐름 소속 판정 */
-	private static final class Asking implements FlowMembership {
+	/** 받은 요청을 모으고 정해진 답을 내는 스토리라인 소속 판정 */
+	private static final class Asking implements StorylineMembership {
 
-		private final Function<FlowMembershipQuery, FlowMembershipJudgement> answer;
+		private final Function<StorylineMembershipQuery, StorylineMembershipJudgement> answer;
 
-		private final List<FlowMembershipQuery> queries = new ArrayList<>();
+		private final List<StorylineMembershipQuery> queries = new ArrayList<>();
 
-		Asking(Function<FlowMembershipQuery, FlowMembershipJudgement> answer) {
+		Asking(Function<StorylineMembershipQuery, StorylineMembershipJudgement> answer) {
 			this.answer = answer;
 		}
 
 		@Override
-		public FlowMembershipJudgement judge(FlowMembershipQuery query) {
+		public StorylineMembershipJudgement judge(StorylineMembershipQuery query) {
 			this.queries.add(query);
 			return this.answer.apply(query);
 		}

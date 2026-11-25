@@ -13,11 +13,11 @@ import java.util.function.Supplier;
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.FlowHappening;
-import net.yozmnews.evaluation.FlowRelation;
 import net.yozmnews.evaluation.RelationJudgement;
 import net.yozmnews.evaluation.RelationJudgementId;
 import net.yozmnews.evaluation.RelationQuery;
+import net.yozmnews.evaluation.StorylineHappening;
+import net.yozmnews.evaluation.StorylineRelation;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.Relation;
@@ -35,16 +35,16 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 공개 API {@link FlowRelation} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R48 · evaluation-R49.
+ * 공개 API {@link StorylineRelation} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R48 · evaluation-R49.
  * <p>
- * 트랜잭션 밖에서 두 흐름의 서술 기사를 한 번에 읽고, 물을 서술을 골라 평가기를 부른다. 성공이면 결과를 지금 문구 판의 답과 대조한 뒤 짧은 트랜잭션 하나로
+ * 트랜잭션 밖에서 두 스토리라인의 서술 기사를 한 번에 읽고, 물을 서술을 골라 평가기를 부른다. 성공이면 결과를 지금 문구 판의 답과 대조한 뒤 짧은 트랜잭션 하나로
  * 판정 원본을 쓰고 그 ID 를 결과에 싣는다. 판정할 기사가 따로 없어 커밋 뒤에 다시 보지 않는다.
  * <p>
  * 평가기는 부를 때 찾는다 — 화면 역할만 띄운 프로세스에는 평가기가 없을 수 있고, 판정은 작업 역할의 작업에서 부른다. 트랜잭션 · 역할
  * 애너테이션이 없다(두 역할 공통).
  */
 @Service
-class FlowRelationService implements FlowRelation {
+class StorylineRelationService implements StorylineRelation {
 
 	static final String NO_EVALUATOR = "평가기가 없는 프로세스에서 관계 판정을 불렀다 — 판정은 작업 역할의 작업에서 부른다";
 
@@ -61,13 +61,13 @@ class FlowRelationService implements FlowRelation {
 	private final InstantSource clock;
 
 	@Autowired
-	FlowRelationService(ObjectProvider<ArticleEvaluator> evaluators, ArticleDirectory articles,
+	StorylineRelationService(ObjectProvider<ArticleEvaluator> evaluators, ArticleDirectory articles,
 			RelationJudgementRepository judgements, TransactionTemplate transaction, InstantSource clock) {
 		this(evaluators::getIfAvailable, articles, judgements, transaction, clock);
 	}
 
 	/** 시험이 평가기를 넣는다 */
-	FlowRelationService(Supplier<@Nullable ArticleEvaluator> evaluator, ArticleDirectory articles,
+	StorylineRelationService(Supplier<@Nullable ArticleEvaluator> evaluator, ArticleDirectory articles,
 			RelationJudgementRepository judgements, TransactionTemplate transaction, InstantSource clock) {
 		this.evaluator = evaluator;
 		this.articles = articles;
@@ -107,7 +107,7 @@ class FlowRelationService implements FlowRelation {
 		if (mismatch.isPresent()) {
 			throw new IllegalStateException("관계 판정 결과를 저장할 수 없다 — " + mismatch.get());
 		}
-		RelationRecord record = RelationRecord.of(query.first().flowId(), query.second().flowId(), ask.first(),
+		RelationRecord record = RelationRecord.of(query.first().storylineId(), query.second().storylineId(), ask.first(),
 				ask.second(), relation, wording.version(), this.clock.instant());
 		RelationJudgementId id = Objects
 			.requireNonNull(this.transaction.execute(status -> this.judgements.insert(record)), "id");
@@ -115,13 +115,13 @@ class FlowRelationService implements FlowRelation {
 				relation.secondOneMatter());
 	}
 
-	/** 두 흐름의 모든 서술 기사 — 한 번에 읽는다. 두 흐름이 함께 가진 기사는 한 번만 */
+	/** 두 스토리라인의 모든 서술 기사 — 한 번에 읽는다. 두 스토리라인이 함께 가진 기사는 한 번만 */
 	private static List<ArticleId> readList(RelationQuery query) {
 		Set<ArticleId> ids = new LinkedHashSet<>();
-		for (FlowHappening happening : query.first().described()) {
+		for (StorylineHappening happening : query.first().described()) {
 			ids.add(happening.articleId());
 		}
-		for (FlowHappening happening : query.second().described()) {
+		for (StorylineHappening happening : query.second().described()) {
 			ids.add(happening.articleId());
 		}
 		return new ArrayList<>(ids);

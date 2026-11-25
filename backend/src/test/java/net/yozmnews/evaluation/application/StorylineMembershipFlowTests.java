@@ -18,12 +18,11 @@ import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.article.ArticlesRemoved;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
-import net.yozmnews.evaluation.FlowCandidate;
-import net.yozmnews.evaluation.FlowMembership;
-import net.yozmnews.evaluation.FlowMembershipJudgement;
-import net.yozmnews.evaluation.FlowMembershipJudgementId;
-import net.yozmnews.evaluation.FlowMembershipQuery;
-import net.yozmnews.evaluation.JudgedEvent;
+import net.yozmnews.evaluation.StorylineCandidate;
+import net.yozmnews.evaluation.StorylineMembership;
+import net.yozmnews.evaluation.StorylineMembershipJudgement;
+import net.yozmnews.evaluation.StorylineMembershipJudgementId;
+import net.yozmnews.evaluation.StorylineMembershipQuery;
 import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
 import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
@@ -36,11 +35,12 @@ import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
 import net.yozmnews.evaluation.domain.evaluator.RelationRereadResult;
-import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RelationResult;
+import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
-import net.yozmnews.evaluation.domain.membership.FlowMembershipJudgementRepository;
 import net.yozmnews.evaluation.domain.membership.MembershipRecord;
+import net.yozmnews.evaluation.domain.membership.RecordedCandidate;
+import net.yozmnews.evaluation.domain.membership.StorylineMembershipJudgementRepository;
 import net.yozmnews.source.SourceDeleted;
 import net.yozmnews.source.SourceId;
 import org.jspecify.annotations.Nullable;
@@ -59,7 +59,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 흐름 소속 판정 공개 API — 흐름 소속 문구로 묻기, 물을 후보 고르기, 결과 갈래, 흐름 소속 원본 표에 기록, 판정 중 지운 기사, 지운 기사의
+ * 스토리라인 소속 판정 공개 API — 스토리라인 소속 문구로 묻기, 물을 후보 고르기, 결과 갈래, 스토리라인 소속 원본 표에 기록, 판정 중 지운 기사, 지운 기사의
  * 판정 원본 지우기를 실제 PostgreSQL 과 결선된 저장소 · 기사 조회로 본다. 평가기는 시험이 넣는다. 커밋 경계를 지나므로 시험을 트랜잭션으로
  * 감싸지 않는다.
  * <p>
@@ -69,7 +69,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @SpringBootTest
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 @ExtendWith(OutputCaptureExtension.class)
-class FlowMembershipFlowTests {
+class StorylineMembershipFlowTests {
 
 	private static final Instant AT = Instant.parse("2026-11-16T09:00:00Z");
 
@@ -79,10 +79,10 @@ class FlowMembershipFlowTests {
 	ArticleDirectory articles;
 
 	@Autowired
-	FlowMembershipJudgementRepository judgements;
+	StorylineMembershipJudgementRepository judgements;
 
 	@Autowired
-	FlowMembership wired;
+	StorylineMembership wired;
 
 	@Autowired
 	TransactionTemplate transaction;
@@ -96,7 +96,7 @@ class FlowMembershipFlowTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from flow_membership_judgements").update();
+		this.jdbc.sql("delete from storyline_membership_judgements").update();
 		this.jdbc.sql("delete from article_event_judgements").update();
 		this.jdbc.sql("delete from article_tag_judgements").update();
 		this.jdbc.sql("delete from article_feed_entries").update();
@@ -111,11 +111,11 @@ class FlowMembershipFlowTests {
 		long strike = article("부산 항만 파업", null, 52);
 		Stub stub = new Stub(input -> new Membership(Map.of(305L, 0.83, 306L, 0.07), "jev", "jev-1.14.0", 812, RAW));
 
-		FlowMembershipJudgement judgement = service(stub).judge(new FlowMembershipQuery(new ArticleId(judged),
-				List.of(new FlowCandidate(305, List.of(new ArticleId(counting), new ArticleId(winner))),
-						new FlowCandidate(306, List.of(new ArticleId(strike))))));
+		StorylineMembershipJudgement judgement = service(stub).judge(new StorylineMembershipQuery(new ArticleId(judged),
+				List.of(new StorylineCandidate(305, List.of(new ArticleId(counting), new ArticleId(winner))),
+						new StorylineCandidate(306, List.of(new ArticleId(strike))))));
 
-		assertThat(judgement).isEqualTo(new FlowMembershipJudgement.Judged(new FlowMembershipJudgementId(judgementId()),
+		assertThat(judgement).isEqualTo(new StorylineMembershipJudgement.Judged(new StorylineMembershipJudgementId(judgementId()),
 				Map.of(305L, 0.83, 306L, 0.07)));
 		assertThat(stub.inputs).containsExactly(new MembershipInput("서울 시장 선거 결과", "개표가 끝났다",
 				List.of(new CandidateEvent(305, List.of("서울 시장 선거 개표", "서울 시장 당선 확정")),
@@ -124,16 +124,17 @@ class FlowMembershipFlowTests {
 		Map<String, Object> row = this.jdbc.sql("""
 				select article_id, evaluator, model_version, wording_version, candidates::text as candidates,
 				       input_tokens
-				from flow_membership_judgements
+				from storyline_membership_judgements
 				""").query().singleRow();
 		assertThat(row).containsEntry("article_id", judged)
 			.containsEntry("evaluator", "jev")
 			.containsEntry("model_version", "jev-1.14.0")
 			.containsEntry("wording_version", "matter-1")
-			.containsEntry("candidates", "[{\"flowId\": 305, \"articleIds\": [" + counting + ", " + winner
-					+ "], \"probability\": 0.83}, {\"flowId\": 306, \"articleIds\": [" + strike + "], \"probability\": 0.07}]")
+			.containsEntry("candidates", "[{\"articleIds\": [" + counting + ", " + winner
+					+ "], \"candidateId\": 305, \"probability\": 0.83}, "
+					+ "{\"articleIds\": [" + strike + "], \"candidateId\": 306, \"probability\": 0.07}]")
 			.containsEntry("input_tokens", 812);
-		assertThat(this.jdbc.sql("select judged_at from flow_membership_judgements")
+		assertThat(this.jdbc.sql("select judged_at from storyline_membership_judgements")
 			.query(OffsetDateTime.class)
 			.single()
 			.toInstant()).isEqualTo(AT);
@@ -149,17 +150,17 @@ class FlowMembershipFlowTests {
 		assertThatIllegalStateException()
 			.isThrownBy(() -> this.transaction
 				.executeWithoutResult(status -> this.wired.judge(query(judged, 305, counting))))
-			.withMessage("흐름 소속 판정을 트랜잭션 안에서 불렀다 — Jev 호출은 트랜잭션 밖에서 한다");
+			.withMessage("스토리라인 소속 판정을 트랜잭션 안에서 불렀다 — Jev 호출은 트랜잭션 밖에서 한다");
 		assertThat(judgementRows()).isZero();
 	}
 
 	@Test
 	void failsBeforeReadingAnythingWithoutAnEvaluator() {
-		FlowMembershipService service = new FlowMembershipService(() -> null, this.articles, this.judgements,
+		StorylineMembershipService service = new StorylineMembershipService(() -> null, this.articles, this.judgements,
 				this.transaction, () -> AT);
 
 		assertThatIllegalStateException().isThrownBy(() -> service.judge(query(1, 305, 3)))
-			.withMessage("평가기가 없는 프로세스에서 흐름 소속 판정을 불렀다 — 판정은 작업 역할의 작업에서 부른다");
+			.withMessage("평가기가 없는 프로세스에서 스토리라인 소속 판정을 불렀다 — 판정은 작업 역할의 작업에서 부른다");
 	}
 
 	@Test
@@ -170,7 +171,7 @@ class FlowMembershipFlowTests {
 			Stub stub = new Stub(input -> new EvaluationFailure(kind, "실패 " + kind));
 
 			assertThat(service(stub).judge(query(judged, 305, counting)))
-				.isEqualTo(new FlowMembershipJudgement.Failed(kind, "실패 " + kind));
+				.isEqualTo(new StorylineMembershipJudgement.Failed(kind, "실패 " + kind));
 		}
 		assertThat(judgementRows()).isZero();
 	}
@@ -181,7 +182,7 @@ class FlowMembershipFlowTests {
 		Stub stub = new Stub(input -> new Membership(Map.of(305L, 0.83), "jev", "jev-1.14.0", 812, RAW));
 
 		assertThat(service(stub).judge(query(999_999, 305, counting)))
-			.isEqualTo(new FlowMembershipJudgement.ArticleMissing());
+			.isEqualTo(new StorylineMembershipJudgement.ArticleMissing());
 		assertThat(stub.inputs).isEmpty();
 		assertThat(judgementRows()).isZero();
 	}
@@ -192,25 +193,25 @@ class FlowMembershipFlowTests {
 		Stub stub = new Stub(input -> new Membership(Map.of(305L, 0.83), "jev", "jev-1.14.0", 812, RAW));
 
 		assertThat(service(stub).judge(query(judged, 305, 999_999)))
-			.isEqualTo(new FlowMembershipJudgement.Judged(null, Map.of()));
+			.isEqualTo(new StorylineMembershipJudgement.Judged(null, Map.of()));
 		assertThat(stub.inputs).isEmpty();
 		assertThat(judgementRows()).isZero();
 	}
 
 	@Test
-	void refusesToRecordAResultThatDoesNotMatchTheAskedFlows() {
+	void refusesToRecordAResultThatDoesNotMatchTheAskedCandidates() {
 		long judged = article("서울 시장 선거 결과", null, 51);
 		long counting = article("서울 시장 선거 개표", null, 52);
 		long strike = article("부산 항만 파업", null, 52);
-		FlowMembershipQuery query = new FlowMembershipQuery(new ArticleId(judged),
-				List.of(new FlowCandidate(305, List.of(new ArticleId(counting))),
-						new FlowCandidate(306, List.of(new ArticleId(strike)))));
+		StorylineMembershipQuery query = new StorylineMembershipQuery(new ArticleId(judged),
+				List.of(new StorylineCandidate(305, List.of(new ArticleId(counting))),
+						new StorylineCandidate(306, List.of(new ArticleId(strike)))));
 
 		assertThatIllegalStateException()
 			.isThrownBy(() -> service(new Stub(
 					input -> new Membership(Map.of(305L, 0.83, 99L, 0.5), "jev", "jev-1.14.0", 812, RAW)))
 				.judge(query))
-			.withMessage("흐름 소속 판정 결과를 저장할 수 없다 — 흐름 키가 물은 후보와 다르다 — 빠진 흐름 [306], 모르는 흐름 [99]");
+			.withMessage("스토리라인 소속 판정 결과를 저장할 수 없다 — 후보 키가 물은 후보와 다르다 — 빠진 후보 [306], 모르는 후보 [99]");
 		assertThat(judgementRows()).isZero();
 	}
 
@@ -226,13 +227,13 @@ class FlowMembershipFlowTests {
 		});
 
 		assertThat(service(stub).judge(query(judged, 305, counting)))
-			.isEqualTo(new FlowMembershipJudgement.ArticleMissing());
+			.isEqualTo(new StorylineMembershipJudgement.ArticleMissing());
 		assertThat(judgementRows()).isZero();
-		assertThat(output).contains("흐름 소속 판정 중 기사가 지워져 판정 원본을 지웠다 — 기사 " + judged);
+		assertThat(output).contains("스토리라인 소속 판정 중 기사가 지워져 판정 원본을 지웠다 — 기사 " + judged);
 	}
 
 	@Test
-	void removingArticlesRemovesTheirFlowMembershipJudgementsOnlyAndAgainChangesNothing() {
+	void removingArticlesRemovesTheirStorylineMembershipJudgementsOnlyAndAgainChangesNothing() {
 		this.judgements.insert(judgement(41, 43));
 		this.judgements.insert(judgement(41, 44));
 		this.judgements.insert(judgement(42, 41));
@@ -251,32 +252,32 @@ class FlowMembershipFlowTests {
 		await().atMost(Duration.ofSeconds(10)).until(() -> publications() == 0);
 	}
 
-	/** 기사 하나를 흐름 305 에 대해 판정한 원본 — 서술 기사 하나 */
+	/** 기사 하나를 후보 305 에 대해 판정한 원본 — 서술 기사 하나 */
 	private static MembershipRecord judgement(long article, long described) {
 		return new MembershipRecord(new ArticleId(article),
-				List.of(new JudgedEvent(305, List.of(new ArticleId(described)), 0.8)), "fake", "fake-rules-3",
+				List.of(new RecordedCandidate(305, List.of(new ArticleId(described)), 0.8)), "fake", "fake-rules-3",
 				"matter-1", 10, "{\"events\":{\"305\":0.8}}", AT);
 	}
 
-	/** 흐름 소속 판정 원본이 있는 기사 — 기사 ID 순, 한 번씩 */
+	/** 스토리라인 소속 판정 원본이 있는 기사 — 기사 ID 순, 한 번씩 */
 	private List<Long> judgedArticles() {
-		return this.jdbc.sql("select distinct article_id from flow_membership_judgements order by article_id")
+		return this.jdbc.sql("select distinct article_id from storyline_membership_judgements order by article_id")
 			.query(Long.class)
 			.list();
 	}
 
-	private FlowMembershipService service(ArticleEvaluator evaluator) {
-		return new FlowMembershipService(() -> evaluator, this.articles, this.judgements, this.transaction, () -> AT);
+	private StorylineMembershipService service(ArticleEvaluator evaluator) {
+		return new StorylineMembershipService(() -> evaluator, this.articles, this.judgements, this.transaction, () -> AT);
 	}
 
-	private static FlowMembershipQuery query(long judged, long flowId, long described) {
-		return new FlowMembershipQuery(new ArticleId(judged),
-				List.of(new FlowCandidate(flowId, List.of(new ArticleId(described)))));
+	private static StorylineMembershipQuery query(long judged, long candidateId, long described) {
+		return new StorylineMembershipQuery(new ArticleId(judged),
+				List.of(new StorylineCandidate(candidateId, List.of(new ArticleId(described)))));
 	}
 
 	/** 기사 하나와 그 엔트리 — 소스 ID 를 정해 소스 삭제로 지울 수 있게 한다 */
 	private long article(String title, @Nullable String summary, long source) {
-		String url = "https://flow-membership.example/" + UUID.randomUUID();
+		String url = "https://storyline-membership.example/" + UUID.randomUUID();
 		long id = this.jdbc.sql("""
 				insert into articles (canonical_url, url_hash, title, title_key_hash, summary_text, published_at,
 				    published_at_estimated, first_seen_at)
@@ -310,12 +311,12 @@ class FlowMembershipFlowTests {
 	}
 
 	private long judgementRows() {
-		return this.jdbc.sql("select count(*) from flow_membership_judgements").query(Long.class).single();
+		return this.jdbc.sql("select count(*) from storyline_membership_judgements").query(Long.class).single();
 	}
 
 	/** 하나뿐인 판정 원본의 ID — DB 가 매긴 값 */
 	private long judgementId() {
-		return this.jdbc.sql("select id from flow_membership_judgements").query(Long.class).single();
+		return this.jdbc.sql("select id from storyline_membership_judgements").query(Long.class).single();
 	}
 
 	/** 소속만 판정하는 시험 평가기 — 받은 입력을 모은다. 평가 · 다시 읽기 · 관계 판정은 크게 실패한다 */

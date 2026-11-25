@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.JudgedEvent;
 import net.yozmnews.evaluation.domain.evaluator.Membership;
 import org.junit.jupiter.api.Test;
 
@@ -33,8 +32,8 @@ class MembershipRecordTests {
 
 		assertThat(MembershipRecord.of(new ArticleId(5), asked, MEMBERSHIP, "membership-1", AT))
 			.isEqualTo(new MembershipRecord(new ArticleId(5),
-					List.of(new JudgedEvent(15, List.of(new ArticleId(7)), 0.07),
-							new JudgedEvent(12, List.of(new ArticleId(3), new ArticleId(4)), 0.83)),
+					List.of(new RecordedCandidate(15, List.of(new ArticleId(7)), 0.07),
+							new RecordedCandidate(12, List.of(new ArticleId(3), new ArticleId(4)), 0.83)),
 					"jev", "jev-1.14.0", "membership-1", 812, "{}", AT));
 	}
 
@@ -45,16 +44,18 @@ class MembershipRecordTests {
 	}
 
 	@Test
-	void refusesNoCandidatesABlankWordingVersionOrACandidateWithoutDescriptions() {
+	void refusesNoCandidatesABlankWordingVersionOrAnInvalidCandidate() {
 		assertThatIllegalArgumentException().isThrownBy(() -> new MembershipRecord(new ArticleId(5), List.of(), "jev",
 				"jev-1.14.0", "membership-1", 812, "{}", AT));
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new MembershipRecord(new ArticleId(5),
-					List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.83)), "jev", "jev-1.14.0", " ", 812,
+					List.of(new RecordedCandidate(12, List.of(new ArticleId(3)), 0.83)), "jev", "jev-1.14.0", " ", 812,
 					"{}", AT));
-		assertThatIllegalArgumentException().isThrownBy(() -> new JudgedEvent(12, List.of(), 0.83));
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new JudgedEvent(12, List.of(new ArticleId(3)), 1.01));
+			.isThrownBy(() -> new RecordedCandidate(0, List.of(new ArticleId(3)), 0.83));
+		assertThatIllegalArgumentException().isThrownBy(() -> new RecordedCandidate(12, List.of(), 0.83));
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new RecordedCandidate(12, List.of(new ArticleId(3)), 1.01));
 	}
 
 }

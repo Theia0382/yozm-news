@@ -16,18 +16,17 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
-import net.yozmnews.evaluation.FlowDescriptor;
-import net.yozmnews.evaluation.FlowHappening;
 import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.RelationJudgement;
 import net.yozmnews.evaluation.RelationJudgementId;
 import net.yozmnews.evaluation.RelationQuery;
+import net.yozmnews.evaluation.StorylineDescriptor;
+import net.yozmnews.evaluation.StorylineHappening;
 import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
-import net.yozmnews.evaluation.domain.evaluator.FlowText;
 import net.yozmnews.evaluation.domain.evaluator.HappeningText;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
@@ -37,6 +36,7 @@ import net.yozmnews.evaluation.domain.evaluator.RelationRereadResult;
 import net.yozmnews.evaluation.domain.evaluator.RelationResult;
 import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
+import net.yozmnews.evaluation.domain.evaluator.StorylineText;
 import net.yozmnews.evaluation.domain.jev.JevResponse;
 import net.yozmnews.evaluation.domain.relation.RelationJudgementRepository;
 import net.yozmnews.evaluation.domain.relation.RelationRecord;
@@ -62,7 +62,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
-class FlowRelationFlowTests {
+class StorylineRelationFlowTests {
 
 	private static final Instant AT = Instant.parse("2026-11-05T06:30:00Z");
 
@@ -94,36 +94,36 @@ class FlowRelationFlowTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from flow_relation_judgements").update();
+		this.jdbc.sql("delete from storyline_relation_judgements").update();
 		this.jdbc.sql("delete from article_feed_entries").update();
 		this.jdbc.sql("delete from articles").update();
 	}
 
 	@Test
-	void judgesTheTwoFlowsAndRecordsTheJudgement() {
+	void judgesTheTwoStorylinesAndRecordsTheJudgement() {
 		long passed = article("특검법 통과", "재석 과반");
 		long veto = article("거부권 건의", "야당 반발");
 		long nominee = article("특검 후보 추천", null);
 		Stub stub = new Stub(input -> relation(PROBABILITIES));
 
 		RelationJudgement judgement = service(stub).judge(new RelationQuery(
-				new FlowDescriptor(7, 12, T1, T3, List.of(happening(passed, T1, true), happening(veto, T2, false))),
-				new FlowDescriptor(9, 4, T2, T3, List.of(happening(nominee, T2, true)))));
+				new StorylineDescriptor(7, 12, T1, T3, List.of(happening(passed, T1, true), happening(veto, T2, false))),
+				new StorylineDescriptor(9, 4, T2, T3, List.of(happening(nominee, T2, true)))));
 
 		assertThat(judgement)
 			.isEqualTo(new RelationJudgement.Judged(new RelationJudgementId(judgementId()), PROBABILITIES, 0.8, 0.6));
 		assertThat(stub.inputs).containsExactly(new RelationInput(
-				new FlowText(12, T1, T3,
+				new StorylineText(12, T1, T3,
 						List.of(new HappeningText(T1, "특검법 통과", "재석 과반"), new HappeningText(T2, "거부권 건의", null))),
-				new FlowText(4, T2, T3, List.of(new HappeningText(T2, "특검 후보 추천", null))),
+				new StorylineText(4, T2, T3, List.of(new HappeningText(T2, "특검 후보 추천", null))),
 				RelationWording.CURRENT));
 		Map<String, Object> row = this.jdbc.sql("""
-				select first_flow_id, second_flow_id, described::text as described, evaluator, model_version,
+				select first_storyline_id, second_storyline_id, described::text as described, evaluator, model_version,
 				       wording_version, raw_response = cast(:raw as jsonb) as same_raw, input_tokens
-				from flow_relation_judgements
+				from storyline_relation_judgements
 				""").param("raw", RAW).query().singleRow();
-		assertThat(row).containsEntry("first_flow_id", 7L)
-			.containsEntry("second_flow_id", 9L)
+		assertThat(row).containsEntry("first_storyline_id", 7L)
+			.containsEntry("second_storyline_id", 9L)
 			.containsEntry("described",
 					"{\"first\": [{\"articleId\": " + passed + ", \"summarized\": true}, {\"articleId\": " + veto
 							+ ", \"summarized\": false}], \"second\": [{\"articleId\": " + nominee
@@ -133,7 +133,7 @@ class FlowRelationFlowTests {
 			.containsEntry("wording_version", "relation-2")
 			.containsEntry("same_raw", true)
 			.containsEntry("input_tokens", 1924);
-		assertThat(this.jdbc.sql("select judged_at from flow_relation_judgements")
+		assertThat(this.jdbc.sql("select judged_at from storyline_relation_judgements")
 			.query(OffsetDateTime.class)
 			.single()
 			.toInstant()).isEqualTo(AT);
@@ -160,7 +160,7 @@ class FlowRelationFlowTests {
 
 		assertThat(found).extracting(StoredRelationJudgement::id).containsExactly(first, second);
 		StoredRelationJudgement stored = found.getFirst();
-		assertThat(stored).extracting(StoredRelationJudgement::firstFlowId, StoredRelationJudgement::secondFlowId,
+		assertThat(stored).extracting(StoredRelationJudgement::firstStorylineId, StoredRelationJudgement::secondStorylineId,
 				StoredRelationJudgement::evaluator, StoredRelationJudgement::modelVersion,
 				StoredRelationJudgement::wordingVersion, StoredRelationJudgement::inputTokens,
 				StoredRelationJudgement::judgedAt)
@@ -175,13 +175,13 @@ class FlowRelationFlowTests {
 	}
 
 	@Test
-	void readsAnArticleSharedByBothFlowsOnceAndKeepsEveryJudgementOfThePair() {
+	void readsAnArticleSharedByBothStorylinesOnceAndKeepsEveryJudgementOfThePair() {
 		long shared = article("특검법 통과", null);
 		long other = article("특검 후보 추천", null);
 		Stub stub = new Stub(input -> relation(PROBABILITIES));
 		RelationQuery query = new RelationQuery(
-				new FlowDescriptor(7, 12, T1, T3, List.of(happening(shared, T1, false))),
-				new FlowDescriptor(9, 4, T1, T3, List.of(happening(shared, T1, false), happening(other, T2, false))));
+				new StorylineDescriptor(7, 12, T1, T3, List.of(happening(shared, T1, false))),
+				new StorylineDescriptor(9, 4, T1, T3, List.of(happening(shared, T1, false), happening(other, T2, false))));
 
 		service(stub).judge(query);
 		service(stub).judge(query);
@@ -203,7 +203,7 @@ class FlowRelationFlowTests {
 	}
 
 	@Test
-	void doesNotAskWhenAFlowHasNoDescriptionLeft() {
+	void doesNotAskWhenAStorylineHasNoDescriptionLeft() {
 		long one = article("특검법 통과", null);
 		Stub stub = new Stub(input -> relation(PROBABILITIES));
 
@@ -236,29 +236,29 @@ class FlowRelationFlowTests {
 	}
 
 	@Test
-	void theTableRefusesAJudgementOfAFlowWithItself() {
-		// 값 타입이 먼저 막지만 테이블도 같은 흐름 둘의 행을 받지 않는다
+	void theTableRefusesAJudgementOfAStorylineWithItself() {
+		// 값 타입이 먼저 막지만 테이블도 같은 스토리라인 둘의 행을 받지 않는다
 		assertThatThrownBy(() -> this.jdbc.sql("""
-				insert into flow_relation_judgements (first_flow_id, second_flow_id, described, evaluator, model_version,
+				insert into storyline_relation_judgements (first_storyline_id, second_storyline_id, described, evaluator, model_version,
 				    wording_version, raw_response, input_tokens, judged_at)
 				values (7, 7, cast('{}' as jsonb), 'jev', 'jev-1.14.0', 'relation-1', cast('{}' as jsonb), 0,
 				    '2026-11-05T06:30:00Z')
 				""").update()).isInstanceOf(DataIntegrityViolationException.class)
-			.hasMessageContaining("flow_relation_judgements_distinct_flows");
+			.hasMessageContaining("storyline_relation_judgements_distinct_storylines");
 		assertThat(judgementRows()).isZero();
 	}
 
 	@Test
 	void failsWithoutAnEvaluator() {
-		FlowRelationService service = new FlowRelationService(() -> null, this.articles, this.judgements,
+		StorylineRelationService service = new StorylineRelationService(() -> null, this.articles, this.judgements,
 				this.transaction, () -> AT);
 
 		assertThatIllegalStateException().isThrownBy(() -> service.judge(query(1, 2)))
 			.withMessage("평가기가 없는 프로세스에서 관계 판정을 불렀다 — 판정은 작업 역할의 작업에서 부른다");
 	}
 
-	private FlowRelationService service(ArticleEvaluator evaluator) {
-		return new FlowRelationService(() -> evaluator, this.articles, this.judgements, this.transaction, () -> AT);
+	private StorylineRelationService service(ArticleEvaluator evaluator) {
+		return new StorylineRelationService(() -> evaluator, this.articles, this.judgements, this.transaction, () -> AT);
 	}
 
 	private static Relation relation(Map<RelationAnswer, Double> probabilities) {
@@ -266,12 +266,12 @@ class FlowRelationFlowTests {
 	}
 
 	private static RelationQuery query(long first, long second) {
-		return new RelationQuery(new FlowDescriptor(7, 12, T1, T3, List.of(happening(first, T1, false))),
-				new FlowDescriptor(9, 4, T2, T3, List.of(happening(second, T2, false))));
+		return new RelationQuery(new StorylineDescriptor(7, 12, T1, T3, List.of(happening(first, T1, false))),
+				new StorylineDescriptor(9, 4, T2, T3, List.of(happening(second, T2, false))));
 	}
 
-	private static FlowHappening happening(long articleId, Instant at, boolean summarized) {
-		return new FlowHappening(new ArticleId(articleId), at, summarized);
+	private static StorylineHappening happening(long articleId, Instant at, boolean summarized) {
+		return new StorylineHappening(new ArticleId(articleId), at, summarized);
 	}
 
 	private long article(String title, @Nullable String summary) {
@@ -295,12 +295,12 @@ class FlowRelationFlowTests {
 	}
 
 	private long judgementRows() {
-		return this.jdbc.sql("select count(*) from flow_relation_judgements").query(Long.class).single();
+		return this.jdbc.sql("select count(*) from storyline_relation_judgements").query(Long.class).single();
 	}
 
 	/** 하나뿐인 판정 원본의 ID — DB 가 매긴 값 */
 	private long judgementId() {
-		return this.jdbc.sql("select id from flow_relation_judgements").query(Long.class).single();
+		return this.jdbc.sql("select id from storyline_relation_judgements").query(Long.class).single();
 	}
 
 	/** 관계만 판정하는 시험 평가기 — 받은 입력을 모은다 */

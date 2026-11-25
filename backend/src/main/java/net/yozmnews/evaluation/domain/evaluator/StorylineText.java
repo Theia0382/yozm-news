@@ -4,25 +4,25 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
-import net.yozmnews.evaluation.FlowDescriptor;
+import net.yozmnews.evaluation.StorylineDescriptor;
 
 /**
- * 관계 판정에 싣는 흐름 하나의 서술 — docs/specs/evaluation.md §4 · evaluation-R48.
+ * 관계 판정에 싣는 스토리라인 하나의 서술 — docs/specs/evaluation.md §4 · evaluation-R48.
  *
- * @param happenings 흐름의 사건 수
- * @param firstAt 흐름의 첫 기사 시각
- * @param lastAt 흐름의 마지막 기사 시각
+ * @param happenings 스토리라인의 사건 수
+ * @param firstAt 스토리라인의 첫 기사 시각
+ * @param lastAt 스토리라인의 마지막 기사 시각
  * @param described 서술 사건 — 넘긴 순서 그대로 싣는다
  */
-public record FlowText(int happenings, Instant firstAt, Instant lastAt, List<HappeningText> described) {
+public record StorylineText(int happenings, Instant firstAt, Instant lastAt, List<HappeningText> described) {
 
 	/**
 	 * @throws IllegalArgumentException 사건 수가 1 미만이거나, 첫 기사 시각이 마지막 기사 시각보다 늦거나, 서술이 없거나
-	 * {@value FlowDescriptor#MAX_DESCRIBED}개를 넘을 때
+	 * {@value StorylineDescriptor#MAX_DESCRIBED}개를 넘을 때
 	 */
-	public FlowText {
+	public StorylineText {
 		if (happenings < 1) {
-			throw new IllegalArgumentException("흐름의 사건 수는 1 이상이다: " + happenings);
+			throw new IllegalArgumentException("스토리라인의 사건 수는 1 이상이다: " + happenings);
 		}
 		Objects.requireNonNull(firstAt, "firstAt");
 		Objects.requireNonNull(lastAt, "lastAt");
@@ -33,9 +33,9 @@ public record FlowText(int happenings, Instant firstAt, Instant lastAt, List<Hap
 		if (described.isEmpty()) {
 			throw new IllegalArgumentException("서술 사건이 없다");
 		}
-		if (described.size() > FlowDescriptor.MAX_DESCRIBED) {
+		if (described.size() > StorylineDescriptor.MAX_DESCRIBED) {
 			throw new IllegalArgumentException(
-					"서술 사건은 " + FlowDescriptor.MAX_DESCRIBED + "개까지다: " + described.size());
+					"서술 사건은 " + StorylineDescriptor.MAX_DESCRIBED + "개까지다: " + described.size());
 		}
 	}
 

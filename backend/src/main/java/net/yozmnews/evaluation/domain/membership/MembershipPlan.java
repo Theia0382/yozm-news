@@ -16,7 +16,7 @@ import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 
 /**
- * 물을 후보 고르기 — 소속 판정(사건 소속 · 흐름 소속) 요청과 읽은 기사로 포트 입력을 만든다 · docs/specs/evaluation.md §4 ·
+ * 물을 후보 고르기 — 소속 판정(사건 소속 · 스토리라인 소속) 요청과 읽은 기사로 포트 입력을 만든다 · docs/specs/evaluation.md §4 ·
  * evaluation-R38 · evaluation-R52.
  * <p>
  * 후보마다 서술 기사 가운데 아직 있는 것의 제목을 요청 순서로 {@link CandidateEvent#limited} 로 자른다. 지워진 서술 기사와 자른 뒤
@@ -29,7 +29,7 @@ public final class MembershipPlan {
 	}
 
 	/**
-	 * @param candidates 후보 ID(사건 ID 또는 흐름 ID) → 서술 기사 — 요청 순서. 요청 값이 이미 검사한 것이다
+	 * @param candidates 후보 ID(사건 소속이면 사건 ID) → 서술 기사 — 요청 순서. 요청 값이 이미 검사한 것이다
 	 * @param article 판정할 기사의 내용
 	 * @param found 읽은 기사 — 서술 기사 가운데 없는(지운) 기사는 빠져 있다
 	 */

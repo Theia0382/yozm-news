@@ -10,15 +10,15 @@ import java.util.Map;
 
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.FlowDescriptor;
-import net.yozmnews.evaluation.FlowHappening;
 import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.RelationQuery;
-import net.yozmnews.evaluation.domain.evaluator.FlowText;
+import net.yozmnews.evaluation.StorylineDescriptor;
+import net.yozmnews.evaluation.StorylineHappening;
 import net.yozmnews.evaluation.domain.evaluator.HappeningText;
 import net.yozmnews.evaluation.domain.evaluator.Relation;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
 import net.yozmnews.evaluation.domain.evaluator.RelationWording;
+import net.yozmnews.evaluation.domain.evaluator.StorylineText;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
@@ -43,18 +43,18 @@ class RelationPlanTests {
 		article(2, "거부권 건의", "야당 반발");
 		article(3, "특검 후보 추천", null);
 		RelationQuery query = new RelationQuery(
-				new FlowDescriptor(7, 12, T1, T3, List.of(happening(1, T1, true), happening(2, T2, false))),
-				new FlowDescriptor(9, 4, T2, T3, List.of(happening(3, T2, true))));
+				new StorylineDescriptor(7, 12, T1, T3, List.of(happening(1, T1, true), happening(2, T2, false))),
+				new StorylineDescriptor(9, 4, T2, T3, List.of(happening(3, T2, true))));
 
 		RelationPlan.Plan plan = RelationPlan.of(query, this.found, RelationWording.CURRENT);
 
 		assertThat(plan).isEqualTo(new RelationPlan.Plan.Ask(
 				new RelationInput(
-						new FlowText(12, T1, T3,
+						new StorylineText(12, T1, T3,
 								List.of(new HappeningText(T1, "특검법 통과", "재석 과반"),
 										new HappeningText(T2, "거부권 건의", null))),
 						// 표시됐지만 요약문이 없는 기사 — 싣지 않고, 기록에도 싣지 않았다고 남긴다
-						new FlowText(4, T2, T3, List.of(new HappeningText(T2, "특검 후보 추천", null))),
+						new StorylineText(4, T2, T3, List.of(new HappeningText(T2, "특검 후보 추천", null))),
 						RelationWording.CURRENT),
 				List.of(new RelationRecord.Described(new ArticleId(1), true),
 						new RelationRecord.Described(new ArticleId(2), false)),
@@ -67,28 +67,28 @@ class RelationPlanTests {
 		article(2, "   ", "제목이 빈 기사");
 		article(3, "특검 후보 추천", null);
 		RelationQuery query = new RelationQuery(
-				new FlowDescriptor(7, 12, T1, T3,
+				new StorylineDescriptor(7, 12, T1, T3,
 						List.of(happening(1, T1, true), happening(2, T2, true), happening(404, T3, false))),
-				new FlowDescriptor(9, 4, T2, T3, List.of(happening(3, T2, false))));
+				new StorylineDescriptor(9, 4, T2, T3, List.of(happening(3, T2, false))));
 
 		RelationPlan.Plan.Ask ask = (RelationPlan.Plan.Ask) RelationPlan.of(query, this.found,
 				RelationWording.CURRENT);
 
-		// 흐름의 사건 수 · 시각은 요청 그대로다 — 서술이 줄어도 바뀌지 않는다
+		// 스토리라인의 사건 수 · 시각은 요청 그대로다 — 서술이 줄어도 바뀌지 않는다
 		assertThat(ask.input().first())
-			.isEqualTo(new FlowText(12, T1, T3, List.of(new HappeningText(T1, "특검법 통과", null))));
+			.isEqualTo(new StorylineText(12, T1, T3, List.of(new HappeningText(T1, "특검법 통과", null))));
 		assertThat(ask.first()).containsExactly(new RelationRecord.Described(new ArticleId(1), false));
 	}
 
 	@Test
-	void asksNothingWhenEitherFlowHasNoDescriptionLeft() {
+	void asksNothingWhenEitherStorylineHasNoDescriptionLeft() {
 		article(1, "특검법 통과", null);
 		RelationQuery firstOnly = new RelationQuery(
-				new FlowDescriptor(7, 12, T1, T3, List.of(happening(1, T1, false))),
-				new FlowDescriptor(9, 4, T2, T3, List.of(happening(404, T2, false))));
+				new StorylineDescriptor(7, 12, T1, T3, List.of(happening(1, T1, false))),
+				new StorylineDescriptor(9, 4, T2, T3, List.of(happening(404, T2, false))));
 		RelationQuery secondOnly = new RelationQuery(
-				new FlowDescriptor(9, 4, T2, T3, List.of(happening(404, T2, false))),
-				new FlowDescriptor(7, 12, T1, T3, List.of(happening(1, T1, false))));
+				new StorylineDescriptor(9, 4, T2, T3, List.of(happening(404, T2, false))),
+				new StorylineDescriptor(7, 12, T1, T3, List.of(happening(1, T1, false))));
 
 		assertThat(RelationPlan.of(firstOnly, this.found, RelationWording.CURRENT))
 			.isEqualTo(new RelationPlan.Plan.NothingToAsk());
@@ -123,8 +123,8 @@ class RelationPlanTests {
 				URI.create("https://plan.example/" + id), T1, List.of()));
 	}
 
-	private static FlowHappening happening(long articleId, Instant at, boolean summarized) {
-		return new FlowHappening(new ArticleId(articleId), at, summarized);
+	private static StorylineHappening happening(long articleId, Instant at, boolean summarized) {
+		return new StorylineHappening(new ArticleId(articleId), at, summarized);
 	}
 
 }

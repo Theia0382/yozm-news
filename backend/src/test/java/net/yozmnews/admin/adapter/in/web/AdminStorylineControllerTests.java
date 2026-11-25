@@ -19,12 +19,12 @@ import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleEntryView;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.FlowMembershipJudgementId;
 import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.RelationJudgementId;
 import net.yozmnews.evaluation.RelationJudgementLog;
 import net.yozmnews.evaluation.RelationJudgementView;
 import net.yozmnews.evaluation.RelationReading;
+import net.yozmnews.evaluation.StorylineMembershipJudgementId;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventStatus;
 import net.yozmnews.event.EventTally;
@@ -39,7 +39,7 @@ import net.yozmnews.storyline.StorylineCursor;
 import net.yozmnews.storyline.StorylineEvent;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineLinkingCriteria;
-import net.yozmnews.storyline.StorylineMembership;
+import net.yozmnews.storyline.StorylineMembershipView;
 import net.yozmnews.storyline.StorylinePage;
 import net.yozmnews.storyline.StorylineRelationAsked;
 import net.yozmnews.storyline.StorylineRelationDetail;
@@ -186,16 +186,16 @@ class AdminStorylineControllerTests {
 				new StorylineEvent(event(80, EventStatus.CLOSED, 2), true),
 				new StorylineEvent(event(85, EventStatus.CLOSED, 1), false)));
 		this.review.memberships.put(7L, List.of(
-				new StorylineMembership(new StorylineId(7), new EventId(70), LinkedBy.RULE, new LinkScore(0.81, 0.77, 0.4),
+				new StorylineMembershipView(new StorylineId(7), new EventId(70), LinkedBy.RULE, new LinkScore(0.81, 0.77, 0.4),
 						FakeStorylineReview.LINKING, null, null, T, null),
-				new StorylineMembership(new StorylineId(7), new EventId(80), LinkedBy.MERGE, null, null, null, null, T, null),
+				new StorylineMembershipView(new StorylineId(7), new EventId(80), LinkedBy.MERGE, null, null, null, null, T, null),
 				// 띠가 생기기 전의 기준 이력 행으로 정한 소속 — 확률 기준이 없다
-				new StorylineMembership(new StorylineId(8), new EventId(80), LinkedBy.PAIR, new LinkScore(0.7, 0.66, 0.2),
+				new StorylineMembershipView(new StorylineId(8), new EventId(80), LinkedBy.PAIR, new LinkScore(0.7, 0.66, 0.2),
 						new StorylineLinkingCriteria(Duration.ofDays(3), 0.62, 0.62, null), null, null, T, new StorylineId(12)),
-				new StorylineMembership(new StorylineId(8), new EventId(85), LinkedBy.RULE, new LinkScore(0.9, 0.88, 0.5),
-						FakeStorylineReview.LINKING, 0.71, new FlowMembershipJudgementId(77), T, null),
+				new StorylineMembershipView(new StorylineId(8), new EventId(85), LinkedBy.RULE, new LinkScore(0.9, 0.88, 0.5),
+						FakeStorylineReview.LINKING, 0.71, new StorylineMembershipJudgementId(77), T, null),
 				// 타임라인에 없는 사건(그새 합쳐짐)의 근거는 싣지 않는다
-				new StorylineMembership(new StorylineId(8), new EventId(99), LinkedBy.RULE, new LinkScore(0.6, 0.6, 0.1),
+				new StorylineMembershipView(new StorylineId(8), new EventId(99), LinkedBy.RULE, new LinkScore(0.6, 0.6, 0.1),
 						FakeStorylineReview.LINKING, null, null, T, null)));
 		// 12 는 같은 사안의 조각으로 합쳐졌고(판정 원본은 지워짐) 13 은 정돈이 합쳤다
 		this.review.merged.put(7L,

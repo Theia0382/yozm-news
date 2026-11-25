@@ -13,6 +13,7 @@ import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.evaluation.EventJudgementView;
 import net.yozmnews.evaluation.JudgedEvent;
 import net.yozmnews.evaluation.domain.membership.MembershipRecord;
+import net.yozmnews.evaluation.domain.membership.RecordedCandidate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -45,8 +46,8 @@ class JdbcEventJudgementRepositoryTests {
 
 	@Test
 	void writesOneRowWithTheAskedCandidatesInRequestOrder() {
-		this.repository.insert(record(5, List.of(new JudgedEvent(15, List.of(new ArticleId(7)), 0.07),
-				new JudgedEvent(12, List.of(new ArticleId(3), new ArticleId(4)), 0.83))));
+		this.repository.insert(record(5, List.of(new RecordedCandidate(15, List.of(new ArticleId(7)), 0.07),
+				new RecordedCandidate(12, List.of(new ArticleId(3), new ArticleId(4)), 0.83))));
 
 		Map<String, Object> row = this.jdbc.sql("""
 				select article_id, evaluator, model_version, wording_version, candidates::text as candidates,
@@ -71,9 +72,9 @@ class JdbcEventJudgementRepositoryTests {
 	@Test
 	void returnsTheIdOfTheInsertedRow() {
 		EventJudgementId first = this.repository
-			.insert(record(5, List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.83))));
+			.insert(record(5, List.of(new RecordedCandidate(12, List.of(new ArticleId(3)), 0.83))));
 		EventJudgementId second = this.repository
-			.insert(record(6, List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.79))));
+			.insert(record(6, List.of(new RecordedCandidate(12, List.of(new ArticleId(3)), 0.79))));
 
 		assertThat(this.jdbc.sql("select article_id from article_event_judgements where id = :id")
 			.param("id", first.value())
@@ -90,14 +91,14 @@ class JdbcEventJudgementRepositoryTests {
 		Instant from = Instant.parse("2026-11-01T00:00:00Z");
 		Instant to = Instant.parse("2026-11-08T00:00:00Z");
 		EventJudgementId atFrom = this.repository.insert(record(5,
-				List.of(new JudgedEvent(15, List.of(new ArticleId(7)), 0.07),
-						new JudgedEvent(12, List.of(new ArticleId(3), new ArticleId(4)), 0.83)),
+				List.of(new RecordedCandidate(15, List.of(new ArticleId(7)), 0.07),
+						new RecordedCandidate(12, List.of(new ArticleId(3), new ArticleId(4)), 0.83)),
 				from));
-		this.repository.insert(record(6, List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.5)), to));
+		this.repository.insert(record(6, List.of(new RecordedCandidate(12, List.of(new ArticleId(3)), 0.5)), to));
 		this.repository.insert(
-				record(7, List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.5)), from.minusNanos(1_000)));
+				record(7, List.of(new RecordedCandidate(12, List.of(new ArticleId(3)), 0.5)), from.minusNanos(1_000)));
 		EventJudgementId later = this.repository
-			.insert(record(8, List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.6)), AT));
+			.insert(record(8, List.of(new RecordedCandidate(12, List.of(new ArticleId(3)), 0.6)), AT));
 
 		List<EventJudgementView> page = this.repository.page(from, to, null, null, 10);
 
@@ -113,11 +114,11 @@ class JdbcEventJudgementRepositoryTests {
 		Instant from = Instant.parse("2026-11-01T00:00:00Z");
 		Instant to = Instant.parse("2026-11-08T00:00:00Z");
 		EventJudgementId a = this.repository
-			.insert(record(5, List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.5)), AT));
+			.insert(record(5, List.of(new RecordedCandidate(12, List.of(new ArticleId(3)), 0.5)), AT));
 		EventJudgementId b = this.repository
-			.insert(record(6, List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.5)), AT));
+			.insert(record(6, List.of(new RecordedCandidate(12, List.of(new ArticleId(3)), 0.5)), AT));
 		EventJudgementId c = this.repository.insert(
-				record(7, List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.5)), AT.minusSeconds(60)));
+				record(7, List.of(new RecordedCandidate(12, List.of(new ArticleId(3)), 0.5)), AT.minusSeconds(60)));
 
 		List<EventJudgementView> first = this.repository.page(from, to, null, null, 2);
 		List<EventJudgementView> second = this.repository.page(from, to, first.getLast().judgedAt(),
@@ -133,10 +134,10 @@ class JdbcEventJudgementRepositoryTests {
 	@Test
 	void findsOneJudgementByIdAndNothingForAnUnknownOrDeletedId() {
 		EventJudgementId kept = this.repository.insert(record(5,
-				List.of(new JudgedEvent(15, List.of(new ArticleId(7)), 0.07),
-						new JudgedEvent(12, List.of(new ArticleId(3), new ArticleId(4)), 0.83))));
+				List.of(new RecordedCandidate(15, List.of(new ArticleId(7)), 0.07),
+						new RecordedCandidate(12, List.of(new ArticleId(3), new ArticleId(4)), 0.83))));
 		EventJudgementId deleted = this.repository
-			.insert(record(6, List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.5))));
+			.insert(record(6, List.of(new RecordedCandidate(12, List.of(new ArticleId(3)), 0.5))));
 		this.repository.deleteByArticles(List.of(new ArticleId(6)));
 
 		assertThat(this.repository.find(kept)).contains(new EventJudgementView(kept, new ArticleId(5),
@@ -149,17 +150,17 @@ class JdbcEventJudgementRepositoryTests {
 
 	@Test
 	void keepsEveryJudgementOfTheSameArticle() {
-		this.repository.insert(record(5, List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.83))));
-		this.repository.insert(record(5, List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.79))));
+		this.repository.insert(record(5, List.of(new RecordedCandidate(12, List.of(new ArticleId(3)), 0.83))));
+		this.repository.insert(record(5, List.of(new RecordedCandidate(12, List.of(new ArticleId(3)), 0.79))));
 
 		assertThat(rowsOf(5)).isEqualTo(2);
 	}
 
 	@Test
 	void deletesTheJudgementsOfTheGivenArticlesOnly() {
-		this.repository.insert(record(5, List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.83))));
-		this.repository.insert(record(5, List.of(new JudgedEvent(15, List.of(new ArticleId(7)), 0.07))));
-		this.repository.insert(record(6, List.of(new JudgedEvent(12, List.of(new ArticleId(5)), 0.9))));
+		this.repository.insert(record(5, List.of(new RecordedCandidate(12, List.of(new ArticleId(3)), 0.83))));
+		this.repository.insert(record(5, List.of(new RecordedCandidate(15, List.of(new ArticleId(7)), 0.07))));
+		this.repository.insert(record(6, List.of(new RecordedCandidate(12, List.of(new ArticleId(5)), 0.9))));
 
 		this.repository.deleteByArticles(List.of(new ArticleId(5)));
 
@@ -169,18 +170,18 @@ class JdbcEventJudgementRepositoryTests {
 
 	@Test
 	void deletesNothingForNoArticles() {
-		this.repository.insert(record(5, List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.83))));
+		this.repository.insert(record(5, List.of(new RecordedCandidate(12, List.of(new ArticleId(3)), 0.83))));
 
 		this.repository.deleteByArticles(List.of());
 
 		assertThat(rowsOf(5)).isEqualTo(1);
 	}
 
-	private static MembershipRecord record(long article, List<JudgedEvent> candidates) {
+	private static MembershipRecord record(long article, List<RecordedCandidate> candidates) {
 		return record(article, candidates, AT);
 	}
 
-	private static MembershipRecord record(long article, List<JudgedEvent> candidates, Instant judgedAt) {
+	private static MembershipRecord record(long article, List<RecordedCandidate> candidates, Instant judgedAt) {
 		return new MembershipRecord(new ArticleId(article), candidates, "jev", "jev-1.14.0", "membership-1", 812, RAW,
 				judgedAt);
 	}

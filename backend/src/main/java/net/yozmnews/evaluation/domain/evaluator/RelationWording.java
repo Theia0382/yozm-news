@@ -17,7 +17,7 @@ import net.yozmnews.evaluation.RelationAnswer;
 /**
  * 관계 판정의 문구와 그 판 — docs/specs/evaluation.md §4 · evaluation-R48.
  * <p>
- * 요청의 state 는 두 흐름의 서술이고({@link #state}), 질문은 관계 하나와 흐름마다 한 사안인가다. 문구나 state · 질문의 조립 모양을 바꾸면
+ * 요청의 state 는 두 스토리라인의 서술이고({@link #state}), 질문은 관계 하나와 스토리라인마다 한 사안인가다. 문구나 state · 질문의 조립 모양을 바꾸면
  * 판을 올린다 — 판은 판정 원본에 남아 바꾼 전후의 판정을 가른다. 판마다 답의 집합이 다를 수 있다 — 판정은 언제나 지금 판({@link #CURRENT})으로
  * 묻고, 옛 판은 그 판으로 남긴 판정 원본을 다시 읽을 때 쓴다({@link #ofVersion}).
  *
@@ -25,12 +25,12 @@ import net.yozmnews.evaluation.RelationAnswer;
  * @param question 관계 질문
  * @param options 답마다 선택지의 문장 — 이 판의 답 모두
  * @param order 요청에 선택지를 싣는 순서 — 이 판의 답 모두를 한 번씩. 답의 선언 순서(동률 순서)와는 다른 지식이다
- * @param oneMatter 한 사안 질문의 틀 — {@value #FLOW_NAME} 자리에 흐름 이름이 들어간다
+ * @param oneMatter 한 사안 질문의 틀 — {@value #FLOW_NAME} 자리에 스토리라인 이름이 들어간다
  */
 public record RelationWording(String version, String question, Map<RelationAnswer, String> options,
 		List<RelationAnswer> order, String oneMatter) {
 
-	/** 한 사안 질문의 틀에서 흐름 이름이 들어갈 자리 */
+	/** 한 사안 질문의 틀에서 스토리라인 이름이 들어갈 자리 */
 	public static final String FLOW_NAME = "{flow}";
 
 	/** 요청에서 first 를 부르는 이름 */
@@ -98,7 +98,7 @@ public record RelationWording(String version, String question, Map<RelationAnswe
 
 	/**
 	 * @throws IllegalArgumentException 판 · 문장이 공백뿐이거나, 선택지에 해당 없음이 없거나, 순서가 선택지의 답을 한 번씩 담지 않거나, 한
-	 * 사안 질문의 틀에 흐름 이름의 자리가 없을 때
+	 * 사안 질문의 틀에 스토리라인 이름의 자리가 없을 때
 	 */
 	public RelationWording {
 		Objects.requireNonNull(version, "version");
@@ -122,7 +122,7 @@ public record RelationWording(String version, String question, Map<RelationAnswe
 			}
 		}
 		if (!oneMatter.contains(FLOW_NAME)) {
-			throw new IllegalArgumentException("한 사안 질문의 틀에 흐름 이름의 자리가 없다");
+			throw new IllegalArgumentException("한 사안 질문의 틀에 스토리라인 이름의 자리가 없다");
 		}
 		options = Collections.unmodifiableMap(new EnumMap<>(options));
 	}
@@ -138,28 +138,28 @@ public record RelationWording(String version, String question, Map<RelationAnswe
 	}
 
 	/**
-	 * 요청의 state — 정본. 흐름마다 머리 줄 하나와 서술 사건마다 제목 줄, 요약문을 실으면 그 다음 줄이다. 두 흐름 사이에 빈 줄을 둔다.
+	 * 요청의 state — 정본. 스토리라인마다 머리 줄 하나와 서술 사건마다 제목 줄, 요약문을 실으면 그 다음 줄이다. 두 스토리라인 사이에 빈 줄을 둔다.
 	 */
-	public String state(FlowText first, FlowText second) {
-		List<String> lines = new ArrayList<>(flow(FIRST_NAME, first));
+	public String state(StorylineText first, StorylineText second) {
+		List<String> lines = new ArrayList<>(storyline(FIRST_NAME, first));
 		lines.add("");
-		lines.addAll(flow(SECOND_NAME, second));
+		lines.addAll(storyline(SECOND_NAME, second));
 		return String.join("\n", lines);
 	}
 
 	/**
 	 * 한 사안 질문의 문장 — 정본
-	 * @param flowName 흐름 이름({@value #FIRST_NAME} · {@value #SECOND_NAME})
+	 * @param storylineName 스토리라인 이름({@value #FIRST_NAME} · {@value #SECOND_NAME})
 	 */
-	public String oneMatterQuestion(String flowName) {
-		return this.oneMatter.replace(FLOW_NAME, flowName);
+	public String oneMatterQuestion(String storylineName) {
+		return this.oneMatter.replace(FLOW_NAME, storylineName);
 	}
 
-	private static List<String> flow(String name, FlowText flow) {
+	private static List<String> storyline(String name, StorylineText storyline) {
 		List<String> lines = new ArrayList<>();
-		lines.add("Flow " + name + " (" + flow.happenings() + " happenings, " + day(flow.firstAt()) + " to "
-				+ day(flow.lastAt()) + "):");
-		for (HappeningText happening : flow.described()) {
+		lines.add("Flow " + name + " (" + storyline.happenings() + " happenings, " + day(storyline.firstAt()) + " to "
+				+ day(storyline.lastAt()) + "):");
+		for (HappeningText happening : storyline.described()) {
 			lines.add("- [" + day(happening.at()) + "] " + happening.title());
 			if (happening.summary() != null) {
 				lines.add("  summary: " + happening.summary());

@@ -22,12 +22,12 @@ import org.junit.jupiter.api.Test;
 class RelationWordingTests {
 
 	@Test
-	void writesBothFlowsWithUtcDaysAndTheSummariesUnderTheirTitles() {
-		FlowText first = new FlowText(6, Instant.parse("2026-10-29T15:10:00Z"), Instant.parse("2026-11-02T01:00:00Z"),
+	void writesBothStorylinesWithUtcDaysAndTheSummariesUnderTheirTitles() {
+		StorylineText first = new StorylineText(6, Instant.parse("2026-10-29T15:10:00Z"), Instant.parse("2026-11-02T01:00:00Z"),
 				List.of(new HappeningText(Instant.parse("2026-10-29T15:10:00Z"), "특검법 본회의 통과", "재석 과반 찬성"),
 						// 한국 시간으로는 11-01 이다 — 날짜는 UTC 로 적는다
 						new HappeningText(Instant.parse("2026-10-31T23:30:00Z"), "야당 거부권 건의", null)));
-		FlowText second = new FlowText(3, Instant.parse("2026-11-01T02:00:00Z"), Instant.parse("2026-11-03T09:00:00Z"),
+		StorylineText second = new StorylineText(3, Instant.parse("2026-11-01T02:00:00Z"), Instant.parse("2026-11-03T09:00:00Z"),
 				List.of(new HappeningText(Instant.parse("2026-11-01T02:00:00Z"), "특검 후보 추천", null)));
 
 		assertThat(RelationWording.CURRENT.state(first, second)).isEqualTo("""
@@ -89,7 +89,7 @@ class RelationWordingTests {
 	}
 
 	@Test
-	void rejectsAWordingWithoutNoneOrAnOrderOfItsOptionsOrThePlaceOfTheFlowName() {
+	void rejectsAWordingWithoutNoneOrAnOrderOfItsOptionsOrThePlaceOfTheStorylineName() {
 		Map<RelationAnswer, String> all = new EnumMap<>(RelationAnswer.class);
 		for (RelationAnswer answer : RelationAnswer.values()) {
 			all.put(answer, "선택지 " + answer);
@@ -111,7 +111,7 @@ class RelationWordingTests {
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationWording("w", "관계는", all, twice, "{flow} 는"))
 			.withMessageStartingWith("순서는 선택지의 답을 한 번씩 담는다");
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationWording("w", "관계는", all, order, "한 사안인가"))
-			.withMessage("한 사안 질문의 틀에 흐름 이름의 자리가 없다");
+			.withMessage("한 사안 질문의 틀에 스토리라인 이름의 자리가 없다");
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationWording(" ", "관계는", all, order, "{flow} 는"))
 			.withMessage("문구 판 · 질문이 비었다");
 	}
