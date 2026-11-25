@@ -42,4 +42,6 @@
 
 ## 후속 기록
 
+- 2026-11-04: 근거 절 "합성 데이터 측정" 의 실측 — 원본 응답은 기본 체계의 Jev 형식(텍스트 3,027바이트 · 저장 1,099바이트)이고 평가마다 더한 태그는 4행이며, 500건을 읽는 트랜잭션 하나는 평균 0.175 · 0.182초로 점유 기간 10분 안이었다. 실제 Jev 응답의 크기와 운영 기기에서는 재지 않았다(evaluation Spec 의 측정 기록, d21f8e6)
+- 2026-11-11: 근거 절 "합성 데이터 측정" 의 실측 — 원본 응답을 평가 행에서 함께 읽던 구조의 값이고, 판정 원본을 평가마다 따로 읽는 구조([ADR-0112](0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md))로는 재지 않았다(tag Spec 의 측정 기록, 22a519f)
 - 2026-11-13: 결정 절 "원본 응답의 형식은 평가기 포트가 안다"를 관계 판정 원본에 넓힌 것 — [ADR-0138](0138-relation-judgement-probabilities-are-read-for-operators-by-the-evaluator-rereading-stored-raw-responses.md) · [evaluation Spec "관계 판정 원본 조회"](../specs/evaluation.md#관계-판정-원본-조회) evaluation-R50
