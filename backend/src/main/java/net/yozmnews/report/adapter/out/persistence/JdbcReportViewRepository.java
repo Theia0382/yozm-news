@@ -79,7 +79,7 @@ class JdbcReportViewRepository implements ReportViewRepository {
 		Objects.requireNonNull(end, "end");
 		return this.jdbc.sql("select " + ROW_COLUMNS + """
 				 from reports
-				where user_id = :user and period_kind = :kind and period_end = :end and status <> 'SCHEDULED'
+				where user_id = :user and period_kind = :kind and period_end = :end and started_at is not null
 				order by id desc limit 1""")
 			.param("user", user.value())
 			.param("kind", kind.name())

@@ -83,6 +83,9 @@ export const reportFailureTexts: Record<ReportFailure, string> = {
   QUOTA_EXHAUSTED: "공급자 계정의 잔액이나 지출 한도가 소진됐습니다.",
   PROVIDER_UNAVAILABLE: "공급자가 여러 번 다시 보내도 답하지 못했습니다.",
   PROVIDER_UNEXPECTED: "공급자가 예상하지 못한 답을 했습니다.",
+  NO_USABLE_MODEL:
+    "쓸 수 있는 모델이 없어 만들기를 시작하지 못했습니다. 유효한 LLM 키와 고른 모델을 확인하세요.",
+  INTERRUPTED: "만들기가 정한 시간 안에 끝나지 않아 멈췄습니다.",
 };
 
 /** 섹션 종류마다 숫자 표의 이름 — 개요는 표가 없다 */

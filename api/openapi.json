@@ -10348,7 +10348,7 @@
           },
           "failure" : {
             "type" : [ "string", "null" ],
-            "enum" : [ "UNREADABLE_OUTPUT", "OUTPUT_TRUNCATED", "OUTPUT_REFUSED", "KEY_MISSING", "KEY_INVALID", "PERMISSION_DENIED", "QUOTA_EXHAUSTED", "PROVIDER_UNAVAILABLE", "PROVIDER_UNEXPECTED" ]
+            "enum" : [ "UNREADABLE_OUTPUT", "OUTPUT_TRUNCATED", "OUTPUT_REFUSED", "KEY_MISSING", "KEY_INVALID", "PERMISSION_DENIED", "QUOTA_EXHAUSTED", "PROVIDER_UNAVAILABLE", "PROVIDER_UNEXPECTED", "NO_USABLE_MODEL", "INTERRUPTED" ]
           },
           "firstDay" : {
             "type" : "string",

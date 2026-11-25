@@ -159,9 +159,9 @@ class LlmReportGeneratorFlowTests {
 	}
 
 	private Map<String, Object> run(UserId user) {
-		ReportGeneration generation = new ReportGeneration(this.reports, this.sections,
+		ReportGeneration generation = new ReportGeneration(this.reports, this.sections, new ReportEndings(this.reports),
 				new LlmReportGenerator(this.gateway), this.transaction, TestClocks.of(Instant::now));
-		ReportId id = generation.schedule(user, ReportFixtures.PERIOD);
+		ReportId id = generation.schedule(user, ReportFixtures.PERIOD).id();
 		ReportInput input = ReportFixtures.input(user, ReportFixtures.PERIOD,
 				ReportFixtures.flows(ReportFixtures.flow(31, 902)), ReportFixtures.coverage(), ReportFixtures.interests(31));
 		ReportStatus status = generation.run(id, MODEL, ReportFixtures.EFFORT, input);

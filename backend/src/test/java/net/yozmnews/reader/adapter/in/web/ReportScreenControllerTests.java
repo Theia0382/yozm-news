@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Duration;
 import java.time.Instant;
 
 import net.yozmnews.LlmKeyRows;
@@ -91,8 +92,11 @@ class ReportScreenControllerTests {
 	void listsOneKindLatestFirstWithThePeriodDaysAndAPageCursor() throws Exception {
 		long user = this.reader.id().value();
 		long[] weeks = new long[ReportScreenController.REPORTS_PAGE_SIZE + 1];
+		// 같은 사용자 · 종류 · 기간은 하나라 앞선 주들은 한 주씩 앞선 기간이다 — 가장 늦은 실패만 기본 기간
 		for (int i = 0; i < weeks.length; i++) {
-			weeks[i] = this.reports.report(user, "EMPTY", null);
+			Duration earlier = Duration.ofDays(7L * (weeks.length - i));
+			weeks[i] = this.reports.report(user, "WEEK", "EMPTY", ReportRows.WEEK_START.minus(earlier),
+					ReportRows.WEEK_END.minus(earlier), null, null);
 		}
 		long failed = this.reports.report(user, "FAILED", null);
 		this.reports.report(user, "MONTH", "READY", Instant.parse("2026-09-30T15:00:00Z"),
@@ -279,7 +283,8 @@ class ReportScreenControllerTests {
 		this.reports.section(partly, "OVERVIEW", 0, null, "개요");
 		this.reports.item(this.reports.section(partly, "STORYLINES", 1, "흐름", "본문"), 0, 999_991L, null);
 		this.reports.section(partly, "COVERAGE", 2, "보도량", "본문");
-		long scheduled = this.reports.report(user, "SCHEDULED", null);
+		long scheduled = this.reports.report(user, "WEEK", "SCHEDULED", ReportRows.WEEK_END,
+				ReportRows.WEEK_END.plus(Duration.ofDays(7)), null, null);
 
 		this.mockMvc.perform(get("/api/reports/{id}", partly).with(this.reader))
 			.andExpect(status().isOk())

@@ -107,7 +107,7 @@ class ReportGenerationTests {
 
 	@Test
 	void savesTheOverviewSectionsAndCitationsOfAReadyReport() {
-		ReportId id = generation(new FakeReportGenerator()).schedule(new UserId(7), WEEK);
+		ReportId id = generation(new FakeReportGenerator()).schedule(new UserId(7), WEEK).id();
 		ReportInput input = input(flows(flow(31, 902)), interests(31), coverage());
 
 		ReportStatus status = generation(new FakeReportGenerator()).run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input);
@@ -140,15 +140,16 @@ class ReportGenerationTests {
 	void recordsThePreviousReportOfTheInputWhenItStarts() {
 		ReportGeneration generation = generation(new FakeReportGenerator());
 		ReportId previous = generation.schedule(new UserId(7),
-				new ReportPeriod(ReportPeriodKind.WEEK, WEEK.start().minus(Duration.ofDays(7)), WEEK.start()));
-		ReportId withPrevious = generation.schedule(new UserId(7), WEEK);
-		ReportId empty = generation.schedule(new UserId(7), WEEK);
+				new ReportPeriod(ReportPeriodKind.WEEK, WEEK.start().minus(Duration.ofDays(7)), WEEK.start())).id();
+		ReportId withPrevious = generation.schedule(new UserId(7), WEEK).id();
+		// 같은 사용자 · 종류 · 기간의 리포트는 하나다(유일 제약) — 갈래 없는 시작은 다른 사용자의 같은 기간으로 본다
+		ReportId empty = generation.schedule(new UserId(8), WEEK).id();
 		ReportInput base = input(interests());
 
 		generation.run(withPrevious, ReportFixtures.MODEL, ReportFixtures.EFFORT, new ReportInput(base.user(),
 				base.period(), base.zone(), base.sections(), base.priors(), base.statsSnapshot(), previous));
 		generation.run(empty, ReportFixtures.MODEL, ReportFixtures.EFFORT,
-				new ReportInput(base.user(), base.period(), base.zone(), List.of(), base.priors(), base.statsSnapshot(),
+				new ReportInput(new UserId(8), base.period(), base.zone(), List.of(), base.priors(), base.statsSnapshot(),
 						previous));
 
 		assertThat(row(withPrevious)).containsEntry("status", "READY")
@@ -163,7 +164,7 @@ class ReportGenerationTests {
 	@Test
 	void refusesAnInputOfAnotherUserOrPeriodWithoutWritingAnything() {
 		ReportGeneration generation = generation(new FakeReportGenerator());
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 		List<ReportInput> others = List.of(
 				input(new UserId(8), WEEK, interests()),
 				input(new UserId(7), new ReportPeriod(ReportPeriodKind.MONTH, WEEK.start(), WEEK.end()), interests()),
@@ -190,7 +191,7 @@ class ReportGenerationTests {
 	void endsEmptyWithoutCallingTheGeneratorWhenTheInputHasNoSection() {
 		AtomicInteger calls = new AtomicInteger();
 		ReportGeneration generation = generation(scripted(calls, request -> "{}"));
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input())).isEqualTo(ReportStatus.EMPTY);
 
@@ -208,7 +209,7 @@ class ReportGenerationTests {
 	@Test
 	void writesAReadyReportForASectionWithoutTargets() {
 		ReportGeneration generation = generation(new FakeReportGenerator());
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests())))
 			.isEqualTo(ReportStatus.READY);
@@ -221,7 +222,7 @@ class ReportGenerationTests {
 	@Test
 	void theContextUseCaseCallsTheRealGeneratorOutsideLocalWhichEndsKeyMissingWithoutAKey() {
 		// 시험 profile 에 local 이 없어 컨텍스트의 생성기는 실제 생성기다 — 사용자 7 은 저장한 키가 없어 관문이 보내지 않는다
-		ReportId id = this.contextGeneration.schedule(new UserId(7), WEEK);
+		ReportId id = this.contextGeneration.schedule(new UserId(7), WEEK).id();
 
 		assertThat(this.contextGeneration.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests())))
 			.isEqualTo(ReportStatus.FAILED);
@@ -241,7 +242,7 @@ class ReportGenerationTests {
 	void doesNothingForAFinishedReport() {
 		AtomicInteger calls = new AtomicInteger();
 		ReportGeneration generation = generation(new FakeReportGenerator());
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 		generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests()));
 
 		ReportGeneration again = generation(scripted(calls, request -> "{}"));
@@ -255,7 +256,7 @@ class ReportGenerationTests {
 	@Test
 	void refusesToRunInsideATransactionWithoutWriting() {
 		ReportGeneration generation = generation(new FakeReportGenerator());
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		assertThatIllegalStateException()
 			.isThrownBy(() -> this.transaction.executeWithoutResult(
@@ -282,7 +283,7 @@ class ReportGenerationTests {
 					completed_at = now(), version = version + 1 where id = :id""").param("id", target.get().value()).update();
 			return "{\"overview\":\"개요\",\"sections\":{\"interests\":{\"title\":\"제목\",\"body\":\"본문\",\"refs\":[]}}}";
 		}));
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 		target.set(id);
 
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests())))
@@ -303,7 +304,7 @@ class ReportGenerationTests {
 				.update();
 			return "{\"overview\":\"개요\",\"sections\":{\"interests\":{\"title\":\"제목\",\"body\":\"본문\",\"refs\":[]}}}";
 		}));
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 		target.set(id);
 
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests())))
@@ -319,7 +320,7 @@ class ReportGenerationTests {
 		ReportGeneration generation = generation(request -> {
 			throw new IllegalStateException("예상 밖의 생성기 오류");
 		});
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		assertThatIllegalStateException()
 			.isThrownBy(() -> generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests())))
@@ -338,7 +339,7 @@ class ReportGenerationTests {
 			this.now.set(T0.plusMillis(1_500));
 			return new ReportOutcome.Failed(ReportFailure.OUTPUT_REFUSED, "공급자 문구");
 		});
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests())))
 			.isEqualTo(ReportStatus.FAILED);
@@ -357,7 +358,7 @@ class ReportGenerationTests {
 			requests.add(request);
 			return "{\"overview\":\"개요\"}";
 		}));
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests())))
 			.isEqualTo(ReportStatus.FAILED);
@@ -381,7 +382,7 @@ class ReportGenerationTests {
 		ReportGeneration generation = generation(scripted(calls, request -> (calls.get() == 1) ? "{\"overview\":\"개요\"}"
 				: """
 						{"overview":"다시 쓴 개요","sections":{"interests":{"title":"관심","body":"본문","refs":[]}}}"""));
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests())))
 			.isEqualTo(ReportStatus.READY);
@@ -402,7 +403,7 @@ class ReportGenerationTests {
 					{"overview":"둘째 개요","sections":{"coverage":{"title":"보도량","body":"본문","refs":[]},\
 					"interests":{"title":"관심","body":"본문","refs":[]}}}""";
 		}));
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(coverage(), interests())))
 			.isEqualTo(ReportStatus.READY);
@@ -424,7 +425,7 @@ class ReportGenerationTests {
 					new TokenUsage(11, 22), GenerationStop.COMPLETE)
 					: new ReportOutcome.Generated("{", new TokenUsage(5, 7), GenerationStop.TRUNCATED);
 		});
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(coverage(), interests())))
 			.isEqualTo(ReportStatus.READY);
@@ -440,7 +441,7 @@ class ReportGenerationTests {
 			calls.incrementAndGet();
 			return new ReportOutcome.Generated("{", new TokenUsage(11, 22), GenerationStop.TRUNCATED);
 		});
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests())))
 			.isEqualTo(ReportStatus.FAILED);
@@ -459,7 +460,7 @@ class ReportGenerationTests {
 			return """
 					{"overview":"개요","sections":{"storylines":{"title":"흐름","body":"본문","refs":["S1"]}}}""";
 		}));
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		generation.run(id, ReportFixtures.MODEL, ReasoningEffort.HIGH, input(flows(flow(31, 902))));
 
@@ -486,7 +487,7 @@ class ReportGenerationTests {
 			return """
 					{"overview":"개요","sections":{"storylines":{"title":"흐름","body":"본문","refs":["S1"]}}}""";
 		}));
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 		ReportInput input = input(new StorylinesSection(List.of(recentFlow(31, 50, "가"), recentFlow(32, 10, "나"),
 				recentFlow(33, 30, "다"))));
 
@@ -508,7 +509,7 @@ class ReportGenerationTests {
 		AtomicInteger calls = new AtomicInteger();
 		ReportGeneration generation = generation(scripted(calls, request -> """
 				{"overview":"개요","sections":{"storylines":{"title":"흐름","body":"본문","refs":["S1","Z9",""]}}}"""));
-		ReportId id = generation.schedule(new UserId(7), WEEK);
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT,
 				input(flows(flow(31)), coverage())))
@@ -522,7 +523,7 @@ class ReportGenerationTests {
 	}
 
 	private ReportGeneration generation(ReportGenerator generator) {
-		return new ReportGeneration(this.reports, this.sections, generator, this.transaction,
+		return new ReportGeneration(this.reports, this.sections, new ReportEndings(this.reports), generator, this.transaction,
 				TestClocks.of(() -> this.now.get()));
 	}
 

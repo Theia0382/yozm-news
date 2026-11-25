@@ -252,6 +252,23 @@ describe("ReportPage", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it.each([
+    [
+      "NO_USABLE_MODEL",
+      "쓸 수 있는 모델이 없어 만들기를 시작하지 못했습니다. 유효한 LLM 키와 고른 모델을 확인하세요.",
+    ],
+    ["INTERRUPTED", "만들기가 정한 시간 안에 끝나지 않아 멈췄습니다."],
+  ] as const)(
+    "일정의 실패 %s 도 그 코드의 무슨 일을 보인다",
+    async (failure, text) => {
+      renderReport(detail(summary(12, { status: "FAILED", failure })));
+
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent("리포트를 만들지 못했습니다.");
+      expect(alert).toHaveTextContent(text);
+    },
+  );
+
   it("없는 리포트는 찾을 수 없다고 알리고, 숫자가 아닌 주소는 묻지 않는다", async () => {
     renderReport(() => problem(404, "없는 리포트: 12"));
     expect(await screen.findByRole("alert")).toHaveTextContent(
