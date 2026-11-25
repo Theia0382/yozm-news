@@ -8,7 +8,7 @@ import java.util.Objects;
 import net.yozmnews.platform.UserId;
 
 /**
- * 사용자 하나의 리포트 일정 — {@link ReportScheduleDirectory} 가 낸다. docs/specs/user.md §3 · user-R50 · user-R61
+ * 사용자 하나의 리포트 일정 — {@link ReportScheduleDirectory} 가 낸다. docs/specs/user.md §3 · user-R50 · user-R76
  *
  * @param user 사용자
  * @param timezone 일정의 기준 시간대

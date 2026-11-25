@@ -88,7 +88,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.digest` 의 공개 타입은 받은 소식의 공개 조회 `ReceivedArticles`, 수동 생성의 공개 API `DigestRequests` 와 그 결과 `DigestRequestOutcome`, 다이제스트 조회 `DigestDirectory` 와 그 값(`DigestDay` · `ShownDigest` · `DigestSectionView` · `DigestCitation` · `DigestAttempt` · `DigestDayUsage` · `DigestDates` · `DigestDateEntry` · `DigestDayState` · `DigestRequestStatus` · `DigestUnresolvedFailure` · `DigestItemPage` · `DigestItemRef` · `DigestItemCursor`), 관심사 히스토리의 공개 조회 `InterestHistory` 와 그 값(`InterestHistorySpan` · `InterestTimeline` · `InterestPeriodView` · `InterestPoint` · `TopicSubscriptionStep`), 구독 제안의 공개 조회 `TopicSuggestions` 와 그 값 `TopicSuggestionList`, 공개 값이 쓰는 enum 넷(`DigestStatus` · `DigestFailure` · `SelectionReason` · `SectionKind` — 상태 · 실패 코드 · 선정 이유 · 섹션 종류, digest-R1 · R7 · R8)이다. HTTP 엔드포인트는 없다 — 화면용 API 는 `reader` 가 낸다. 받는 이벤트는 `article` 의 `ArticlesRemoved` 다(§4 들어오는 쪽). 내는 이벤트는 `user` 가 선언한 `DigestFailed` · `DigestCompleted` 다(digest-R33 — [user Spec](user.md#digestfailed) · [`DigestCompleted`](user.md#digestcompleted)). 다른 모듈이 선언한 인터페이스 넷을 구현한다 — `feedback` 의 `DigestItems`([feedback Spec](feedback.md#digestitems) — 구현 `application` 의 `DigestItemsService`, digest-R14)와 `user` 의 `TopicInterestNow`([user Spec](user.md#topicinterestnow) — 구현 `application` 의 `TopicSuggestionService`, digest-R43) · `InterestSignalWindow`([user Spec](user.md#interestsignalwindow) — 구현 `application` 의 `InterestSignalWindows`) · `StorylineStandingNow`([user Spec](user.md#storylinestandingnow) — 구현 `application` 의 `StorylineStandingService`, digest-R51).
+모듈 최상위 패키지 `net.yozmnews.digest` 의 공개 타입은 받은 소식의 공개 조회 `ReceivedArticles`, READY 다이제스트 날짜 수의 공개 조회 `ReadyDigestDays`, 수동 생성의 공개 API `DigestRequests` 와 그 결과 `DigestRequestOutcome`, 다이제스트 조회 `DigestDirectory` 와 그 값(`DigestDay` · `ShownDigest` · `DigestSectionView` · `DigestCitation` · `DigestAttempt` · `DigestDayUsage` · `DigestDates` · `DigestDateEntry` · `DigestDayState` · `DigestRequestStatus` · `DigestUnresolvedFailure` · `DigestItemPage` · `DigestItemRef` · `DigestItemCursor`), 관심사 히스토리의 공개 조회 `InterestHistory` 와 그 값(`InterestHistorySpan` · `InterestTimeline` · `InterestPeriodView` · `InterestPoint` · `TopicSubscriptionStep`), 구독 제안의 공개 조회 `TopicSuggestions` 와 그 값 `TopicSuggestionList`, 공개 값이 쓰는 enum 넷(`DigestStatus` · `DigestFailure` · `SelectionReason` · `SectionKind` — 상태 · 실패 코드 · 선정 이유 · 섹션 종류, digest-R1 · R7 · R8)이다. HTTP 엔드포인트는 없다 — 화면용 API 는 `reader` 가 낸다. 받는 이벤트는 `article` 의 `ArticlesRemoved` 다(§4 들어오는 쪽). 내는 이벤트는 `user` 가 선언한 `DigestFailed` · `DigestCompleted` 다(digest-R33 — [user Spec](user.md#digestfailed) · [`DigestCompleted`](user.md#digestcompleted)). 다른 모듈이 선언한 인터페이스 넷을 구현한다 — `feedback` 의 `DigestItems`([feedback Spec](feedback.md#digestitems) — 구현 `application` 의 `DigestItemsService`, digest-R14)와 `user` 의 `TopicInterestNow`([user Spec](user.md#topicinterestnow) — 구현 `application` 의 `TopicSuggestionService`, digest-R43) · `InterestSignalWindow`([user Spec](user.md#interestsignalwindow) — 구현 `application` 의 `InterestSignalWindows`) · `StorylineStandingNow`([user Spec](user.md#storylinestandingnow) — 구현 `application` 의 `StorylineStandingService`, digest-R51).
 
 ### ReceivedArticles
 
@@ -108,6 +108,23 @@ public interface ReceivedArticles {
 - 계약
   - 읽기 전용 트랜잭션 하나 · 질의 하나다. 역할 애너테이션이 없다(두 역할 공통)
   - 다른 사용자의 다이제스트는 보지 않는다 — 사용자는 부르는 쪽이 세션에서 받은 `UserId` 다
+
+### ReadyDigestDays
+
+READY 다이제스트의 날짜 수 — 변화 리포트의 일정이 주간 리포트를 만들지 정하려고 읽는다([report Spec](report.md#생성-조건) report-R28). 구현은 `application` 의 `ReadyDigestDaysService` 다.
+
+```java
+public interface ReadyDigestDays {
+    int count(UserId user, Instant from, Instant to);
+}
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `count` | 그 사용자의 `READY` 다이제스트 가운데 기간 끝(일정이면 생성 시각, 수동이면 요청 시각 — 사용자에게 간 때)이 `from` 이상 · `to` 미만인 것의 서로 다른 다이제스트 날짜 수(digest-R54). `to` 가 `from` 보다 뒤가 아니면 `IllegalArgumentException` |
+
+- 계약
+  - 사용자를 인자로 받는 조회다. 읽기 전용 트랜잭션 하나 · 질의 하나다. 쓰지 않는다. 역할 애너테이션이 없다
 
 ### DigestRequests
 
@@ -171,7 +188,7 @@ public record DigestSectionView(SectionKind kind, @Nullable String title, @Nulla
 }
 public record DigestCitation(ArticleId article) { }
 public record DigestAttempt(long digestId, DigestStatus status, @Nullable DigestFailure failure,
-        @Nullable DigestFailureCause cause, @Nullable Instant completedAt) { }
+        @Nullable GenerationFailureCause cause, @Nullable Instant completedAt) { }
 public record DigestDayUsage(int attempts, long inputTokens, long outputTokens) { }
 public record DigestDates(List<DigestDateEntry> dates, @Nullable LocalDate next) { }
 public record DigestDateEntry(LocalDate date, DigestDayState state) { }
@@ -202,7 +219,7 @@ public record DigestUnresolvedFailure(LocalDate digestDate, Instant failedAt) { 
 | `DigestRequestStatus` | 지금의 사용자 시간대 날짜 · 사용자 시간대 · 쓸 모델 유무 · 진행 중 · 오늘 남은 수동 횟수 · 다시 차는 시각 · 지금 요청하면 만들 날짜와 그것이 다시 만들기인가 · 일정이 오늘을 만들 생성 시각(아직 오지 않았을 때만, 아니면 null) · 해결되지 않은 마지막 실패(없으면 null)(digest-R40) |
 | `DigestUnresolvedFailure` | 해결되지 않은 마지막 실패의 날짜와 끝낸 시각 — 끝낸 시각은 그 실패의 `DigestFailed.failedAt` 과 같은 값이다(digest-R33 · R40) |
 
-`DigestFailureCause` 는 `user` 의 공개 타입이다([user Spec](user.md#digestfailed)). `ArticleId` 는 `article` 의, `EventId` 는 `event` 의 공개 타입이다.
+`GenerationFailureCause` 는 `user` 의 공개 타입이다([user Spec](user.md#digestfailed)). `ArticleId` 는 `article` 의, `EventId` 는 `event` 의 공개 타입이다.
 
 - 계약
   - 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만 부른다. 다른 사용자의 다이제스트는 보지 않는다. 쓰지 않는다
@@ -338,7 +355,7 @@ sequenceDiagram
 - 반복 작업 — `CandidateCleanupJob`(작업 역할, 하루마다 — ID `digest-candidate-cleanup`, 실패해도 재시도하지 않는다 — 다음 회차가 잇는다). `CandidateCleanup` 을 부른다(digest-R11)
 - 반복 작업 — `ScheduleDueDigestsJob`(작업 역할, 1분마다 — ID `schedule-due-digests`) → `DigestScheduling`(digest-R29), `RecoverStalledDigestsJob`(작업 역할, 5분마다 — ID `recover-stalled-digests`) → `StalledDigests`(digest-R32). 둘 다 재시도하지 않는다 — 다음 회차가 잇는다
 - 생성 작업 — `GenerateDigestJob.run(digestId, token)`(작업 역할 — 작업 ID 는 등록 토큰, 재시도하지 않는다) → `DigestRun`(digest-R29). 등록은 일정 회차 · 수동 생성 · 거두기가 커밋 뒤 `DigestDispatch` 로 한다
-- 공개 API — `DigestRequests`(digest-R31) · 공개 조회 `DigestDirectory`(digest-R38 ~ R40) · `TopicSuggestions`(digest-R42). 부르는 쪽은 `reader` 의 화면용 처리기다. `user` 의 거절 처리기가 `TopicInterestNow`(digest-R43)를, `user` 의 정리 실행이 `StorylineStandingNow`(digest-R51)를 부른다. 컨트롤러는 없다
+- 공개 API — `DigestRequests`(digest-R31) · 공개 조회 `DigestDirectory`(digest-R38 ~ R40) · `TopicSuggestions`(digest-R42). `report` 의 일정 회차가 공개 조회 `ReadyDigestDays`(digest-R54)를 부른다. 부르는 쪽은 `reader` 의 화면용 처리기다. `user` 의 거절 처리기가 `TopicInterestNow`(digest-R43)를, `user` 의 정리 실행이 `StorylineStandingNow`(digest-R51)를 부른다. 컨트롤러는 없다
 
 ### `application`
 
@@ -350,6 +367,7 @@ sequenceDiagram
 - `StalledDigests` — 거두기 회차(digest-R32). 기준 시각 셋은 `platform` 의 `AppClock.before` 로 회차 시작에 한 번 정한다 — 시계가 넘긴 시간을 뺀 경과다(platform-R28)
 - `DigestRequestsService` — 공개 API `DigestRequests` 의 구현(digest-R31). 대상 날짜 · 기간과 오늘 횟수는 `ManualTargets` 로 읽는다. 역할 애너테이션 없음
 - `ManualTargets` — 수동 생성 대상 · 오늘 횟수 읽기의 정본 — 행 조회(`DigestLedger`)로 `ManualTarget.of` 의 재료를 읽어 대상을 정하고(`targetOf`), 사용자 시간대의 오늘 만든 수동 행을 세고(`manualCountOn`), 다음 날 0시(`nextDayStart`)를 낸다. 트랜잭션 안에서 부른다. 스프링 구성 요소가 아니다 — `DigestRequestsService` · `DigestDirectoryService` 가 행 조회로 만든다(digest-R31 · R40)
+- `ReadyDigestDaysService` — 공개 조회 `ReadyDigestDays` 의 구현. 읽기 전용 트랜잭션 하나에서 `DigestLedger.readyDayCount` 를 부른다(digest-R54)
 - `DigestDirectoryService` — 공개 조회 `DigestDirectory` 의 구현. 날짜 보기는 `DigestLedger.latestDate` · `DigestDayRepository` 로 읽어 `DigestDays` 에, 날짜 목록은 `limit + 1` 개를 읽어 `DigestDayStates.page` 에 맡긴다. 날짜 보기의 섹션이 저장한 꼭대기는 `storyline` 의 `StorylineDirectory.topsOfStorylines`(`StorylineTopsQueries`) 한 번으로 지금 꼭대기로 푼다(digest-R38). 수동 생성 상태는 `user` 의 `UserDigestSchedules`(시간대 · 생성 시각) · `DigestModelDirectory` 와 `ManualTargets` · `DigestLedger.latestDate` · `DigestDayRepository` 의 실패 재료로 읽어 `DigestScheduleRules.upcomingToday` · `UnresolvedFailures` 에 맡긴다. 시계는 `platform` 의 앱 시계(`InstantSource` — platform-R26), 역할 애너테이션 없음(digest-R38 ~ R40)
 - `DigestArticleRemoval` — 지운 기사 따르기. 트랜잭션 하나 — 지우는 항목 섹션의 항목 기록은 `feedback` 의 `DigestItemRemoval.forget` 으로 지운다(digest-R10)
 - `DigestArticleRemovalListener` — `ArticlesRemoved` 리스너
@@ -369,10 +387,10 @@ sequenceDiagram
 
 - `Digest` — 상태 aggregate(`digests`) — 상태 전이의 정본(digest-R1). 바꾸는 메서드는 새 값을 돌려준다. 버전(`@Version`)을 갖는다. 끝낸 시각은 저장 정밀도(마이크로초)로 갖는다 — 저장한 행과 실패 이벤트의 시각이 같은 값이다(digest-R33)
 - `DigestRepository` — 상태 저장소. 다이제스트 행 잠금(`lock`)
-- `DigestLedger` — 행 조회 — 사용자마다 가장 늦은 날짜 · 직전 `READY` · `EMPTY` 의 끝 · 그 날짜의 가장 최근 기간 · 진행 중 · 하루 수동 수 · 멈춘 등록 · 멈춘 생성(digest-R29 ~ R32). 구현 `JdbcDigestLedger`
+- `DigestLedger` — 행 조회 — 사용자마다 가장 늦은 날짜 · 직전 `READY` · `EMPTY` 의 끝 · 그 날짜의 가장 최근 기간 · 진행 중 · 하루 수동 수 · 멈춘 등록 · 멈춘 생성(digest-R29 ~ R32) · 기간 끝이 범위 안인 `READY` 다이제스트의 날짜 수(`readyDayCount` — digest-R54). 구현 `JdbcDigestLedger`
 - `DigestOwnerLock` — 한 사용자의 행 만들기 잠금(트랜잭션 advisory 잠금 — 첫 키 'DGST')(digest-R29 · R31). 구현 `JdbcDigestOwnerLock`
 - `DigestJobQueue` — 생성 작업 등록 포트 — 작업 서버(외부 의존성)에 토큰을 작업 ID 로 넣는다(digest-R29). 구현 `adapter/out/job` 의 `JobRunrDigestJobQueue`
-- `FailureCauses` — 실패 코드를 실패 알림의 갈래로 옮기는 정본 — 망라 분기(digest-R33)
+- `FailureCauses` — 실패 코드를 실패 알림의 갈래(`user` 의 `GenerationFailureCause`)로 옮기는 정본 — 망라 분기(digest-R33)
 - `DigestScheduleRules` · `DigestPeriods` · `ManualTarget` — 일정 규칙과 상수 · 기간 산식 · 수동 생성 대상의 정본(digest-R29 ~ R32 · R40)
 - `CandidateSet` — 항목 · 기사와 별칭의 정본 — 다이제스트의 후보 수는 항목의 사건 수(`eventCount`)다(digest-R3)
 - `DigestCandidateRepository` — 후보 행 저장소 — 다시 쓰기 · 공유 잠금 읽기 · 지우기(생성 중 지운 기사 · 지운 기사 따르기 · 보존 정리)(digest-R9 ~ R11)
@@ -829,6 +847,12 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 해결되지 않은 마지막 실패(`UnresolvedFailures`): 그 사용자의 가장 최근 `FAILED` 행(ID 가 가장 큼) 뒤(ID 가 더 큰 행)에 기간을 덮는 행(`READY` · `EMPTY` — digest-R30 과 같은 조건 `CoveringDigestSql`)이 없으면 그 실패의 날짜와 끝낸 시각, 아니면 없음. 날짜는 보지 않고, 생성을 기다리거나 생성 중인 행은 해결로 치지 않는다. 끝낸 시각은 그 실패의 `DigestFailed.failedAt` 과 같은 값이다(digest-R33 — 둘 다 마이크로초로 자른 aggregate 의 값) — 독자 화면이 실패 알림과 맞추는 열쇠다
 - **digest-R53** — 흐름에 묶인 지난 항목(`DigestDirectory.itemsOfStorylines`): 그 사용자의 날짜별로 보이는 다이제스트(digest-R13)의 항목 섹션이 저장한 꼭대기를 지금 꼭대기로 풀어(digest-R38 의 풀기와 같다) 주어진 꼭대기에 드는 섹션을 낸다. 덮인 다이제스트의 항목, 흐름 없이 저장한 항목, 저장한 스토리라인이 지워진 항목은 들지 않는다. 순서는 날짜 내림차순 · 같은 날짜면 섹션 위치 내림차순이고, 한 쪽은 1 ~ `DigestDirectory.MAX_ITEMS`(50 — 측정 전 목표)개다. 다음 쪽이 있으면 이 쪽 마지막 항목의 (날짜, 위치)를 커서로 낸다 — 커서보다 뒤의 항목부터 이어져 빠지거나 겹치지 않는다. 항목마다 날짜 · 위치 · 종류 · 제목 · 사건을 싣고 본문 · 인용은 싣지 않는다. 읽기 전용 트랜잭션 하나에서 읽는다. 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다([ADR-0290](../adr/0290-the-readers-storyline-tab-shows-the-users-summarized-flows-and-the-tracking-list-has-one-row-per-user-storyline.md))
 
+### READY 다이제스트 날짜 수
+
+판단의 이유는 [ADR-0322](../adr/0322-a-weekly-report-needs-three-ready-digest-days-a-monthly-report-two-ready-weeklies-wholly-inside-and-a-monthly-waits-for-unfinished-weeklies.md)에 있다.
+
+- **digest-R54** — READY 다이제스트 날짜 수(`ReadyDigestDays.count` — 질의 `DigestLedger.readyDayCount`): 그 사용자의 `READY` 행 가운데 기간 끝이 [`from`, `to`) 안인 것의 서로 다른 다이제스트 날짜를 센다 — 같은 날짜의 행(일정 하나와 수동 여럿)은 하나로 센다. 날짜가 드는지는 행마다 그 행의 기간 끝으로 본다 — 같은 날짜의 `READY` 가운데 하나라도 범위 안이면 그 날짜를 센다. 보이는 다이제스트 조건(`ShownDigestSql` — digest-R13)을 쓰지 않는다 — 사용자에게 간 `READY` 를 세는 것이고 그 날짜에 어느 것이 보이는지와 무관하다
+
 ## 6. 데이터
 
 컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V46__digests.sql` · `V61__digest_schedule.sql` · `V70__digest_sections_by_item.sql`(섹션 종류 · 섹션 사건) · `V71__digest_items_drop_note.sql`(인용의 코멘트 칸 지우기) · `V73__digest_items_drop_selection_reason.sql`(인용의 선정 이유 칸 지우기) · `V77__digest_section_storyline.sql`(섹션의 꼭대기)이다.
@@ -923,3 +947,5 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 | [0298](../adr/0298-storyline-interest-drops-silent-exposures-before-the-latest-reacted-exposure-per-flow-and-topics-and-tracking-are-left-out.md) | 스토리라인 관심은 묶음마다 반응한 가장 늦은 노출보다 앞선 무반응 노출을 노출에서 빼고, 주제 관심과 흐름 추적에는 그 규칙을 걸지 않는다 |
 | [0313](../adr/0313-the-input-token-estimate-is-an-llm-public-type.md) | 입력 토큰 어림은 `llm` 의 공개 타입이 정본이다 |
 | [0314](../adr/0314-the-free-text-interest-setting-is-removed-and-its-stored-values-are-dropped-by-migration.md) | 자유 텍스트 관심사 설정을 없애 프롬프트의 프로필과 후보 예산 어림에서 뺀다 |
+| [0322](../adr/0322-a-weekly-report-needs-three-ready-digest-days-a-monthly-report-two-ready-weeklies-wholly-inside-and-a-monthly-waits-for-unfinished-weeklies.md) | 주간 리포트는 그 주에 READY 다이제스트가 3일 이상, 월간은 그 기간에 다 든 READY 주간이 2편 이상일 때만 만들고, 월간은 끝나지 않은 주간을 기다리며 주간을 끄면 월간도 없다 |
+| [0324](../adr/0324-report-failures-become-notices-through-an-event-declared-by-the-receiving-user-module-like-digest-failures.md) | 리포트 실패는 받는 쪽 user 가 선언한 이벤트로 다이제스트와 같은 꼴의 알림이 되고, 실패 갈래 타입을 함께 쓴다 |

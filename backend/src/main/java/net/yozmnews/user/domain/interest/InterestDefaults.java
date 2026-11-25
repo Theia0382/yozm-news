@@ -35,7 +35,7 @@ public final class InterestDefaults {
 	/** 월간 변화 리포트의 날짜 */
 	public static final int MONTHLY_REPORT_DAY = 1;
 
-	/** 기본 리포트 설정 — 주간 · 요일 · 월간 · 월간 날짜. 설정 행이 없는 계정의 리포트 설정이기도 하다(리포트 일정 목록 — user-R61) */
+	/** 기본 리포트 설정 — 주간 · 요일 · 월간 · 월간 날짜. 설정 행이 없는 계정의 리포트 설정이기도 하다(리포트 일정 목록 — user-R76) */
 	public static final ReportSettings REPORTS = new ReportSettings(WEEKLY_REPORT, WEEKLY_REPORT_DAY, MONTHLY_REPORT,
 			MONTHLY_REPORT_DAY);
 

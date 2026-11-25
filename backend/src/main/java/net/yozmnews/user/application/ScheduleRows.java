@@ -11,7 +11,7 @@ import net.yozmnews.user.domain.interest.ScheduleSettings;
 import org.springframework.stereotype.Component;
 
 /**
- * 쓰는 계정마다의 일정 · 리포트 설정 읽기 — 다이제스트 · 리포트의 일정 목록이 함께 쓴다. docs/specs/user.md §4 · user-R61
+ * 쓰는 계정마다의 일정 · 리포트 설정 읽기 — 다이제스트 · 리포트의 일정 목록이 함께 쓴다. docs/specs/user.md §4 · user-R61 · user-R76
  * <p>
  * 쓰는 계정의 쪽을 {@code account} 의 공개 조회로 읽고, 계정마다 설정 행의 값을 낸다 — 설정 행이 없으면 기본값
  * ({@link ScheduleSettings#DEFAULTS}). 부르는 쪽의 트랜잭션에서 읽는다. 쓰지 않는다.

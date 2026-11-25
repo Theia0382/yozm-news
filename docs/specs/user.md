@@ -6,7 +6,7 @@
 
 `user` 는 사용자 한 사람의 관심과 그 사람에게 보이는 기록을 맡는다 — 관심 설정 · 사용자 스토리라인 · 흐름 추적 · 흐름의 정리 · 구독 제안 거절과 화면 내 알림이다. 계정 · 인증 · 보안은 [account Spec](account.md)에 있다.
 
-- **화면 내 알림** — 메일 대신 쓰는 알림을 받는 사용자마다 저장하고, 세션 사용자의 알림함(목록 · 안 읽은 수 · 읽음)을 낸다. 지금 종류는 여섯이다 — 피드 상태 알림(`source` 의 피드 상태 변화를 운영자 계정마다 안 읽은 알림 하나에 모은다), 비밀번호 알림(`account` 의 `PasswordChanged` 를 받아 남긴다), 키 무효 알림(`credential` 의 `CredentialInvalidated` 를 받아 남긴다), 선호 조정 알림(태그 체계 활성 전환이 선호를 해제하거나 더했을 때), 사라진 구독 알림(추적하던 흐름이 사라졌을 때), 다이제스트 실패 알림(`digest` 가 내는 `DigestFailed` 를 받아 남긴다 — 이벤트 타입은 이 모듈이 선언한다)
+- **화면 내 알림** — 메일 대신 쓰는 알림을 받는 사용자마다 저장하고, 세션 사용자의 알림함(목록 · 안 읽은 수 · 읽음)을 낸다. 지금 종류는 일곱이다 — 피드 상태 알림(`source` 의 피드 상태 변화를 운영자 계정마다 안 읽은 알림 하나에 모은다), 비밀번호 알림(`account` 의 `PasswordChanged` 를 받아 남긴다), 키 무효 알림(`credential` 의 `CredentialInvalidated` 를 받아 남긴다), 선호 조정 알림(태그 체계 활성 전환이 선호를 해제하거나 더했을 때), 사라진 구독 알림(추적하던 흐름이 사라졌을 때), 다이제스트 실패 알림(`digest` 가 내는 `DigestFailed` 를 받아 남긴다), 리포트 실패 알림(`report` 가 내는 `ReportFailed` 를 받아 남긴다) — 두 실패 이벤트의 타입은 이 모듈이 선언한다
 - **정리** — 읽은 지 오래된 알림을 지운다
 - **관심 설정** — 사용자마다 설정 행 하나(선호의 체계 버전 · 일정 · 고른 모델 · 변화 리포트 · 다이제스트 분량)와 태그 선호(주제 구독 · 지역 제외 · 형식 제외)의 현재 상태 · 추가 전용 이력, 제외 소스. 계정이 생기면(`account` 의 `AccountCreated`) 기본값을 넣고(설정 행이 없는 계정은 처음 저장할 때 · 기동 때 채운다), 태그 체계의 활성 전환을 따라 선호를 활성 키로 고쳐 쓰고 알린다. 고른 모델과 쓸 모델을 정한다
 - **사용자 스토리라인** — 사용자가 관심 신호(좋아요 · 싫어요 · 흐름 추적)를 준 흐름을 사용자마다 저장한다. 씨앗(신호를 받은 스토리라인의 꼭대기)에서 `storyline` 의 이어짐을 앞에서 뒤로 따라 닿는 끝(헤드)마다 한 사용자 스토리라인으로 추적하고(갈라지기 전 꼭대기는 갈래 여럿에 든다), 공용 관계의 변화(합침 · 지움 · 관계가 생기고 사라짐)를 따른다. 저장은 흐름 추적의 처리기 · `StorylinesRetired` 리스너 · 정리 작업이 하고, 다이제스트의 관심도가 읽는 공개 조회(`UserStorylineDirectory`)는 쓰지 않고 같은 규칙의 결과를 낸다
@@ -17,7 +17,7 @@
 - **주제 구독 이력 조회** — 다이제스트의 관심도 · 관심사 히스토리가 읽는 공개 조회(`TopicSubscriptionHistory`) — 기간의 선호 이력 가운데 주제 행을 기록 당시 버전으로 펼치고 활성 중분류로 풀어 원인과 함께 낸다. 쓰지 않는다(user-R58)
 - **사용자 시간대 · 일정 조회** — 관심 설정의 시간대를 내는 공개 조회(`UserTimezones`) — 다이제스트의 수동 생성이 오늘의 경계를 정할 때, 관심사 히스토리가 기간을 자를 때, 변화 리포트 조회가 시작 전 리포트의 기간 날짜를 적을 때 읽는다. 사용자 하나의 일정(시간대 · 생성 시각)을 내는 공개 조회(`UserDigestSchedules`) — 다이제스트의 수동 생성 상태가 오늘의 경계와 오늘 일정 생성 시각을 정할 때 읽는다. 쓰지 않는다(user-R60)
 - **다이제스트 일정과 쓸 모델** — 다이제스트의 일정 회차가 읽는 일정 목록(`DigestScheduleDirectory` — 쓰는 계정의 시간대 · 생성 시각)과 일정 · 생성 작업 · 수동 생성 · 수동 생성 상태가 읽는 쓸 모델(`DigestModelDirectory` — `ModelChoice`). 쓰지 않는다(user-R61)
-- **(미설계)** 변화 리포트의 일정이 리포트 설정(주간 켬 · 요일 · 월간 켬 · 시간대 · 쓸 모델)을 읽는 공개 조회 — 소비자의 작업이 소비 계약과 함께 연다([ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md)). 리포트의 재료는 구독 주제를 `DigestInterestsDirectory` 로 읽는다
+- **리포트 일정과 쓸 모델** — 변화 리포트의 일정 회차가 읽는 일정 목록(`ReportScheduleDirectory` — 쓰는 계정의 시간대 · 다이제스트 생성 시각 · 주간 켬 · 요일 · 월간 켬 · 날짜)과 일정 회차 · 생성 작업 · 다시 만들기가 읽는 쓸 모델과 추론 강도(`ReportModelDirectory` — `ModelChoice`). 쓰지 않는다(user-R76). 리포트의 재료는 구독 주제를 `DigestInterestsDirectory` 로 읽는다
 
 하지 않는 것:
 
@@ -75,9 +75,9 @@
 
 ## 3. 공개 인터페이스
 
-받는 이벤트는 `account` 의 `AccountCreated` · `PasswordChanged`(user-R43 · R74), `source` 의 `FeedStatusesChanged` · `SourceDeleted`, `credential` 의 `CredentialInvalidated`, `tag` 의 `TagSetActivated`, `storyline` 의 `StorylinesRetired`, `article` 의 `ArticlesRemoved`, `digest` 가 내는 `DigestFailed` · `DigestCompleted`(이 모듈이 선언한 이벤트 — user-R62 · R68)이고, 내는 이벤트는 없다 — 관심 설정 · 스토리라인 구독이 바뀌어도 이벤트를 내지 않는다([ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md)).
+받는 이벤트는 `account` 의 `AccountCreated` · `PasswordChanged`(user-R43 · R74), `source` 의 `FeedStatusesChanged` · `SourceDeleted`, `credential` 의 `CredentialInvalidated`, `tag` 의 `TagSetActivated`, `storyline` 의 `StorylinesRetired`, `article` 의 `ArticlesRemoved`, `digest` 가 내는 `DigestFailed` · `DigestCompleted`, `report` 가 내는 `ReportFailed`(이 모듈이 선언한 이벤트 — user-R62 · R68 · R75)이고, 내는 이벤트는 없다 — 관심 설정 · 스토리라인 구독이 바뀌어도 이벤트를 내지 않는다([ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md)).
 
-모듈 최상위 패키지 `net.yozmnews.user` 의 공개 타입 가운데 다른 모듈이 읽는 공개 조회는 스토리라인 구독(`StorylineSubscriptionDirectory`)과 그 값 타입(`StorylineSubscriptionChange` · `StorylineSubscriptionAction` · `StorylineSubscriptionCause`), 사용자 스토리라인(`UserStorylineDirectory`)과 그 값 타입(`UserStorylineView` · `UserStorylineId`), 다이제스트가 읽는 관심 설정(`DigestInterestsDirectory`)과 그 값 타입(`DigestInterests` · `TopicSubscription` · `SummaryLength`), 주제 구독 이력(`TopicSubscriptionHistory`)과 그 값 타입(`TopicSubscriptionChanges` · `TopicSubscriptionChange` · `TopicSubscriptionAction` · `TopicSubscriptionCause`), 사용자 시간대(`UserTimezones` · `UserDigestSchedules`), 다이제스트 일정 목록(`DigestScheduleDirectory`)과 그 값 타입(`DigestScheduleEntry`), 다이제스트의 쓸 모델(`DigestModelDirectory`), 구독 제안 거절(`TopicSuggestionDeclines`)과 그 값 타입(`TopicSuggestionDeclineList` · `TopicSuggestionDecline`)이다. 독자 화면이 읽는 공개 조회는 사용자 스토리라인의 정리(`UserStorylineSummaries`)와 그 값 타입(`UserStorylineSummaryView` · `TopSummary` · `SummaryUsage` · `UserStorylineSummaryRef`)이다. 다른 모듈이 구현하는 공급 인터페이스는 지금 관심(`TopicInterestNow`) · 관심 신호의 창(`InterestSignalWindow`) · 지금 흐름 판정(`StorylineStandingNow` 와 그 값 타입 `StorylineStanding`)이다 — 셋 다 `digest` 가 구현한다. 받는 쪽으로 선언한 이벤트는 다이제스트 실패(`DigestFailed`)와 그 값 타입(`DigestFailureCause`), 다이제스트 끝남(`DigestCompleted`)이다. 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다([platform Spec](platform.md#userid)).
+모듈 최상위 패키지 `net.yozmnews.user` 의 공개 타입 가운데 다른 모듈이 읽는 공개 조회는 스토리라인 구독(`StorylineSubscriptionDirectory`)과 그 값 타입(`StorylineSubscriptionChange` · `StorylineSubscriptionAction` · `StorylineSubscriptionCause`), 사용자 스토리라인(`UserStorylineDirectory`)과 그 값 타입(`UserStorylineView` · `UserStorylineId`), 다이제스트가 읽는 관심 설정(`DigestInterestsDirectory`)과 그 값 타입(`DigestInterests` · `TopicSubscription` · `SummaryLength`), 주제 구독 이력(`TopicSubscriptionHistory`)과 그 값 타입(`TopicSubscriptionChanges` · `TopicSubscriptionChange` · `TopicSubscriptionAction` · `TopicSubscriptionCause`), 사용자 시간대(`UserTimezones` · `UserDigestSchedules`), 다이제스트 일정 목록(`DigestScheduleDirectory`)과 그 값 타입(`DigestScheduleEntry`), 다이제스트의 쓸 모델(`DigestModelDirectory`), 리포트 일정 목록(`ReportScheduleDirectory`)과 그 값 타입(`ReportScheduleEntry`), 리포트의 쓸 모델(`ReportModelDirectory`)과 그 값 타입(`ReportModel`), 구독 제안 거절(`TopicSuggestionDeclines`)과 그 값 타입(`TopicSuggestionDeclineList` · `TopicSuggestionDecline`)이다. 독자 화면이 읽는 공개 조회는 사용자 스토리라인의 정리(`UserStorylineSummaries`)와 그 값 타입(`UserStorylineSummaryView` · `TopSummary` · `SummaryUsage` · `UserStorylineSummaryRef`)이다. 다른 모듈이 구현하는 공급 인터페이스는 지금 관심(`TopicInterestNow`) · 관심 신호의 창(`InterestSignalWindow`) · 지금 흐름 판정(`StorylineStandingNow` 와 그 값 타입 `StorylineStanding`)이다 — 셋 다 `digest` 가 구현한다. 받는 쪽으로 선언한 이벤트는 다이제스트 실패(`DigestFailed`), 다이제스트 끝남(`DigestCompleted`), 리포트 실패(`ReportFailed`)와 그 값 타입(`ReportFailedKind`)이고, 두 실패 이벤트가 함께 쓰는 값 타입은 생성 실패의 갈래(`GenerationFailureCause`)다. 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다([platform Spec](platform.md#userid)).
 
 HTTP 엔드포인트:
 
@@ -90,8 +90,8 @@ HTTP 엔드포인트:
 | `/api/interests/tags` | `PUT` | 태그 선호 저장 — `SAVED`(+선호) · `TAG_SET_CHANGED`(+활성 버전 ID). 그 버전에 없는 키는 400(user-R46) |
 | `/api/interests/sources` | `GET` | 고를 소스(숨기지 않은 소스의 ID · 이름)와 제외 소스(user-R49) |
 | `/api/interests/sources` | `PUT` | 제외 소스 저장 — `SAVED`(+제외 소스)(user-R49) |
-| `/api/interests/settings` | `GET` | 시간대 · 생성 시각 · 변화 리포트(user-R50) |
-| `/api/interests/settings` | `PUT` | 저장 — `SAVED` · `UNKNOWN_TIMEZONE`. 시각 · 요일 형식이 틀리면 400(user-R50) |
+| `/api/interests/settings` | `GET` | 시간대 · 생성 시각 · 변화 리포트(주간 켬 · 요일 · 월간 켬 · 날짜)와 월간 날짜의 범위(`monthlyReportDayRange`)(user-R50) |
+| `/api/interests/settings` | `PUT` | 저장 — `SAVED` · `UNKNOWN_TIMEZONE`. 시각 · 요일 형식이 틀리거나 월간 날짜가 범위 밖이면 400(user-R50) |
 | `/api/interests/model` | `GET` | 고를 수 있는 모델 · 고른 모델 · 쓸 모델 · 까닭 · 추론 강도와 그 값들(user-R51 · R59) |
 | `/api/interests/model` | `PUT` | 모델 고르기 — `SAVED`(+조회와 같은 칸) · `PROVIDER_WITHOUT_KEY` · `MODEL_NOT_ALLOWED`(user-R51) |
 | `/api/interests/effort` | `PUT` | 추론 강도 저장 — 모델 조회와 같은 칸. 키 · 고른 모델과 무관하다. 값 이름이 틀리면 400(user-R59) |
@@ -384,22 +384,69 @@ public interface DigestModelDirectory {
 
 관련 규칙: user-R61.
 
+### ReportScheduleDirectory
+
+리포트 일정 목록 — 변화 리포트의 일정 회차가 리포트 시점이 된 사용자를 고르려고 읽는다([report Spec](report.md#일정) report-R27). 구현은 `application` 의 `ReportScheduleDirectoryService` 다.
+
+```java
+public interface ReportScheduleDirectory {
+    int MAX_PAGE = 500;                                          // 쪽 하나의 상한 — 정본. 측정 전 목표
+    List<ReportScheduleEntry> page(long afterUserId, int limit);
+}
+
+public record ReportScheduleEntry(UserId user, ZoneId timezone, LocalTime time, boolean weekly, DayOfWeek weeklyDay,
+        boolean monthly, int monthlyDay) {}
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `page` | 쓰는(`ACTIVE`) 계정마다의 리포트 일정(설정 행이 없으면 기본값) — 사용자 ID 가 `afterUserId` 보다 큰 것부터 ID 순으로 `limit` 개까지. `limit` 이 1 ~ `MAX_PAGE` 밖이면 `IllegalArgumentException` |
+| `ReportScheduleEntry` | 사용자 · 일정의 기준 시간대 · 다이제스트 생성 시각(분 단위 — 리포트 기간의 경계 시각) · 주간 리포트를 받는가 · 그 요일 · 월간 리포트를 받는가 · 그 날짜(1 ~ 31 — 그 날이 없는 달의 경계는 부르는 쪽이 정한다)(user-R50) |
+
+- 계약
+  - 백그라운드 작업 전용이다 — 사용자 범위가 없어 화면 경로에서 부르지 않는다
+  - 읽기 전용 트랜잭션 하나다. 쓰지 않는다. 기간 · 경계 계산은 부르는 쪽이 한다
+
+관련 규칙: user-R76.
+
+### ReportModelDirectory
+
+변화 리포트를 만들 때 쓸 모델과 추론 강도 — 리포트의 일정 회차 · 생성 작업 · 다시 만들기가 읽는다. 구현은 `application` 의 `ReportModelDirectoryService` 다.
+
+```java
+public interface ReportModelDirectory {
+    Optional<ReportModel> modelOf(UserId user);
+}
+
+public record ReportModel(LlmModel model, ReasoningEffort effort) {}
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `modelOf` | 그 사용자의 쓸 모델(user-R51 · `ModelChoice`)과 추론 강도(user-R59) — 계정이 없거나 쓰는(`ACTIVE`) 계정이 아니거나 쓸 모델이 없으면 빈 값. 설정 행이 없으면 계정을 만들 때의 값으로 정한다 |
+
+- 계약
+  - 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다
+  - 읽기 전용 트랜잭션 하나다(부르는 쪽의 트랜잭션이 있으면 그 안에서 읽는다). 쓰지 않는다. 판정은 다이제스트의 쓸 모델과 같은 정본이다
+
+관련 규칙: user-R76.
+
 ### DigestFailed
 
 다이제스트가 실패로 끝났다 — 받는 쪽인 이 모듈이 선언하고 `digest` 가 실패를 쓰는 트랜잭션에서 낸다. 이 모듈은 받아 그 사용자에게 알림을 남긴다([ADR-0233](../adr/0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md)).
 
 ```java
-public record DigestFailed(UserId user, long digestId, LocalDate digestDate, DigestFailureCause cause,
+public record DigestFailed(UserId user, long digestId, LocalDate digestDate, GenerationFailureCause cause,
         Instant failedAt) {}
 
-public enum DigestFailureCause { KEY, PROVIDER_ACCOUNT, TEMPORARY, OUTPUT }
+public enum GenerationFailureCause { KEY, PROVIDER_ACCOUNT, TEMPORARY, OUTPUT }
 ```
 
 | 멤버 | 뜻 |
 |---|---|
 | `digestId` | 실패한 다이제스트(1 이상) — 같은 다이제스트의 알림은 하나다 |
 | `digestDate` · `failedAt` | 다이제스트 날짜 · 실패로 끝낸 시각 |
-| `DigestFailureCause` | 실패의 갈래 — 사용자가 할 일로 묶는다. 실패 알림과 다이제스트 화면이 할 일 문구를 고른다. `KEY` 키 확인 · `PROVIDER_ACCOUNT` 공급자 계정의 권한 · 잔액 · `TEMPORARY` 잠시 뒤 다시 · `OUTPUT` 모델 출력 문제. 실패 코드를 갈래로 옮기는 정본은 `digest` 에 있다([digest Spec](digest.md#끝내기와-실패-이벤트)) |
+| `GenerationFailureCause` | 사용자 키로 하는 생성(다이제스트 · 변화 리포트)이 실패한 갈래 — 사용자가 할 일로 묶는다. 실패 알림과 화면이 할 일 문구를 고른다(문구 표는 다이제스트 · 리포트가 따로 둔다). `KEY` 키 확인(키가 없거나 무효이거나 쓸 모델이 없다) · `PROVIDER_ACCOUNT` 공급자 계정의 권한 · 잔액 · `TEMPORARY` 잠시 뒤 다시(일시 장애 · 예상 밖의 답 · 생성이 끝나지 않음) · `OUTPUT` 모델 출력 문제. 실패 코드를 갈래로 옮기는 정본은 생성한 모듈에 있다([digest Spec](digest.md#끝내기와-실패-이벤트) · [report Spec](report.md#끝내기와-실패-알림)) |
 
 - 계약
   - 받는 쪽이 선언한다 — `digest` 는 이 모듈의 공개 조회를 읽어 이 모듈에 기대므로, `digest` 가 선언한 이벤트를 이 모듈이 받으면 두 모듈이 서로 기댄다
@@ -424,6 +471,30 @@ public record DigestCompleted(UserId user, long digestId, LocalDate digestDate, 
   - 실패로 끝난 다이제스트에는 내지 않는다. 덮이는 다이제스트를 다시 만들어 끝나도 낸다
 
 관련 규칙: user-R68.
+
+### ReportFailed
+
+변화 리포트가 실패로 끝났다 — 받는 쪽인 이 모듈이 선언하고 `report` 가 실패를 쓰는 트랜잭션에서 낸다. 이 모듈은 받아 그 사용자에게 알림을 남긴다([ADR-0324](../adr/0324-report-failures-become-notices-through-an-event-declared-by-the-receiving-user-module-like-digest-failures.md)).
+
+```java
+public record ReportFailed(UserId user, long reportId, ReportFailedKind kind, LocalDate firstDay, LocalDate lastDay,
+        GenerationFailureCause cause, Instant failedAt) {}
+
+public enum ReportFailedKind { WEEK, MONTH }
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `reportId` | 실패한 리포트(1 이상) — 다시 만든 리포트가 또 실패하면 같은 ID 에 실패 시각이 다르다 |
+| `kind` | 리포트의 종류 — 주간 · 월간. 받는 쪽인 이 모듈이 선언한다 |
+| `firstDay` · `lastDay` | 기간 첫날 · 마지막 날 — 리포트 행의 시간대로 적은 날짜. 마지막 날이 첫날보다 앞이면 `IllegalArgumentException` |
+| `cause` | 실패의 갈래(`GenerationFailureCause` — 다이제스트와 함께 쓴다). 실패 코드를 갈래로 옮기는 정본은 `report` 에 있다([report Spec](report.md#끝내기와-실패-알림)) |
+| `failedAt` | 실패로 끝낸 시각 |
+
+- 계약
+  - 받는 쪽이 선언한다 — `DigestFailed` 와 같은 까닭이다
+
+관련 규칙: user-R75.
 
 ### StorylineStandingNow
 
@@ -504,22 +575,22 @@ public record UserStorylineSummaryRef(UserStorylineId id, String title) {}
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 스토리라인 구독 조회 · 사용자 스토리라인 조회와 관심 신호의 창(공급 인터페이스) · 다이제스트가 읽는 관심 설정 · 주제 구독 이력 · 사용자 시간대 · 다이제스트 일정 목록 · 쓸 모델 조회와 그 값, 구독 제안 거절 조회 · 지금 관심(공급 인터페이스), 정리 조회 · 지금 흐름 판정(공급 인터페이스), 받는 쪽으로 선언한 다이제스트 실패 · 끝남 이벤트와 그 값(§3) |
+| (최상위) | 스토리라인 구독 조회 · 사용자 스토리라인 조회와 관심 신호의 창(공급 인터페이스) · 다이제스트가 읽는 관심 설정 · 주제 구독 이력 · 사용자 시간대 · 다이제스트 일정 목록 · 쓸 모델 조회와 그 값, 리포트 일정 목록 · 쓸 모델 조회와 그 값, 구독 제안 거절 조회 · 지금 관심(공급 인터페이스), 정리 조회 · 지금 흐름 판정(공급 인터페이스), 받는 쪽으로 선언한 다이제스트 실패 · 끝남 · 리포트 실패 이벤트와 그 값(§3) |
 | `adapter/in/job` | 읽은 알림 정리 반복 작업 |
 | `adapter/in/web` | 알림함 · 관심 설정 · 스토리라인 구독 엔드포인트와 그 요청 · 응답 값 |
 | `adapter/out/persistence` | 알림 · 반영 기준 저장소, 설정 행 · 태그 선호 · 선호 이력 · 제외 소스 저장소, 선호 버전 울타리, 스토리라인 구독 · 구독 이력 저장소 |
-| `application` | 피드 상태 · 비밀번호 · 키 무효 · 다이제스트 실패 알림 유스케이스와 그 리스너, 알림함 유스케이스, 읽은 알림 정리 유스케이스, 관심 설정 — 계정 생김 리스너 · 기본값 쓰기 · 기존 계정 채우기 · 기동 단계 · 조회 · 저장 유스케이스 넷 · 따라가기와 그 리스너 · 소스 삭제 리스너 · 사용자 시간대 · 다이제스트 일정 목록 · 쓸 모델 조회와 쓸 모델 판정의 재료 읽기, 스토리라인 구독 — 조회 · 추적 · 해제 · 추적 상태 유스케이스 · 소비자 조회 · 구독 이력 유스케이스 · 남는 쪽 풀기 · 사라진 구독 알림의 제목 읽기, 사용자 스토리라인 — 맞추기의 재료와 판정 · 저장하는 따라가기와 그 리스너 · 공개 조회 |
+| `application` | 피드 상태 · 비밀번호 · 키 무효 · 다이제스트 실패 · 리포트 실패 알림 유스케이스와 그 리스너, 알림함 유스케이스, 읽은 알림 정리 유스케이스, 관심 설정 — 계정 생김 리스너 · 기본값 쓰기 · 기존 계정 채우기 · 기동 단계 · 조회 · 저장 유스케이스 넷 · 따라가기와 그 리스너 · 소스 삭제 리스너 · 사용자 시간대 · 다이제스트 · 리포트 일정 목록과 그 함께 쓰는 읽기 · 쓸 모델 조회와 함께 쓰는 쓸 모델 정하기 · 쓸 모델 판정의 재료 읽기, 스토리라인 구독 — 조회 · 추적 · 해제 · 추적 상태 유스케이스 · 소비자 조회 · 구독 이력 유스케이스 · 남는 쪽 풀기 · 사라진 구독 알림의 제목 읽기, 사용자 스토리라인 — 맞추기의 재료와 판정 · 저장하는 따라가기와 그 리스너 · 공개 조회 |
 | `domain` | `notice`(알림 종류 · 내용 · 모으기 · 반영 기준 · 보존과 그 저장), `interest`(설정 행 aggregate · 기본값 · 시간대 · 일정 · 리포트 · 고른 모델 · 쓸 모델 판정 · 선호 버전 울타리 · 제외 소스 저장), `preference`(태그 선호 집합 · 모드 · 원인 · 차이 · 정규화 · 따라가기 규칙과 그 저장), `subscription`(추적 중인 사용자 스토리라인 수의 상한 · 구독 이력 쪽 크기 · 추적 씨앗 따라가기 판정 · 구독 이력 저장), `userstoryline`(씨앗 · 묶음 · 잇기 판정과 사용자 스토리라인 · 추적 대상 · 추적 씨앗 · 구독 행 저장) |
 
 계정: 세션 · 보안 구성 · 요청 방어는 `account` 의 것이다([account Spec §4](account.md#4-내부-구조)). 이 모듈의 처리기는 세션 체인이 정한 세션 사용자를 처리기 인자 `UserId` 로 받는다. 계정의 있음 · 쓰는 계정 · 쓰는 운영자 · 계정 쪽은 `account` 의 공개 조회 `AccountDirectory` 로 읽고, 계정 생김 · 비밀번호 바뀜은 `account` 의 이벤트로 받는다.
 
-알림: `source` 의 `FeedStatusesChanged` 를 `FeedStatusNoticeListener` 가 받아 `FeedStatusNotices` 에 맡긴다. 유스케이스는 피드 이름을 `source` 의 `FeedLabels` 로, 받는 사람을 `account` 의 `AccountDirectory.activeAdmins` 로 읽고, 받는 사람마다 `NoticeRepository` 로 반영 기준 행을 잠근 뒤 `FeedStatusReceipt` 로 회차를 거르고, 안 읽은 피드 상태 알림을 `FeedStatusContent` 로 모으거나 새로 만든다. `credential` 의 `CredentialInvalidated` 는 `KeyInvalidatedNoticeListener` 가 받아 `KeyInvalidatedNotices` 에 맡기고, 유스케이스는 그 사용자에게 키 무효 알림을 전이마다 하나 남긴다. `digest` 가 낸 `DigestFailed` 는 `DigestFailedNoticeListener` 가 받아 `DigestFailedNotices` 에 맡기고, 유스케이스는 실패한 다이제스트마다 알림 하나를 남긴다(계정이 없으면 — `AccountDirectory.exists` — 남기지 않는다). `account` 의 `PasswordChanged` 는 `PasswordChangedNoticeListener` 가 받아 `PasswordChangedNotices` 에 맡기고, 유스케이스는 변경마다 비밀번호 알림 하나를 남긴다(같은 변경을 거듭 받아도 하나). 화면은 `NoticeController` → `NoticeInbox` → `NoticeRepository` 로 세션 사용자의 알림을 읽고 읽음을 쓴다.
+알림: `source` 의 `FeedStatusesChanged` 를 `FeedStatusNoticeListener` 가 받아 `FeedStatusNotices` 에 맡긴다. 유스케이스는 피드 이름을 `source` 의 `FeedLabels` 로, 받는 사람을 `account` 의 `AccountDirectory.activeAdmins` 로 읽고, 받는 사람마다 `NoticeRepository` 로 반영 기준 행을 잠근 뒤 `FeedStatusReceipt` 로 회차를 거르고, 안 읽은 피드 상태 알림을 `FeedStatusContent` 로 모으거나 새로 만든다. `credential` 의 `CredentialInvalidated` 는 `KeyInvalidatedNoticeListener` 가 받아 `KeyInvalidatedNotices` 에 맡기고, 유스케이스는 그 사용자에게 키 무효 알림을 전이마다 하나 남긴다. `digest` 가 낸 `DigestFailed` 는 `DigestFailedNoticeListener` 가 받아 `DigestFailedNotices` 에 맡기고, 유스케이스는 실패한 다이제스트마다 알림 하나를 남긴다(계정이 없으면 — `AccountDirectory.exists` — 남기지 않는다). `report` 가 낸 `ReportFailed` 는 `ReportFailedNoticeListener` 가 받아 `ReportFailedNotices` 에 맡기고, 유스케이스는 실패마다 알림 하나를 남긴다(같은 실패를 거듭 받아도 하나, 계정이 없으면 남기지 않는다). `account` 의 `PasswordChanged` 는 `PasswordChangedNoticeListener` 가 받아 `PasswordChangedNotices` 에 맡기고, 유스케이스는 변경마다 비밀번호 알림 하나를 남긴다(같은 변경을 거듭 받아도 하나). 화면은 `NoticeController` → `NoticeInbox` → `NoticeRepository` 로 세션 사용자의 알림을 읽고 읽음을 쓴다.
 
 관심 설정: `account` 의 `AccountCreated` 를 `AccountCreatedListener` 가 받아 `InterestDefaultsWriter` 로 설정 행 · 형식 기본 제외를 쓴다 — 울타리(`PreferenceVersionFence`) 공유 잠금 뒤 `tag` 의 `TagSetDirectory` 로 활성 체계를 읽는다. 기존 계정은 기동 단계의 `InterestBackfill` 이 `AccountDirectory.page` 로 계정 쪽을 읽어 같은 쓰기로 채운다. 화면은 `InterestController` → `TagPreferences` · `ExcludedSources` · `DigestSettings` · `ModelSelection` · `DigestVolumeSettings` 이고, 다섯 모두 설정 행을 잠근 뒤 `PreferenceFollowups.followLocked` 로 먼저 따라간다. 따라가기는 `TagKeyLineage` 의 계보 표와 `TagSetDirectory.tagSet` 의 옛 버전 구조로 `PreferenceFollowup` 이 판정하고, `TagPreferenceRepository` 가 현재 상태 · 이력을 쓰며, 조정이 있으면 `NoticeRepository` 로 알림을 남긴다. `tag` 의 `TagSetActivated` 는 `TagSetActivationListener` → `PreferenceFollowups.followAll`, `source` 의 `SourceDeleted` 는 `SourceDeletedListener` → `ExcludedSources.forget` 이다. 고를 소스는 `source` 의 `SourceNames`, 쓸 모델은 `llm` 의 `LlmModels` 와 `credential` 의 `LlmKeys` 를 `ModelResolutions` 가 읽어 `ModelChoice` 가 정한다 — 관심 설정 화면(`ModelSelection`)과 다이제스트가 읽는 쓸 모델(`DigestModelDirectoryService`)이 함께 쓴다. 다이제스트 일정 목록은 `DigestScheduleDirectoryService` 가 `AccountDirectory.activePage` 로 쓰는 계정 쪽을 읽고 `InterestSettingsRepository.schedulesOf` 로 그 계정들의 일정을 읽어(행이 없으면 `InterestDefaults.SCHEDULE`), 사용자 시간대는 `UserTimezonesService` 가 설정 행으로 읽는다. 주제 구독 이력의 소비자 조회는 `TopicSubscriptionHistoryService` 가 `TagPreferenceRepository.topicChanges` 의 행을 `TagSetDirectory.tagSet` 의 기록 버전 구조로 펼치고(`TopicExpansion`) `TagKeyLineage` 의 계보 표로 푼다.
 
 스토리라인 구독 · 사용자 스토리라인: 화면은 `StorylineSubscriptionController` → `StorylineSubscriptions` 이고, 조회 · 추적 · 해제 · 추적 상태 모두 `InterestSettingsLock.lockFollowed`(설정 행 만들기 · 잠금 · 태그 따라가기) 뒤 `UserStorylineFollowups.followLocked` 로 사용자 스토리라인을 먼저 맞춘다. 맞추기의 판정은 `UserStorylineMaterials.match` 하나다 — 저장 행(`UserStorylineRepository` · `JdbcUserStorylines`)의 추적 씨앗을 `CurrentStorylines`(`storyline` 의 `StorylineDirectory.findAll` 로 남는 쪽을 푸는 정본)와 `SubscriptionFollow` 로 풀고, 창 안의 반응 이력(`feedback` 의 `EventFeedback.changes`) · 사용자 원인 구독 이력(`StorylineSubscriptionRepository`) · 꼭대기와 이어짐(`StorylineDirectory.topsOf` · `topsOfStorylines` · `continuationsOf`)으로 묶음을 내어(`UserStorylineSeeds` · `UserStorylineGroups`) `UserStorylineReconcile` 로 잇는다. `UserStorylineFollowups` 는 그 결과를 저장 행에 옮기고 이력 · 사라진 구독 알림(`NoticeRepository`)을 남긴다. 창의 시작은 `InterestSignalWindow`(`digest` 가 구현)로 받는다. `storyline` 의 `StorylinesRetired` 는 `StorylinesRetiredListener` → `UserStorylineFollowups.followRetired` 가 받아 그 스토리라인을 추적 대상이나 추적 씨앗으로 가진 사용자를 쪽으로 나눠 사용자마다 같은 정본을 부른다. 공개 조회 `UserStorylineDirectoryService` 는 읽기 전용 트랜잭션에서 같은 `match` 의 결과를 값으로 옮긴다. 알림함(`NoticeInbox.page`)은 사라진 구독 알림이 가리키는 사건의 대표 기사 제목을 `RemovedSubscriptionTitles` 로 읽는다 — `event` 의 `EventDirectory`(남는 사건 · 대표 기사)와 `article` 의 `ArticleDirectory`(제목). 소비자 조회는 `StorylineSubscriptionDirectoryService` 가 추적 중인 사용자 스토리라인의 추적 씨앗을 읽어 `CurrentStorylines` 로 푼다. 화면의 구독 이력은 `StorylineSubscriptionController` → `StorylineSubscriptionHistory` 가 `StorylineSubscriptionRepository.userChanges` 로 원인이 사용자인 행을 최근부터 한 쪽 읽어 `CurrentStorylines` 로 푼다 — 소비자 조회를 거치지 않는다([ADR-0244](../adr/0244-the-storyline-subscription-history-handler-is-opened-by-user-without-a-key-and-reads-recent-pages-in-the-module.md)).
 
-역할: `NoticeController` · `InterestController` · `StorylineSubscriptionController` 는 화면 역할, `ForgetReadNoticesJob` 은 작업 역할에서만 켜진다. `FeedStatusNoticeListener` · `KeyInvalidatedNoticeListener` · `DigestFailedNoticeListener` · `PasswordChangedNoticeListener` · `AccountCreatedListener` · `TagSetActivationListener` · `SourceDeletedListener` · `StorylinesRetiredListener` · `InterestBackfill` 을 포함한 나머지는 두 역할 공통이다 — 피드 상태 변화는 작업 역할의 피드 건강 검사가, 계정 생김은 가입(화면 역할) · 첫 운영자(두 역할)가 발행하므로 리스너가 두 역할 모두에서 받는다([platform Spec](platform.md#역할) platform-R9).
+역할: `NoticeController` · `InterestController` · `StorylineSubscriptionController` 는 화면 역할, `ForgetReadNoticesJob` 은 작업 역할에서만 켜진다. `FeedStatusNoticeListener` · `KeyInvalidatedNoticeListener` · `DigestFailedNoticeListener` · `ReportFailedNoticeListener` · `PasswordChangedNoticeListener` · `AccountCreatedListener` · `TagSetActivationListener` · `SourceDeletedListener` · `StorylinesRetiredListener` · `InterestBackfill` 을 포함한 나머지는 두 역할 공통이다 — 피드 상태 변화는 작업 역할의 피드 건강 검사가, 계정 생김은 가입(화면 역할) · 첫 운영자(두 역할)가 발행하므로 리스너가 두 역할 모두에서 받는다([platform Spec](platform.md#역할) platform-R9).
 
 ### 들어오는 쪽
 
@@ -546,11 +617,14 @@ public record UserStorylineSummaryRef(UserStorylineId id, String title) {}
 | 사용자 시간대 · 일정 조회 | `UserTimezonesService` | 다른 모듈의 조회(세션 사용자의 화면 경로 포함) | §3 `UserTimezones` · `UserDigestSchedules` 의 구현(user-R60). 읽기 전용 트랜잭션 |
 | 다이제스트 일정 목록 | `DigestScheduleDirectoryService` | 다른 모듈의 백그라운드 작업 | §3 `DigestScheduleDirectory` 의 구현(user-R61). 읽기 전용 트랜잭션 |
 | 다이제스트의 쓸 모델 | `DigestModelDirectoryService` | 다른 모듈의 조회(세션 사용자의 화면 경로 포함) | §3 `DigestModelDirectory` 의 구현(user-R61). 읽기 전용 트랜잭션 |
+| 리포트 일정 목록 | `ReportScheduleDirectoryService` | 다른 모듈의 백그라운드 작업 | §3 `ReportScheduleDirectory` 의 구현(user-R76). 읽기 전용 트랜잭션 |
+| 리포트의 쓸 모델 | `ReportModelDirectoryService` | 다른 모듈의 조회(세션 사용자의 화면 경로 포함) | §3 `ReportModelDirectory` 의 구현(user-R76). 읽기 전용 트랜잭션 |
 | 피드 상태 변화 | `FeedStatusNoticeListener` → `FeedStatusNotices` | `source` 의 `FeedStatusesChanged` | 그때 쓰는 운영자 계정마다 안 읽은 피드 상태 알림에 모은다(user-R22 ~ R24). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고, 반영 기준이 결과를 같게 한다 |
 | 다이제스트 실패 | `DigestFailedNoticeListener` → `DigestFailedNotices` | `digest` 가 낸 `DigestFailed` | 그 사용자에게 다이제스트 실패 알림을 남긴다(user-R62). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고, 같은 다이제스트의 알림은 하나만 남는다 |
+| 리포트 실패 | `ReportFailedNoticeListener` → `ReportFailedNotices` | `report` 가 낸 `ReportFailed` | 그 사용자에게 리포트 실패 알림을 남긴다(user-R75). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고, 같은 실패의 알림은 하나만 남는다 |
 | 키 무효 | `KeyInvalidatedNoticeListener` → `KeyInvalidatedNotices` | `credential` 의 `CredentialInvalidated` | 그 사용자에게 키 무효 알림을 남긴다(user-R36). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고, 같은 전이의 알림은 하나만 남는다 |
 | 비밀번호 바뀜 | `PasswordChangedNoticeListener` → `PasswordChangedNotices` | `account` 의 `PasswordChanged` | 그 사용자에게 비밀번호 알림을 남긴다(user-R74). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고, 같은 변경의 알림은 하나만 남는다 |
-| 알림함 | `NoticeController` → `NoticeInbox` | `GET /api/notices` · `GET /api/notices/unread-count` · `POST /api/notices/read` | user-R25 · R27. 응답 값 `NoticePageResponse` · `NoticeResponse` · `FeedStatusNoticeResponse` · `FeedStatusEntryResponse` · `PasswordChangedNoticeResponse` · `KeyInvalidatedNoticeResponse` · `PreferencesAdjustedNoticeResponse` · `AdjustmentResponse` · `StorylineSubscriptionsRemovedNoticeResponse` · `RemovedStorylineResponse` · `UnreadNoticesResponse`, 요청 값 `ReadNoticesRequest` |
+| 알림함 | `NoticeController` → `NoticeInbox` | `GET /api/notices` · `GET /api/notices/unread-count` · `POST /api/notices/read` | user-R25 · R27. 응답 값 `NoticePageResponse` · `NoticeResponse` · `FeedStatusNoticeResponse` · `FeedStatusEntryResponse` · `PasswordChangedNoticeResponse` · `KeyInvalidatedNoticeResponse` · `PreferencesAdjustedNoticeResponse` · `AdjustmentResponse` · `StorylineSubscriptionsRemovedNoticeResponse` · `RemovedStorylineResponse` · `ReportFailedNoticeResponse` · `UnreadNoticesResponse`, 요청 값 `ReadNoticesRequest` |
 | 읽은 알림 정리 — 반복 작업 ID `forget-read-notices` | `ForgetReadNoticesJob` | 하루마다 | 읽은 지 90일이 지난 알림을 지운다(user-R26). 재시도하지 않는다 — 다음 회차가 이어 지운다 |
 
 ### `application`
@@ -563,6 +637,7 @@ public record UserStorylineSummaryRef(UserStorylineId id, String title) {}
 - `KeyInvalidatedNotices` — 키 무효 알림 유스케이스. 이벤트 하나가 트랜잭션 하나다(user-R36)
 - `KeyInvalidatedNoticeListener` — `CredentialInvalidated` 리스너(들어오는 쪽). 역할 애너테이션이 없다(user-R36)
 - `DigestFailedNotices` — 다이제스트 실패 알림 유스케이스. 이벤트 하나가 트랜잭션 하나다(user-R62)
+- `ReportFailedNotices` — 리포트 실패 알림 유스케이스. 이벤트 하나가 트랜잭션 하나다(user-R75)
 - `DigestFailedNoticeListener` — `DigestFailed` 리스너(들어오는 쪽). 역할 애너테이션이 없다(user-R62)
 - `NoticeInbox` — 알림함 유스케이스 — 세션 사용자의 목록 한 쪽(`NoticePage` — 사라진 구독 알림이 가리키는 사건의 제목 표와 함께) · 안 읽은 수 · 읽음(user-R25 · R27 · R54)
 - `RemovedSubscriptionTitles` — 사라진 구독 알림이 가리키는 사건의 지금 대표 기사 제목 읽기 — 알림함 쪽마다 한 번(user-R54)
@@ -589,7 +664,10 @@ public record UserStorylineSummaryRef(UserStorylineId id, String title) {}
 - `DigestInterestsDirectoryService` — 공개 조회 `DigestInterestsDirectory` 의 구현. 설정 행을 잠그지 않으므로 설정 행 · 선호 행 · 활성 체계 · 계보를 한 스냅숏에서 읽도록 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나다 — 기본 격리면 리스너의 따라가기가 그 사이 커밋되어 옛 선호 버전과 새 버전 키를 섞어 읽을 수 있다(user-R57)
 - `UserTimezonesService` — 공개 조회 `UserTimezones` · `UserDigestSchedules` 의 구현. 계정 유무(`AccountDirectory.exists`)와 설정 행을 읽기 전용 트랜잭션 하나에서 읽는다 — 설정 행이 없을 때의 일정은 `InterestDefaults.SCHEDULE` 이고 `timezoneOf` 는 그 일정의 시간대다(user-R60)
 - `DigestScheduleDirectoryService` · `DigestModelDirectoryService` — 공개 조회 `DigestScheduleDirectory` · `DigestModelDirectory` 의 구현. 읽기 전용 트랜잭션 하나(user-R61)
-- `ModelResolutions` — 쓸 모델 판정의 재료 읽기(허용 모델 목록 · 키가 있는 공급자 · 쓸 수 있는 키의 공급자)와 고를 수 있는 모델 — `ModelSelection` 과 `DigestModelDirectoryService` 가 함께 쓴다(user-R51 · R61)
+- `ModelResolutions` — 쓸 모델 판정의 재료 읽기(허용 모델 목록 · 키가 있는 공급자 · 쓸 수 있는 키의 공급자)와 고를 수 있는 모델 — `ModelSelection` 과 `UsableModels` 가 함께 쓴다(user-R51 · R61)
+- `UsableModels` — 사용자 하나의 쓸 모델 정하기 — 쓰는 계정이면 고른 모델(설정 행이 없으면 계정을 만들 때의 값) · 허용 목록 · 키 상태로 쓸 모델을 정하고 설정 행의 추론 강도를 함께 낸다. `DigestModelDirectoryService` · `ReportModelDirectoryService` 가 함께 쓴다. 부르는 쪽의 트랜잭션에서 읽는다(user-R61 · R76)
+- `ScheduleRows` — 쓰는 계정마다의 일정 · 리포트 설정 읽기 — 쓰는 계정의 쪽을 `AccountDirectory.activePage` 로 읽고 설정 행의 값(없으면 `ScheduleSettings.DEFAULTS`)을 낸다. `DigestScheduleDirectoryService` · `ReportScheduleDirectoryService` 가 함께 쓴다(user-R61 · R76)
+- `ReportScheduleDirectoryService` · `ReportModelDirectoryService` — 공개 조회 `ReportScheduleDirectory` · `ReportModelDirectory` 의 구현. 읽기 전용 트랜잭션 하나(user-R76)
 - `TopicSuggestionDeclining` — 구독 제안 거절 유스케이스 — 활성 버전 확인 · 중분류 키 확인(`DeclinableTopics`) · 거절 때 관심(`TopicInterestNow`) · upsert. 트랜잭션이 없다(user-R64)
 - `TopicSuggestionDeclinesService` — 공개 조회 `TopicSuggestionDeclines` 의 구현. 거절 행 · 활성 체계 · 계보 표를 한 스냅숏에서 읽도록 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나다 — 계보 표의 기준이 읽은 활성 버전이 아니면 불변식 위반이다(user-R65)
 - `TopicSubscriptionHistoryService` — 공개 조회 `TopicSubscriptionHistory` 의 구현. 이력 행 · 활성 체계 · 기록 버전의 구조 · 계보 표를 한 스냅숏에서 읽도록 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나다 — 계보 표의 기준이 읽은 활성 버전이 아니면 불변식 위반이다(user-R58)
@@ -604,10 +682,10 @@ public record UserStorylineSummaryRef(UserStorylineId id, String title) {}
 - `FeedStatusReceipt` — 반영 기준 판정의 정본(user-R24)
 - `NoticeRetention` — 읽은 알림 보존 기간 · 알림함 쪽 크기 상수의 정본(user-R26 · R27)
 - `NoticeRepository` — 알림 · 반영 기준의 저장 인터페이스. 구현은 `adapter/out/persistence` 의 `JdbcNoticeRepository` 다(user-R21 · R23 ~ R26)
-- `InterestSettings` — 설정 행 aggregate(`user_settings`) — 선호 버전 · 일정 · 고른 모델 · 추론 강도 · 리포트 · 다이제스트 분량. 저장소 `InterestSettingsRepository`(잠금 · 없을 때만 넣기 · 바꾸기 · 주어진 계정 가운데 설정 행 없는 것(`withoutSettingsAmong`) · 선호 버전이 다른 사용자 · 주어진 계정의 일정(`schedulesOf`))(user-R43 · R46 · R61)
-- `InterestDefaults` — 관심 설정 기본값의 정본 — 시간대 `Asia/Seoul` · 생성 시각 07:00(기본 일정 `SCHEDULE` — 설정 행이 없을 때 일정 목록 · 사용자 시간대가 함께 쓴다) · 주간 리포트 켬(월요일) · 월간 리포트 켬 · 다이제스트 분량 보통 · 큰 슬롯 3(user-R43 · R56)
+- `InterestSettings` — 설정 행 aggregate(`user_settings`) — 선호 버전 · 일정 · 고른 모델 · 추론 강도 · 리포트 · 다이제스트 분량. 저장소 `InterestSettingsRepository`(잠금 · 없을 때만 넣기 · 바꾸기 · 주어진 계정 가운데 설정 행 없는 것(`withoutSettingsAmong`) · 선호 버전이 다른 사용자 · 주어진 계정의 일정 · 리포트 설정(`scheduleSettingsOf` — 값 `ScheduleSettings`))(user-R43 · R46 · R61 · R76)
+- `InterestDefaults` — 관심 설정 기본값의 정본 — 시간대 `Asia/Seoul` · 생성 시각 07:00(기본 일정 `SCHEDULE` — 설정 행이 없을 때 일정 목록 · 사용자 시간대가 함께 쓴다) · 주간 리포트 켬(월요일) · 월간 리포트 켬(1일) · 다이제스트 분량 보통 · 큰 슬롯 3(user-R43 · R56)
 - `DigestVolume` · `CandidateVolume` — 다이제스트 분량과 그 단계 값 · 범위의 정본(user-R56)
-- `Timezones` · `DigestSchedule` · `ReportSettings` — 시간대 읽기(IANA 지역 ID 만) · 일정(분 단위) · 리포트 설정(user-R50)
+- `Timezones` · `DigestSchedule` · `ReportSettings` · `ScheduleSettings` — 시간대 읽기(IANA 지역 ID 만) · 일정(분 단위) · 리포트 설정(월간 날짜의 범위 `MONTHLY_DAY_MIN` 1 · `MONTHLY_DAY_MAX` 31 — 정본) · 일정과 리포트 설정의 묶음(설정 행이 없을 때의 `DEFAULTS`)(user-R50 · R76)
 - `ModelRef` · `ModelChoice` · `ModelResolution` · `ModelReason` — 고른 모델과 쓸 모델 판정의 정본(user-R51)
 - `PreferenceVersionFence` — 선호 버전 울타리(공유 · 배타). 구현 `JdbcPreferenceVersionFence`(user-R43 · R47)
 - `ExcludedSourceRepository` — 제외 소스 저장 — 읽기 · 바꾸기 · 소스 잊기. 구현 `JdbcExcludedSources`(user-R49)
@@ -705,22 +783,23 @@ public interface SummaryJobQueue {
 
 판단의 이유는 [ADR-0134](../adr/0134-in-app-notices-are-one-row-per-recipient-with-a-closed-kind-and-per-kind-jsonb-content-and-read-notices-are-deleted-after-ninety-days.md) · [ADR-0135](../adr/0135-feed-status-changes-publish-each-check-runs-transitions-and-gather-into-one-unread-notice-per-active-admin-read-up-to-the-seen-revision.md) · [ADR-0136](../adr/0136-unread-notice-count-refetches-on-navigation-and-window-focus-without-polling.md)에 있다.
 
-- **user-R21** — 알림은 받는 사용자마다 한 행이다. 종류는 닫힌 집합(`NoticeKind` — `FEED_STATUS` · `PASSWORD_CHANGED` · `KEY_INVALIDATED` · `PREFERENCES_ADJUSTED` · `STORYLINE_SUBSCRIPTIONS_REMOVED` · `DIGEST_FAILED`)이고, 내용은 종류마다 정한 레코드를 jsonb 한 칸에 둔다. 판은 만들 때 1 이고 내용을 고칠 때마다 하나 오른다. 종류로 가르는 곳은 기본 갈래 없는 망라 분기다
+- **user-R21** — 알림은 받는 사용자마다 한 행이다. 종류는 닫힌 집합(`NoticeKind` — `FEED_STATUS` · `PASSWORD_CHANGED` · `KEY_INVALIDATED` · `PREFERENCES_ADJUSTED` · `STORYLINE_SUBSCRIPTIONS_REMOVED` · `DIGEST_FAILED` · `REPORT_FAILED`)이고, 내용은 종류마다 정한 레코드를 jsonb 한 칸에 둔다. 판은 만들 때 1 이고 내용을 고칠 때마다 하나 오른다. 종류로 가르는 곳은 기본 갈래 없는 망라 분기다
 - **user-R22** — 피드 상태 알림의 받는 사람은 `FeedStatusesChanged` 를 처리할 때 쓰는(`ACTIVE`) 운영자(`ADMIN`) 계정 전부다(계정 ID 순 — `account` 의 `AccountDirectory.activeAdmins`, [account Spec](account.md#계정-공개-조회) account-R37). 이 조회는 사용자 범위가 없어 리스너만 쓴다. 나중에 운영자가 된 계정은 지난 회차를 받지 않고, 알림을 받은 뒤 역할이 바뀌어도 알림은 남는다. 이벤트 하나가 트랜잭션 하나다 — 받는 사람 전부의 반영이 함께 커밋되거나 함께 롤백된다. 받는 사람이 없으면 아무것도 쓰지 않는다. 피드 이름 · 섹션은 처리할 때 `FeedLabels` 로 읽어 내용에 적는다 — 얻지 못한 피드(지운 피드)는 이름 · 섹션이 없다. 내용은 피드 ID · 출처 이름 · 섹션 · 상태 · 판정 시각 · 바뀐 횟수만이다(피드 URL · 실패 문구 · 다른 계정의 정보는 없다)
 - **user-R23** — 모으기: 사용자마다 안 읽은 피드 상태 알림은 많아야 하나다(부분 고유 인덱스). 회차를 반영할 때 그 알림이 있으면 거기에 더하고(판 + 1, 고친 시각 = 지금), 없으면 새로 만든다. 더하기는 피드마다 — 이미 있는 피드는 마지막 새 상태 · 마지막 판정 시각을 바꾸고 바뀐 횟수를 하나 올리며(이름 · 섹션은 이번에 얻었으면 바꾸고 아니면 둔다), 없는 피드는 새 줄(처음 = 마지막, 횟수 1)이다. 줄은 피드 ID 순이다. 복귀(`ACTIVE`)도 전이라, 처음 이전 상태와 마지막 새 상태가 같은 줄(되돌아온 피드)은 횟수 2 이상이다. 더하는 회차의 판정 시각이 알림의 어느 줄의 마지막 판정 시각보다 늦지 않으면 거부한다(반영 기준이 먼저 거르므로 정상 경로에서는 일어나지 않는다)
 - **user-R24** — 반영 기준: 사용자마다 반영한 마지막 회차의 판정 시각 하나다. 회차를 반영하기 전에 그 사용자의 반영 기준 행을 잠그고(없으면 자리 행을 넣고 잠근다), 기준이 없거나 회차의 판정 시각이 기준보다 늦을 때만 반영한 뒤 기준을 그 판정 시각으로 올린다. 같은 회차의 두 번째 처리 · 늦게 온 앞선 회차는 반영하지 않는다 — 읽은 알림과 무관하다. 이 잠금이 같은 사용자에 대한 리스너들을 줄 세운다. 늦게 온 앞선 회차를 버리므로 바뀐 횟수 · 처음 이전 상태가 빠질 수 있지만 마지막 새 상태는 맞다. 검사 둘이 겹쳐 판정 시각 순서와 커밋 순서가 어긋나면 알림이 한 회차 앞의 상태로 남을 수 있다(source-R49)
 - **user-R25** — 읽음: 화면이 받은 알림의 `{id, revision}` 가운데, 세션 사용자의 알림이고 판이 그대로이며 아직 읽지 않은 것만 읽은 시각을 쓴다. 다른 사용자의 알림 · 없는 알림 · 판이 다른 알림은 바뀌지 않고 응답은 같은 204 다(존재를 드러내지 않는다). 리스너가 알림을 고치는 동안 온 옛 판의 읽음은 기다렸다가 바뀌지 않고, 읽음이 먼저 커밋되면 리스너는 새 알림을 만든다
 - **user-R26** — 읽은 알림은 읽은 지 90일(`NoticeRetention.KEEP_READ`)이 지나면 지운다 — 읽은 시각이 지금 − 90일보다 이른 알림이다(정확히 90일은 남는다). 작업 역할의 반복 작업이 하루마다 지운다. 안 읽은 알림은 기간과 무관하게 남는다
-- **user-R27** — 알림함: 세 경로 모두 세션 사용자로 범위가 정해진다(account-R6). 목록은 최근(ID 큰 것)부터 한 쪽 50개(`NoticeRetention.PAGE_SIZE`)이고, 다음 쪽이 있으면 이 쪽의 마지막 알림 ID 를 `nextBefore` 로 준다 — 다음 쪽은 `before` 로 그 값을 준다. 알림 하나는 종류 판별자와 그 종류의 본문 하나(`feedStatus` · `passwordChanged` · `keyInvalidated` · `preferencesAdjusted` · `storylineSubscriptionsRemoved` · `digestFailed` — 나머지는 null)다. 읽음 요청은 50개까지다. `before` 가 1 미만이거나 숫자가 아니면, 읽음 요청이 50개를 넘거나 원소의 ID · 판이 1 미만(빠짐 포함)이거나 목록이 없으면 400 이다. 화면은 안 읽은 수를 로그인한 화면에 들어올 때 · 경로를 옮길 때 · 창으로 돌아올 때 · 다시 연결될 때 다시 읽고 주기 조회는 하지 않는다. 알림 페이지에서 읽음을 보내면 안 읽은 수를 다시 읽는다
+- **user-R27** — 알림함: 세 경로 모두 세션 사용자로 범위가 정해진다(account-R6). 목록은 최근(ID 큰 것)부터 한 쪽 50개(`NoticeRetention.PAGE_SIZE`)이고, 다음 쪽이 있으면 이 쪽의 마지막 알림 ID 를 `nextBefore` 로 준다 — 다음 쪽은 `before` 로 그 값을 준다. 알림 하나는 종류 판별자와 그 종류의 본문 하나(`feedStatus` · `passwordChanged` · `keyInvalidated` · `preferencesAdjusted` · `storylineSubscriptionsRemoved` · `digestFailed` · `reportFailed` — 나머지는 null)다. 읽음 요청은 50개까지다. `before` 가 1 미만이거나 숫자가 아니면, 읽음 요청이 50개를 넘거나 원소의 ID · 판이 1 미만(빠짐 포함)이거나 목록이 없으면 400 이다. 화면은 안 읽은 수를 로그인한 화면에 들어올 때 · 경로를 옮길 때 · 창으로 돌아올 때 · 다시 연결될 때 다시 읽고 주기 조회는 하지 않는다. 알림 페이지에서 읽음을 보내면 안 읽은 수를 다시 읽는다
 - **user-R36** — 키 무효 알림: `credential` 의 `CredentialInvalidated` 하나에 그 사용자의 알림 하나를 남긴다(모으지 않는다). 내용은 공급자 · 키 ID · 무효 시각이고, 화면 응답은 공급자와 무효 시각만 낸다. 같은 사용자 · 키 ID · 무효 시각의 알림은 많아야 하나다(부분 고유 인덱스) — 같은 발행을 거듭 받아도 하나만 남는다. 이벤트 하나가 트랜잭션 하나다. 판단의 이유는 [ADR-0166](../adr/0166-credential-invalidated-is-published-on-each-transition-to-invalid-and-leaves-one-notice-per-transition.md)에 있다
-- **user-R62** — 다이제스트 실패 알림: `digest` 가 낸 `DigestFailed` 하나에 그 사용자의 알림 하나를 남긴다(`DIGEST_FAILED` — 모으지 않는다). 내용은 다이제스트 ID · 날짜 · 실패의 갈래(`DigestFailureCause`) · 실패 시각이고, 화면 응답은 날짜 · 갈래 · 실패 시각만 낸다(`digestFailed`). 같은 사용자 · 다이제스트 ID 의 알림은 많아야 하나다(부분 고유 인덱스) — 같은 이벤트를 거듭 받아도 하나만 남는다. 계정이 없으면(`AccountDirectory.exists`) 남기지 않고 끝낸다(지운 계정의 이벤트가 재처리를 되풀이하지 않는다). 이벤트 하나가 트랜잭션 하나다. 화면은 갈래마다 할 일 문구(다이제스트 화면과 같은 문구)를 보이고 그 날짜의 다이제스트 화면으로 잇는다 — 갈래마다 가 볼 화면(`KEY` 면 LLM 키 화면, `OUTPUT` 이면 관심 설정의 모델 절)으로도 잇고, 다시 만들기가 할 일인 갈래(`TEMPORARY` · `OUTPUT`)의 알림이 해결되지 않은 마지막 실패(`digest` 의 수동 생성 상태 — [digest-R40](digest.md#다이제스트-조회))면 다시 만들기 버튼이 있는 홈으로도 잇는다. 해결 판정은 `digest` 가 하고, 화면은 실패 알림 본문이 홈 응답을 읽어 날짜와 실패 시각이 같은 알림에만 그 링크를 단다(실패 알림이 없으면 홈 응답을 읽지 않고, 읽지 못하면 그 링크만 달지 않는다). 판단의 이유는 [ADR-0233](../adr/0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md) · [ADR-0240](../adr/0240-digest-failures-show-the-cause-action-and-the-code-and-never-the-failure-message.md)에 있다
+- **user-R62** — 다이제스트 실패 알림: `digest` 가 낸 `DigestFailed` 하나에 그 사용자의 알림 하나를 남긴다(`DIGEST_FAILED` — 모으지 않는다). 내용은 다이제스트 ID · 날짜 · 실패의 갈래(`GenerationFailureCause`) · 실패 시각이고, 화면 응답은 날짜 · 갈래 · 실패 시각만 낸다(`digestFailed`). 같은 사용자 · 다이제스트 ID 의 알림은 많아야 하나다(부분 고유 인덱스) — 같은 이벤트를 거듭 받아도 하나만 남는다. 계정이 없으면(`AccountDirectory.exists`) 남기지 않고 끝낸다(지운 계정의 이벤트가 재처리를 되풀이하지 않는다). 이벤트 하나가 트랜잭션 하나다. 화면은 갈래마다 할 일 문구(다이제스트 화면과 같은 문구)를 보이고 그 날짜의 다이제스트 화면으로 잇는다 — 갈래마다 가 볼 화면(`KEY` 면 LLM 키 화면, `OUTPUT` 이면 관심 설정의 모델 절)으로도 잇고, 다시 만들기가 할 일인 갈래(`TEMPORARY` · `OUTPUT`)의 알림이 해결되지 않은 마지막 실패(`digest` 의 수동 생성 상태 — [digest-R40](digest.md#다이제스트-조회))면 다시 만들기 버튼이 있는 홈으로도 잇는다. 해결 판정은 `digest` 가 하고, 화면은 실패 알림 본문이 홈 응답을 읽어 날짜와 실패 시각이 같은 알림에만 그 링크를 단다(실패 알림이 없으면 홈 응답을 읽지 않고, 읽지 못하면 그 링크만 달지 않는다). 판단의 이유는 [ADR-0233](../adr/0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md) · [ADR-0240](../adr/0240-digest-failures-show-the-cause-action-and-the-code-and-never-the-failure-message.md)에 있다
+- **user-R75** — 리포트 실패 알림: `report` 가 낸 `ReportFailed` 하나에 그 사용자의 알림 하나를 남긴다(`REPORT_FAILED` — 모으지 않는다). 내용은 리포트 ID · 종류 · 기간 첫날 · 마지막 날 · 실패의 갈래(`GenerationFailureCause`) · 실패 시각이고, 화면 응답은 리포트 ID · 종류 · 첫날 · 마지막 날 · 갈래 · 실패 시각을 낸다(`reportFailed`). 같은 사용자 · 리포트 ID · 실패 시각의 알림은 많아야 하나다(부분 고유 인덱스) — 같은 이벤트를 거듭 받아도 하나만 남고, 다시 만든 리포트가 또 실패하면 실패 시각이 달라 알림이 하나 더 생긴다. 계정이 없으면(`AccountDirectory.exists`) 남기지 않고 끝낸다. 이벤트 하나가 트랜잭션 하나다. 화면은 종류 · 기간 날짜 · 갈래마다 할 일 문구(리포트용 표 — 다이제스트의 갈래 문구와 따로 둔다. 할 일이 다시 만들기인 갈래는 리포트 화면의 다시 만들기를 말한다 — [reader-R16](reader.md#변화-리포트)) · 실패 시각을 보이고 그 리포트 화면으로 잇는다 — 갈래마다 가 볼 화면(`KEY` 면 LLM 키 화면, `OUTPUT` 이면 관심 설정의 모델 절)으로도 잇는다. 실패 메시지는 싣지 않는다. 판단의 이유는 [ADR-0324](../adr/0324-report-failures-become-notices-through-an-event-declared-by-the-receiving-user-module-like-digest-failures.md)에 있다
 - **user-R74** — 비밀번호 알림: `account` 의 `PasswordChanged`([account Spec](account.md#계정의-사실-알림) account-R36) 하나에 그 사용자의 알림 하나를 남긴다(`PASSWORD_CHANGED` — 모으지 않는다). 내용은 방법(`CHANGE` · `RECOVERY`)과 바꾼 시각이고 화면 응답도 그 둘이다(`passwordChanged`). 같은 사용자 · 바꾼 시각의 알림은 많아야 하나다(부분 고유 인덱스) — 같은 발행을 거듭 받아도 하나만 남는다. 첫 로그인의 강제 변경 · 운영자의 초기 비밀번호 다시 정하기 · 복구 코드 재발급은 알리지 않는다 — `account` 가 내지 않는다. 이벤트 하나가 트랜잭션 하나다. 판단의 이유는 [ADR-0145](../adr/0145-password-notices-are-left-for-password-changes-and-recovery-resets-but-not-for-the-forced-first-sign-in-change.md) · [ADR-0309](../adr/0309-account-facts-are-published-after-commit-and-user-writes-interest-defaults-and-password-notices-from-them.md)에 있다
 
 ### 관심 설정
 
 판단의 이유는 [ADR-0175](../adr/0175-tag-preferences-follow-tag-set-activation-events-and-are-rewritten-to-active-keys.md) · [ADR-0176](../adr/0176-tag-set-changes-do-not-narrow-a-users-preferences-without-telling.md) · [ADR-0177](../adr/0177-formats-newly-excluded-by-default-on-activation-are-added-to-existing-users-exclusions.md) · [ADR-0178](../adr/0178-the-llm-model-to-use-is-decided-at-query-time-from-the-chosen-model-the-allowed-list-and-key-status.md) · [ADR-0179](../adr/0179-interest-settings-handlers-are-open-without-a-key.md) · [ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md) · [ADR-0181](../adr/0181-tag-preferences-take-only-topic-subscriptions-and-region-and-format-exclusions.md) · [ADR-0182](../adr/0182-startup-work-reading-the-active-tag-set-runs-in-a-lifecycle-phase-after-first-start-seeding-and-before-the-web-server.md)에 있다.
 
-- **user-R43** — 계정이 생기면(`account` 의 `AccountCreated` — 계정을 만드는 네 길 모두, [account Spec](account.md#계정의-사실-알림) account-R35) 커밋 뒤 받아 새 트랜잭션에서 관심 설정 기본값을 쓴다(`InterestDefaultsWriter` — 이력의 시각은 계정을 만든 시각). 같은 쓰기를 관심 설정 · 스토리라인 구독의 유스케이스가 설정 행을 잠그기 전에(행이 없으면), 기존 계정 채우기가 기동 때(user-R44) 한다 — 먼저 쓴 쪽만 쓴다. 그 전의 조회는 기본값으로 답한다(user-R57 · R60 · R61). 쓰기는: 선호 버전 울타리의 공유 잠금(트랜잭션 advisory 잠금)을 잡고 → 그 순간의 활성 태그 체계를 읽어 → 설정 행(선호 버전 = 활성 버전, 시간대 `Asia/Seoul` · 생성 시각 07:00 · 고른 모델 없음 · 추론 강도 보통 · 주간 리포트 켬 · 요일 월요일 · 월간 리포트 켬 — `InterestDefaults`)과 활성 버전에서 기본 제외인 형식 전부의 제외(이력 원인 `ONBOARDING`)를 쓴다. 주제 구독은 없다 — 화면은 처음 키를 등록하면 관심 설정(`/interests`)으로 보내고, 구독 주제가 없으면 홈 · 관심 설정 화면에 안내한다. 설정 행이 이미 있으면 아무것도 쓰지 않는다. 코드는 특정 형식 키를 알지 않는다 — 기본 제외는 체계 데이터다
+- **user-R43** — 계정이 생기면(`account` 의 `AccountCreated` — 계정을 만드는 네 길 모두, [account Spec](account.md#계정의-사실-알림) account-R35) 커밋 뒤 받아 새 트랜잭션에서 관심 설정 기본값을 쓴다(`InterestDefaultsWriter` — 이력의 시각은 계정을 만든 시각). 같은 쓰기를 관심 설정 · 스토리라인 구독의 유스케이스가 설정 행을 잠그기 전에(행이 없으면), 기존 계정 채우기가 기동 때(user-R44) 한다 — 먼저 쓴 쪽만 쓴다. 그 전의 조회는 기본값으로 답한다(user-R57 · R60 · R61). 쓰기는: 선호 버전 울타리의 공유 잠금(트랜잭션 advisory 잠금)을 잡고 → 그 순간의 활성 태그 체계를 읽어 → 설정 행(선호 버전 = 활성 버전, 시간대 `Asia/Seoul` · 생성 시각 07:00 · 고른 모델 없음 · 추론 강도 보통 · 주간 리포트 켬 · 요일 월요일 · 월간 리포트 켬 · 날짜 1일 — `InterestDefaults`)과 활성 버전에서 기본 제외인 형식 전부의 제외(이력 원인 `ONBOARDING`)를 쓴다. 주제 구독은 없다 — 화면은 처음 키를 등록하면 관심 설정(`/interests`)으로 보내고, 구독 주제가 없으면 홈 · 관심 설정 화면에 안내한다. 설정 행이 이미 있으면 아무것도 쓰지 않는다. 코드는 특정 형식 키를 알지 않는다 — 기본 제외는 체계 데이터다
 - **user-R44** — 기동 단계: 기존 계정 채우기(`InterestBackfill`)는 `SmartLifecycle` 의 단계 `UserStartup.PHASE`(웹 서버 시작 단계 `Integer.MAX_VALUE − 2048` 보다 작은 코드 상수)에서 두 역할 공통으로 돈다 — 모든 `SmartInitializingSingleton`(태그 체계의 첫 기동 적재 — [tag Spec](tag.md#기본-체계와-첫-기동) tag-R2 포함) 뒤 · 웹 서버 앞이다. 채우기는 `account` 의 `AccountDirectory.page` 로 계정을 계정 ID 순 묶음으로 읽어 그 가운데 설정 행이 없는 계정마다 트랜잭션 하나로 user-R43 의 쓰기를 한다 — 대상은 설정 행으로만 고른다 — 설정 행이 있으면 형식 제외 행이 없어도(사용자가 모두 풀었을 수 있다) 대상이 아니다. 동시에 뜬 프로세스 · 계정 생김 리스너와 겹쳐도 한 번이다. 기동 단계의 실패는 앱을 띄우지 않는다
 - **user-R45** — 태그 선호(`PreferenceSet`)는 주제 구독 · 지역 제외 · 형식 제외다 — 태그 종류마다 모드 하나(`PreferenceMode.of` — 주제 `SUBSCRIBE`, 지역 · 형식 `EXCLUDE`)이고 다른 조합은 저장 제약이 막는다. 주제 구독은 대분류 · 중분류 키를 받고, 대분류를 구독하면 하위 중분류 전체를 구독한 것이며 그 중분류 행은 두지 않는다(정규화). 현재 상태 전체가 선호 버전(설정 행의 칸 하나)의 키다. 이력(`user_tag_preference_events`)은 추가만 하고 행마다 원인(`USER` · `ONBOARDING` · `TAG_SET_CHANGE`) · 기록 당시 버전 · 종류 · 키 · 모드 · 더함 뺌 · 시각을 갖는다. 이력은 활성 키로 푼 집합이 바뀔 때만 남는다 — 이름 변경 · 정규화는 이력이 없다. 관심 신호는 원인이 `USER` 인 행만이다
 - **user-R46** — 관심 설정 조회 · 저장(태그 선호 · 제외 소스 · 일정 · 모델)은 한 트랜잭션에서 ① 설정 행이 없으면 user-R43 의 쓰기로 만들고 ② 설정 행을 잠그고(`FOR UPDATE`) ③ 선호 버전이 지금 활성 버전과 다르면 먼저 따라가게 하고(user-R47 의 사용자 하나) ④ 읽거나 쓴다. 저장은 갈래마다 통째로 바꾼다 — 태그 선호는 차이를 이력으로 남기고(user-R45), 나머지 갈래는 이력이 없다. 태그 선호 저장은 화면이 본 체계 버전 ID 를 싣고 — 지금 활성 버전과 다르면 바꾸지 않고 `TAG_SET_CHANGED`(활성 버전 ID)다(③ 의 따라가기는 커밋된다). 같으면 요청을 정규화해 저장하고 `SAVED`(저장한 선호)다. 그 버전에 없는 키 · 빈 키는 400 이다
@@ -734,7 +813,7 @@ public interface SummaryJobQueue {
   해제는 `from` 키의 뺌(버전 `from`), 더함은 활성 키의 더함(버전 `to`)으로 이력에 남기고 원인은 `TAG_SET_CHANGE` 다. 설정 행의 선호 버전을 활성 버전으로 올린다. 한 사용자의 실패는 그 사용자만 되돌리고, 이벤트가 다시 처리되면 남은 사용자만 고친다
 - **user-R48** — 선호 조정 알림: 따라가기가 사용자의 선호를 해제하거나 더했으면 그 사용자에게 알림 하나를 남긴다(`PREFERENCES_ADJUSTED` — 모으지 않는다). 내용은 활성 버전 번호와 조정 항목(종류 · 키 · 그 버전의 이름 · 모드 · 조정 종류)이다. 일대일 이어짐 · 정규화는 싣지 않는다
 - **user-R49** — 제외 소스는 소스 단위이고 이력이 없다(관심 신호가 아니다). 고를 소스는 `source` 의 `SourceNames`(숨기지 않은 소스)다. 저장은 고를 소스 안에서만 바꾼다 — 새 집합 = (지금 제외 가운데 고를 소스 밖의 것) ∪ (요청 가운데 고를 소스 안의 것)이고 고를 소스 밖의 요청은 버린다. 숨긴 소스의 제외는 남아 다시 보이면 그대로다. `source` 의 `SourceDeleted` 를 받으면 그 소스의 제외 행을 모두 지운다
-- **user-R50** — 일정 · 리포트: 시간대는 IANA 시간대 ID(`ZoneId.getAvailableZoneIds` 에 있는 것 — 그 밖의 값은 오프셋(`+09:00` · `Z`) · 목록에 없는 약어(`KST`)를 포함해 `UNKNOWN_TIMEZONE`), 생성 시각은 `HH:mm`(분 단위), 주간 리포트 요일은 `DayOfWeek` 이름이다 — 시각 · 요일의 형식이 틀리면 400. 리포트 설정은 저장 · 조회만 하고 일정은 리포트의 작업이 쓴다. 화면의 시각 표기는 브라우저 시간대다 — 사용자 시간대는 일정의 기준이다
+- **user-R50** — 일정 · 리포트: 시간대는 IANA 시간대 ID(`ZoneId.getAvailableZoneIds` 에 있는 것 — 그 밖의 값은 오프셋(`+09:00` · `Z`) · 목록에 없는 약어(`KST`)를 포함해 `UNKNOWN_TIMEZONE`), 생성 시각은 `HH:mm`(분 단위), 주간 리포트 요일은 `DayOfWeek` 이름, 월간 리포트 날짜는 1 ~ 31(`ReportSettings.MONTHLY_DAY_MIN` · `MONTHLY_DAY_MAX` — 조회가 범위를 함께 낸다)이다 — 시각 · 요일의 형식이 틀리거나 날짜가 범위 밖이면 400. 그 날이 없는 달의 경계는 리포트의 일정이 그 달 마지막 날로 정한다([report-R27](report.md#일정)). 주간 리포트를 끄면 월간 리포트도 오지 않는다 — 화면은 주간을 끄면 월간 설정을 막고 그렇게 안내한다. 리포트를 만들지 않는 경우(생성 조건)는 `reader` 의 조건 처리기가 낸 수로 안내한다([reader-R17](reader.md#변화-리포트)). 리포트 설정은 저장 · 조회만 하고 일정은 리포트의 작업이 읽는다(user-R76). 화면의 시각 표기는 브라우저 시간대다 — 사용자 시간대는 일정의 기준이다
 - **user-R51** — 공급자 · 모델: 고르기는 그 사용자의 키가 있는(상태 무관) 공급자의 허용 모델만 받는다 — 키가 없는 공급자면 `PROVIDER_WITHOUT_KEY`, 목록에 없는 모델이면 `MODEL_NOT_ALLOWED`. 쓸 모델은 조회 때 정한다(`ModelChoice`): 고른 모델이 허용 목록에 있고 그 공급자의 키가 `VALID` 면 그것(`CHOSEN`), 아니면 `VALID` 키가 있는 공급자(`Provider` 선언 순)의 허용 목록 첫 모델, 그것도 없으면 없음. 고른 모델을 못 쓴 까닭은 하나이고 앞의 것부터다 — `NOT_CHOSEN` → `NOT_ALLOWED`(목록에서 빠짐) → `NO_KEY` → `KEY_INVALID`. 조회는 고를 수 있는 모델(키가 있는 공급자의 허용 모델) · 고른 모델 · 쓸 모델 · 까닭을 낸다
 - **user-R56** — 다이제스트 분량: 최대 후보 수(다이제스트 후보 사건의 수 — [digest Spec](digest.md#후보-선별) digest-R21)는 단계(`CandidateVolume` — 적게 20 · 보통 40 · 많이 60) 또는 직접 입력(10 ~ 100 — `DigestVolume.MIN_COUNT` · `MAX_COUNT`)이고, 큰 슬롯 수는 0 ~ 10(`MIN_BIG_SLOTS` · `MAX_BIG_SLOTS` — 0 이면 큰 슬롯을 넣지 않는다)이다. 요약 길이는 짧게 · 보통 · 자세히(`SummaryLength` — 단계의 뜻은 다이제스트의 지시가 정한다, [digest-R26](digest.md#프롬프트-구성))이다. 기본은 보통 · 3 · 보통(`InterestDefaults`). 저장은 네 칸을 통째로 바꾸고 이력이 없다. 직접 입력일 때만 직접 입력한 수가 있다(`customCountMatches` — 처리기는 400, 유스케이스는 범위보다 먼저 본다). 범위는 저장할 때만 직접 입력한 수 → 큰 슬롯 수 순으로 보고 어긋난 첫 칸을 결과로 낸다 — 범위 값을 나중에 좁혀도 이미 저장된 값은 그대로 읽는다. 처리기는 키 없이 연다(account-R5). 다이제스트 하나의 항목 수 위쪽(직접 입력의 상한 — 상한을 낮추기 전에 저장된 값은 150 까지)을 고쳐 누르는 사용이 `FEEDBACK` 한도(account-R30) 안이어야 한다 — 상한을 올리면 그 한도를 함께 본다. 실제 사건 수는 입력 토큰 예산(안전 상한 — [llm Spec](llm.md#공급자와-허용-모델-목록) llm-R4)이 더 줄일 수 있다. 단계 값과 기본값(큰 슬롯 수 3 · 요약 길이 보통)은 한 공급자 모델로 사용자 넷의 7일치 다이제스트를 만들어 재고 정했고, 직접 입력 · 큰 슬롯 수의 범위는 측정 전 목표다([ADR-0209](../adr/0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md) · [ADR-0223](../adr/0223-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md) · [ADR-0272](../adr/0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md))
 - **user-R59** — 추론 강도: 다이제스트 · 변화 리포트 생성 호출의 추론 강도는 `llm` 의 `ReasoningEffort`(낮음 · 보통 · 높음)이고 기본은 보통(`InterestDefaults.REASONING_EFFORT`)이다 — 두 과제가 한 칸을 함께 쓴다([ADR-0312](../adr/0312-the-reasoning-effort-setting-is-shared-by-digests-and-change-reports-and-report-lengths-are-constants.md)). 저장(`ModelSelection.saveEffort` — `PUT /api/interests/effort`)은 user-R46 의 트랜잭션에서 칸 하나를 바꾸고 이력이 없다 — 키 · 고른 모델 · 쓸 모델과 무관하게 받는다. 모델 조회 · 고르기 · 저장의 응답이 지금 값과 고를 수 있는 값을 함께 낸다. 처리기는 키 없이 연다(account-R5). 값을 더하는 변경은 `llm` 의 값과 설정 칸의 검사 · 화면용 API 명세를 함께 고친다([ADR-0218](../adr/0218-the-digest-generation-reasoning-effort-is-a-user-setting-defaulting-to-medium.md))
@@ -798,6 +877,12 @@ public interface SummaryJobQueue {
 
 - **user-R61** — 다이제스트 일정 목록(`DigestScheduleDirectory`)은 쓰는(`ACTIVE`) 계정마다 시간대 · 생성 시각을 사용자 ID 순 쪽(`MAX_PAGE` 500 — 측정 전 목표)으로 낸다 — 쓰는 계정의 쪽은 `account` 의 `AccountDirectory.activePage` 로 읽고, 설정 행이 있으면 그 일정, 없으면 기본 일정(`InterestDefaults.SCHEDULE` — user-R60 과 같은 대체)이다. 정지 · 탈퇴 계정은 빠진다. 쪽마다 쓰는 계정 하나에 항목 하나라 쪽의 길이 · 끝은 계정 쪽과 같다. 다이제스트의 쓸 모델(`DigestModelDirectory`)은 쓰는 계정(`AccountDirectory.active`)이면 설정 행의 고른 모델(행이 없으면 계정을 만들 때의 값 — 고른 모델 없음)과 허용 목록 · 키 상태로 user-R51 의 판정(`ModelChoice`)을 내고, 계정이 없거나 쓰는 계정이 아니면 빈 값이다. 판정의 재료 읽기(`ModelResolutions`)는 관심 설정 화면의 모델 조회와 하나다. 둘 다 읽기 전용 트랜잭션 하나이고 쓰지 않는다. 일정 목록은 사용자 범위가 없어 백그라운드 작업 전용이고, 쓸 모델은 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다
 
+### 리포트 일정과 쓸 모델
+
+판단의 이유는 [ADR-0321](../adr/0321-change-report-periods-end-at-the-digest-time-of-the-chosen-weekday-or-day-are-made-within-two-hours-and-a-changed-setting-makes-a-whole-new-period.md) · [ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md)에 있다.
+
+- **user-R76** — 리포트 일정 목록(`ReportScheduleDirectory`)은 쓰는(`ACTIVE`) 계정마다 시간대 · 다이제스트 생성 시각 · 주간 리포트 켬 · 요일 · 월간 리포트 켬 · 날짜를 사용자 ID 순 쪽(`MAX_PAGE` 500 — 측정 전 목표)으로 낸다 — 쓰는 계정의 쪽과 설정 행 읽기는 다이제스트 일정 목록과 하나(`ScheduleRows` — 설정 행이 없으면 기본값 `ScheduleSettings.DEFAULTS`)이고, 쪽의 길이 · 끝은 계정 쪽과 같다. 리포트 기간 · 경계는 리포트가 정한다([report-R27](report.md#일정)). 리포트의 쓸 모델(`ReportModelDirectory`)은 다이제스트의 쓸 모델과 같은 판정(user-R51 · `ModelChoice` — 정하기는 `UsableModels` 하나)으로 쓸 모델을 정하고 설정 행의 추론 강도(user-R59)를 함께 내며, 계정이 없거나 쓰는 계정이 아니거나 쓸 모델이 없으면 빈 값이다. 둘 다 읽기 전용 트랜잭션 하나이고 쓰지 않는다. 일정 목록은 사용자 범위가 없어 백그라운드 작업 전용이고, 쓸 모델은 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다
+
 ### 사용자 스토리라인의 정리
 
 판단의 이유는 [ADR-0287](../adr/0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md) · [ADR-0288](../adr/0288-summaries-are-made-after-a-digest-ends-only-for-changed-flows-and-extended-with-new-events.md) · [ADR-0289](../adr/0289-shown-flows-are-user-storylines-with-a-summary-which-the-summary-job-creates-and-removes.md) · [ADR-0291](../adr/0291-tokens-spent-on-a-summary-are-shown-on-the-personal-flow-screen-as-the-last-summary-and-the-running-total.md)에 있다.
@@ -836,9 +921,9 @@ public interface SummaryJobQueue {
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
-| `user_notices` | id, user_id, kind(`FEED_STATUS`/`PASSWORD_CHANGED`/`KEY_INVALIDATED`/`PREFERENCES_ADJUSTED`/`STORYLINE_SUBSCRIPTIONS_REMOVED`/`DIGEST_FAILED`), content(jsonb), revision(1 이상), created_at, updated_at, read_at | 화면 내 알림(user-R21). `user_id` 는 계정 ID 다(FK 없음). 피드 상태 알림은 사용자마다 안 읽은 것이 많아야 하나다(부분 고유 인덱스 — user-R23). 키 무효 알림은 사용자 · 키 ID · 무효 시각마다 많아야 하나다(부분 고유 인덱스 — user-R36). 다이제스트 실패 알림은 사용자 · 다이제스트 ID 마다 많아야 하나다(부분 고유 인덱스 — user-R62). 비밀번호 알림은 사용자 · 바꾼 시각마다 많아야 하나다(부분 고유 인덱스 — user-R74). `read_at` 이 없으면 안 읽은 알림 |
+| `user_notices` | id, user_id, kind(`FEED_STATUS`/`PASSWORD_CHANGED`/`KEY_INVALIDATED`/`PREFERENCES_ADJUSTED`/`STORYLINE_SUBSCRIPTIONS_REMOVED`/`DIGEST_FAILED`/`REPORT_FAILED`), content(jsonb), revision(1 이상), created_at, updated_at, read_at | 화면 내 알림(user-R21). `user_id` 는 계정 ID 다(FK 없음). 피드 상태 알림은 사용자마다 안 읽은 것이 많아야 하나다(부분 고유 인덱스 — user-R23). 키 무효 알림은 사용자 · 키 ID · 무효 시각마다 많아야 하나다(부분 고유 인덱스 — user-R36). 다이제스트 실패 알림은 사용자 · 다이제스트 ID 마다 많아야 하나다(부분 고유 인덱스 — user-R62). 리포트 실패 알림은 사용자 · 리포트 ID · 실패 시각마다 많아야 하나다(부분 고유 인덱스 — user-R75). 비밀번호 알림은 사용자 · 바꾼 시각마다 많아야 하나다(부분 고유 인덱스 — user-R74). `read_at` 이 없으면 안 읽은 알림 |
 | `user_feed_status_receipts` | user_id(PK), received_through | 피드 상태 알림의 반영 기준 — 사용자마다 한 행(user-R24). `received_through` 가 없으면 아직 반영한 회차가 없는 자리 행이다 |
-| `user_settings` | user_id(PK), tag_set_id, timezone, digest_time, llm_provider, llm_model, weekly_report, weekly_report_day, monthly_report, candidate_volume(`FEW`/`NORMAL`/`MANY`/`CUSTOM`), candidate_count, big_slots, summary_length(`SHORT`/`NORMAL`/`DETAILED`), reasoning_effort(`LOW`/`MEDIUM`/`HIGH`), updated_at, version | 설정 행 — 사용자마다 하나(user-R43). `tag_set_id` 는 선호 버전(user-R45 — `tag` 의 버전 ID, FK 없음). `llm_provider` · `llm_model` 은 함께 있거나 함께 없다(검사). `weekly_report_day` 는 ISO 요일 1 ~ 7. `candidate_count` 는 `CUSTOM` 일 때만 있다(검사) — 단계의 값과 범위는 칸이 아니라 코드(`DigestVolume`)가 갖는다(user-R56). `summary_length` 의 뜻은 다이제스트의 지시가 갖는다(user-R56), `reasoning_effort` 는 `llm` 의 값이다(user-R59) |
+| `user_settings` | user_id(PK), tag_set_id, timezone, digest_time, llm_provider, llm_model, weekly_report, weekly_report_day, monthly_report, monthly_report_day, candidate_volume(`FEW`/`NORMAL`/`MANY`/`CUSTOM`), candidate_count, big_slots, summary_length(`SHORT`/`NORMAL`/`DETAILED`), reasoning_effort(`LOW`/`MEDIUM`/`HIGH`), updated_at, version | 설정 행 — 사용자마다 하나(user-R43). `tag_set_id` 는 선호 버전(user-R45 — `tag` 의 버전 ID, FK 없음). `llm_provider` · `llm_model` 은 함께 있거나 함께 없다(검사). `weekly_report_day` 는 ISO 요일 1 ~ 7, `monthly_report_day` 는 1 ~ 31(검사 — user-R50). `candidate_count` 는 `CUSTOM` 일 때만 있다(검사) — 단계의 값과 범위는 칸이 아니라 코드(`DigestVolume`)가 갖는다(user-R56). `summary_length` 의 뜻은 다이제스트의 지시가 갖는다(user-R56), `reasoning_effort` 는 `llm` 의 값이다(user-R59) |
 | `user_tag_preferences` | user_id · tag_kind · tag_key(PK), mode, created_at | 태그 선호의 현재 상태 — 선호 이력의 투영(user-R45). `tag_kind` 는 `TOPIC`/`REGION`/`FORMAT`, `mode` 는 `TOPIC` 이면 `SUBSCRIBE` · 그 밖 `EXCLUDE`(검사) |
 | `user_tag_preference_events` | id, user_id, cause(`USER`/`ONBOARDING`/`TAG_SET_CHANGE`), tag_set_id, tag_kind, tag_key, mode, action(`ADD`/`REMOVE`), occurred_at | 선호 이력 — 추가만 한다(user-R45). `tag_set_id` 는 기록 당시 버전 |
 | `user_excluded_sources` | user_id · source_id(PK), created_at | 제외 소스(user-R49). `source_id` 는 `source` 의 소스 ID(FK 없음 — `SourceDeleted` 로 지운다, 소스 ID 색인) |
@@ -910,3 +995,5 @@ public interface SummaryJobQueue {
 | [0309](../adr/0309-account-facts-are-published-after-commit-and-user-writes-interest-defaults-and-password-notices-from-them.md) | 계정 생김 · 비밀번호 바뀜을 `account` 의 이벤트로 받아 관심 설정 기본값 · 비밀번호 알림을 쓴다 |
 | [0312](../adr/0312-the-reasoning-effort-setting-is-shared-by-digests-and-change-reports-and-report-lengths-are-constants.md) | 추론 강도 설정은 다이제스트와 변화 리포트가 함께 쓰고, 리포트의 글 길이 기준은 상수다 |
 | [0314](../adr/0314-the-free-text-interest-setting-is-removed-and-its-stored-values-are-dropped-by-migration.md) | 관심 설정은 자유 텍스트 관심사를 받지 않고, 저장된 값은 마이그레이션에서 지운다 |
+| [0321](../adr/0321-change-report-periods-end-at-the-digest-time-of-the-chosen-weekday-or-day-are-made-within-two-hours-and-a-changed-setting-makes-a-whole-new-period.md) | 변화 리포트는 고른 요일 · 날짜의 다이제스트 생성 시각에서 기간을 끊고, 그 시각 뒤 2시간 안에 만들며, 설정을 바꾸면 새 설정의 온전한 기간을 만든다 |
+| [0324](../adr/0324-report-failures-become-notices-through-an-event-declared-by-the-receiving-user-module-like-digest-failures.md) | 리포트 실패는 받는 쪽 user 가 선언한 이벤트로 다이제스트와 같은 꼴의 알림이 되고, 실패 갈래 타입을 함께 쓴다 |

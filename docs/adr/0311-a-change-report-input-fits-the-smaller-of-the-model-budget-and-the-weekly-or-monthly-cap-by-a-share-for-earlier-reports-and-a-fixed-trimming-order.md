@@ -37,3 +37,7 @@
 | 월간의 주간 리포트는 개요 · 제목만 싣는다 | 월간이 주마다 어떻게 이어졌는지를 본문에서 읽지 못한다 |
 | 상한을 넘으면 실패로 끝낸다 | 흐름을 많이 추적한 사용자는 리포트를 받지 못한다 |
 | 재료 조립에서 덜어 낸다 | 스냅숏에서 덜어 낸 흐름의 통계가 빠져 다음 리포트의 직전 값이 사라진다 |
+
+## 후속 기록
+
+- 2026-11-25: 맥락 "월간에는 직전 월간 한 편과 그 달 주간 리포트 4 ~ 6편이 든다" — 월간은 그 기간 안에 다 든 READY 주간만 싣는다(달마다 3 ~ 4편 — [ADR-0322](0322-a-weekly-report-needs-three-ready-digest-days-a-monthly-report-two-ready-weeklies-wholly-inside-and-a-monthly-waits-for-unfinished-weeklies.md)), 지금 상태는 [report Spec "생성 조건"](../specs/report.md#생성-조건) report-R28

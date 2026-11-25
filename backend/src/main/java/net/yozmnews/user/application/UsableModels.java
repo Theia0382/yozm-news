@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 사용자 하나의 쓸 모델 정하기 — 쓰는 계정이면 고른 모델 · 허용 목록 · 키 상태로 쓸 모델을 정하고 설정 행의 추론 강도를 함께 낸다. 다이제스트 ·
- * 리포트의 쓸 모델 조회가 함께 쓴다. docs/specs/user.md §4 · user-R51 · user-R59 · user-R61
+ * 리포트의 쓸 모델 조회가 함께 쓴다. docs/specs/user.md §4 · user-R51 · user-R59 · user-R61 · user-R76
  * <p>
  * 설정 행이 없으면 계정을 만들 때의 값({@link InterestSettings#defaults})으로 본다. 판정은 {@link ModelResolutions} 와
  * {@code ModelChoice} 가 한다. 부르는 쪽의 트랜잭션에서 읽는다. 쓰지 않는다.

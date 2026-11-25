@@ -31,3 +31,4 @@
 
 - 2026-11-16: 결과 "소비자용 공개 조회도 소비자의 작업이 연다" — 결정 범위(사용자 설정 · 태그 선호) 밖인 스토리라인 구독의 소비자 조회는 구독을 만든 작업이 열었다([ADR-0191](0191-the-consumer-query-of-storyline-subscriptions-is-opened-with-the-subscriptions-and-resolves-ids-without-writing.md)), 지금 상태는 [user Spec "스토리라인 구독"](../specs/user.md#스토리라인-구독)(user-R55)
 - 2026-11-17: 결과 "소비자용 공개 조회도 소비자의 작업이 연다" — 다이제스트가 읽는 관심 설정 조회를 후보 선별 작업이 열었다([ADR-0211](0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md)), 지금 상태는 [user Spec "다이제스트가 읽는 관심 설정"](../specs/user.md#다이제스트가-읽는-관심-설정)
+- 2026-11-25: 결과 "소비자용 공개 조회도 소비자의 작업이 연다" — 변화 리포트의 일정 · 생성 작업 · 다시 만들기가 읽는 일정 목록 · 쓸 모델 조회를 리포트 일정 작업이 열었다([ADR-0321](0321-change-report-periods-end-at-the-digest-time-of-the-chosen-weekday-or-day-are-made-within-two-hours-and-a-changed-setting-makes-a-whole-new-period.md)), 지금 상태는 [user Spec "리포트 일정과 쓸 모델"](../specs/user.md#리포트-일정과-쓸-모델) user-R76
