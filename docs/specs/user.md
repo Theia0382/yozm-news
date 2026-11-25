@@ -656,7 +656,7 @@ public record UserStorylineSummaryRef(UserStorylineId id, String title) {}
 - `StorylineSubscriptionDirectoryService` — 공개 조회 `StorylineSubscriptionDirectory` 의 구현. 읽기 전용이다(user-R55)
 - `StorylineSubscriptionHistory` — 화면의 구독 이력 유스케이스 — 세션 사용자의 원인 `USER` 행 한 쪽과 다음 쪽 커서. 값 `HistoryPage` · `HistoryEntry`. 읽기 전용이다(user-R63)
 - `StorylineSummaryRun` — 사용자 하나의 정리 실행 — 쓸 모델 · 맞추기 · 스토리라인 판정 · 재료 · 처분 · 생성 호출 · 견줘 저장 · 시도 기록(user-R68 ~ R71). 결과 `SummaryRunResult`(저장 · 지움 · 실패 · 버림의 수). 역할 애너테이션이 없다
-- `SummaryMaterials` — 정리의 재료 읽기 — 추적 대상 꼭대기의 사건(`storyline` 의 타임라인 — 하위 스토리라인의 사건까지)과 대표 기사(`event`)의 제목 · 요약문(`article`). 대표 기사가 없거나 그새 지운 사건은 뺀다. 트랜잭션 없이 조회를 차례로 부른다(user-R70)
+- `SummaryMaterials` — 정리의 재료 읽기 — 추적 대상 꼭대기의 사건(`storyline` 의 타임라인 — 하위 스토리라인의 사건까지, 첫 기사 시각이 실행의 지금 이하인 것)과 대표 기사(`event`)의 제목 · 요약문(`article`). 대표 기사가 없거나 그새 지운 사건은 뺀다. 트랜잭션 없이 조회를 차례로 부른다(user-R70)
 - `DigestCompletedListener` — `DigestCompleted` 리스너(들어오는 쪽). 역할 애너테이션이 없다(user-R68)
 - `SummaryArticleRemoval` · `SummaryArticleRemovalListener` — 지운 기사 따르기와 `ArticlesRemoved` 리스너(user-R72)
 - `UserStorylineSummariesService` — 공개 조회 `UserStorylineSummaries` 의 구현. 읽기 전용이다(user-R73)
@@ -885,7 +885,7 @@ public interface SummaryJobQueue {
 
 ### 사용자 스토리라인의 정리
 
-판단의 이유는 [ADR-0287](../adr/0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md) · [ADR-0288](../adr/0288-summaries-are-made-after-a-digest-ends-only-for-changed-flows-and-extended-with-new-events.md) · [ADR-0289](../adr/0289-shown-flows-are-user-storylines-with-a-summary-which-the-summary-job-creates-and-removes.md) · [ADR-0291](../adr/0291-tokens-spent-on-a-summary-are-shown-on-the-personal-flow-screen-as-the-last-summary-and-the-running-total.md)에 있다.
+판단의 이유는 [ADR-0287](../adr/0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md) · [ADR-0288](../adr/0288-summaries-are-made-after-a-digest-ends-only-for-changed-flows-and-extended-with-new-events.md) · [ADR-0289](../adr/0289-shown-flows-are-user-storylines-with-a-summary-which-the-summary-job-creates-and-removes.md) · [ADR-0291](../adr/0291-tokens-spent-on-a-summary-are-shown-on-the-personal-flow-screen-as-the-last-summary-and-the-running-total.md) · [ADR-0327](../adr/0327-summary-materials-take-only-events-that-started-by-the-runs-now.md)에 있다.
 
 - **user-R68** — 계기와 실행: `DigestCompleted` 를 받으면 그 사용자의 정리 작업 하나를 등록한다 — 작업 ID 는 (사용자, 다이제스트)에서 낸 이름 기반 UUID 라 같은 이벤트를 다시 처리해도 작업은 하나다. 작업은 재시도하지 않는다 — 다음 다이제스트가 다시 계기가 된다. 실행(`StorylineSummaryRun.run`)은 트랜잭션 밖에서 다음 순서로 한다
   1. 쓸 모델(`DigestModelDirectory.modelOf`)이 없으면 아무 일도 하지 않는다
@@ -902,7 +902,7 @@ public interface SummaryJobQueue {
   - 호출하는 처분은 새로 만들기 → 다시 만들기 → 고치기 순, 그 안에서 추적 중인 것 먼저 · ID 순으로 한 실행에 `SummaryRules.MAX_CALLS_PER_RUN`(20)개까지다. 넘친 것은 다음 실행으로 미룬다
   - 한 호출에 넣는 사건은 대상 사건(처음부터면 전부, 고칠 때면 새 사건) 가운데 `SummaryRules.MAX_EVENTS`(60)개까지다 — 대상 사건이 있는 꼭대기마다 먼저 그 꼭대기의 늦은 사건을 몫(상한 ÷ 그런 꼭대기 수, 적어도 하나)만큼 담고 남는 자리를 전체에서 늦은 순으로 채워, 첫 기사 시각 · 사건 ID 순으로 싣는다. 대상 사건이 있는 꼭대기는 모두 사건을 하나 이상 받는다. 상한에 걸려 넣지 못한 사건도 넣은 사건으로 기록한다
   - 값은 모두 측정 전 목표다
-- **user-R70** — 재료 · 프롬프트 · 출력 · 저장: 사건은 대표 기사의 제목과 저장된 RSS 요약문, 첫 기사 시각(사용자 시간대의 날짜)으로 싣는다 — 본문은 싣지 않는다. 사용자 구획은 JSON 문서이고 꼭대기마다 별칭 · 지난 글 · 사건 줄이다. 고치는 호출은 지난 글과 새 사건만 싣는다. 넣을 사건도 지난 글도 없는 꼭대기는 호출에 넣지 않고 글 없이 둔다 — 그런 꼭대기뿐이면 부르지 않는다. 지시는 분야를 가리지 않는 일반 원리로만 쓴다
+- **user-R70** — 재료 · 프롬프트 · 출력 · 저장: 재료의 사건은 추적 대상 꼭대기의 타임라인 가운데 첫 기사 시각이 그 실행의 지금(처분에 쓰는 지금과 같은 값) 이하인 사건이다 — 측정용 시계로 지난 날짜를 돌 때 복원한 데이터의 뒷날 사건을 싣지 않는다. 실제 시간에서는 1시간 안의 미래 사건만 첫 기사 시각이 지난 뒤의 실행으로 미뤄진다(발행 시각 해석 — [source Spec](source.md#5-규칙과-불변식) source-R40). 사건은 대표 기사의 제목과 저장된 RSS 요약문, 첫 기사 시각(사용자 시간대의 날짜)으로 싣는다 — 본문은 싣지 않는다. 사용자 구획은 JSON 문서이고 꼭대기마다 별칭 · 지난 글 · 사건 줄이다. 고치는 호출은 지난 글과 새 사건만 싣는다. 넣을 사건도 지난 글도 없는 꼭대기는 호출에 넣지 않고 글 없이 둔다 — 그런 꼭대기뿐이면 부르지 않는다. 지시는 분야를 가리지 않는 일반 원리로만 쓴다
   - 출력의 서술은 하나다(`SummaryOutputSchema` — `platform` 의 `OutputShape`) — 사용자 스토리라인 전체의 글(`whole`)은 언제나 있고, 꼭대기가 둘 이상이면 꼭대기 별칭을 키로 한 필수 칸(`tops`)이 더 있다. 꼭대기가 하나면 사용자 스토리라인 전체의 글이 그 꼭대기의 글이다. 글 한 벌은 제목 · 흐름 요약 · 최근 전개이고 지시가 권하는 길이는 60 · 600 · 400 코드 포인트, 서술의 상한은 그 두 배다 — 상한을 넘은 글은 상한까지만 남긴다(`OverLimit.TRUNCATE` — [platform Spec](platform.md#3-공개-인터페이스)). 출력 본문 토큰 상한은 글 한 벌마다 `SummaryRules.MAX_BODY_TOKENS_PER_PART`(2,400)이고 관문의 상한을 넘지 않는다. 추론 강도는 `LOW` 로 고정한다 — 사용자의 추론 강도 설정을 따르지 않는다
   - 생성기(`StorylineSummarizer`)는 트랜잭션 밖에서 부른다. 끝까지 쓴 응답이 아니거나 서술대로 읽지 못하면 실패다(user-R71)
   - 저장은 한 트랜잭션에서 설정 행을 잠근 뒤 견준다 — 그 사용자 스토리라인이 그대로 있고, 저장한 추적 대상이 호출 때와 같고, 정리의 판이 읽었을 때와 같을 때만 쓴다(처음이면 정리가 없을 때만). 아니면 결과를 버린다. 정리 행은 사용자 스토리라인 전체의 글, 꼭대기마다의 글(호출에 넣지 않은 꼭대기는 글 없음), 넣은 사건과 그 대표 기사, 마지막 호출의 공급자 키 · 모델 ID · 토큰, 처음 · 마지막 정리 시각을 갖는다

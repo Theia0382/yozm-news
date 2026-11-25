@@ -328,6 +328,7 @@
 | [0324](0324-report-failures-become-notices-through-an-event-declared-by-the-receiving-user-module-like-digest-failures.md) | 리포트 실패는 받는 쪽 user 가 선언한 이벤트로 다이제스트와 같은 꼴의 알림이 되고, 실패 갈래 타입을 함께 쓴다 | 승인 |
 | [0325](0325-a-failed-report-is-regenerated-from-the-screen-on-the-same-row-up-to-three-times.md) | 실패한 리포트는 화면에서 같은 행을 다시 생성을 기다리게 해 리포트마다 세 번까지 다시 만든다 | 승인 |
 | [0326](0326-development-names-call-a-shared-storyline-storyline-a-user-storyline-user-storyline-and-a-judgement-candidate-of-unknown-kind-candidate.md) | 개발 이름은 공유 스토리라인을 `Storyline`, 사용자 스토리라인을 `UserStoryline` 으로 부르고, 종류를 모르는 판정 후보는 `Candidate` 로 부른다 | 승인 |
+| [0327](0327-summary-materials-take-only-events-that-started-by-the-runs-now.md) | 정리 재료는 실행의 지금까지 첫 기사가 난 사건만 싣고, 사건의 대표 기사와 스토리라인 구조는 자르지 않는다 | 승인 |
 
 ## 운영 규칙
 
