@@ -53,7 +53,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.evaluation` 의 공개 타입은 태그 판정 `ArticleTagging` 과 그 질문 묶음 `TagQuestions` · 값 타입(`TopicCategory` · `AskedTag` · `FormatChoice` · `FormatOption` · `ImportanceScale` · `ImportanceLevel`) · 결과 타입, 사건 소속 판정 `EventMembership`, 관계 판정 `StorylineRelation`, 판정 원본 조회 `EventJudgementLog` · `RelationJudgementLog`, 판정 원본 조회 기간 `JudgementPeriod`, 그 값 · 결과 타입과 평가기 실패 갈래 `EvaluatorFailureKind`, 평가기 시간 `EvaluatorTiming`, 기사 임베딩 `TextEmbedding` 과 그 값 · 결과 타입(`EmbedderInfo` · `Embedding` · `EmbeddingResult` · `Embeddings` · `EmbeddingFailure`)과 임베딩 실패 갈래 `EmbedderFailureKind` 다. 이벤트는 내지 않는다.
+모듈 최상위 패키지 `net.yozmnews.evaluation` 의 공개 타입은 태그 판정 `ArticleTagging` 과 그 질문 묶음 `TagQuestions` · 값 타입(`TopicCategory` · `AskedTag` · `FormatChoice` · `FormatOption` · `ImportanceScale` · `ImportanceLevel`) · 결과 타입, 사건 소속 판정 `EventMembership`, 스토리라인 소속 판정 `StorylineMembership` 과 그 값 · 결과 타입(`StorylineMembershipQuery` · `StorylineCandidate` · `StorylineMembershipJudgement` · `StorylineMembershipJudgementId`), 관계 판정 `StorylineRelation`, 판정 원본 조회 `EventJudgementLog` · `RelationJudgementLog`, 판정 원본 조회 기간 `JudgementPeriod`, 그 값 · 결과 타입과 평가기 실패 갈래 `EvaluatorFailureKind`, 평가기 시간 `EvaluatorTiming`, 기사 임베딩 `TextEmbedding` 과 그 값 · 결과 타입(`EmbedderInfo` · `Embedding` · `EmbeddingResult` · `Embeddings` · `EmbeddingFailure`)과 임베딩 실패 갈래 `EmbedderFailureKind` 다. 이벤트는 내지 않는다.
 
 받는 이벤트는 `article` 의 `ArticlesRemoved` 이고, 판정의 입력은 `article` 의 공개 조회 `ArticleDirectory.findAll` 과 `source` 의 공개 조회 `FeedLabels` 로 읽는다([article Spec §3](article.md#3-공개-인터페이스) · [source Spec §3](source.md#3-공개-인터페이스)).
 
@@ -699,7 +699,7 @@ OpenAI 호환 외부 임베딩의 판단이다. 스프링 없이 단위 시험�
 
 #### `ArticleEvaluator`
 
-태그 판정 · 사건 소속 판정 · 관계 판정의 포트 — Jev 를 부르는 유일한 포트다. 사용자 정보를 받지 않는다. 패키지는 `domain/evaluator` 다.
+태그 판정 · 사건 소속 판정 · 스토리라인 소속 판정 · 관계 판정의 포트 — Jev 를 부르는 유일한 포트다. 사용자 정보를 받지 않는다. 패키지는 `domain/evaluator` 다.
 
 ```java
 public interface ArticleEvaluator {

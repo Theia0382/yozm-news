@@ -69,7 +69,7 @@
 
 ## 3. 공개 인터페이스
 
-이 모듈은 `article` 의 이벤트를 받고, 사건 변화 알림(`EventsChanged`)과 사건 삭제 알림(`EventsRemoved`)을 발행하며, 공개 조회 둘(`EventDirectory` · 운영자 화면의 `EventReview`)과 공개 운영 API 하나(`EventIntakeAdministration`)를 낸다. `EventDirectory` 는 `digest` · `report` · `admin` · `storyline` · `user` · `feedback` 이 쓰고, `EventReview` 와 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)).
+이 모듈은 `article` 의 이벤트를 받고, 사건 변화 알림(`EventsChanged`)과 사건 삭제 알림(`EventsRemoved`)을 발행하며, 공개 조회 둘(`EventDirectory` · 운영자 화면의 `EventReview`)과 공개 운영 API 하나(`EventIntakeAdministration`)를 낸다. `EventDirectory` 는 `digest` · `report` · `admin` · `storyline` · `user` · `feedback` · `reader` 가 쓰고, `EventReview` 와 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)).
 
 ### EventsChanged
 
@@ -450,7 +450,7 @@ sequenceDiagram
 | `ArticleStored` · `ArticlesRemoved` 리스너 | `EventIntakeListener`(`application`) | `article` 의 `ArticleStored` · `ArticlesRemoved` | 새 기사를 대기에 넣고(event-R5), 지운 기사의 대기 · 배정 대기 · 배정 · 후보 · 표현 행을 지우고 사건을 다시 맞춘다(event-R8). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다(Spring Modulith `@ApplicationModuleListener`). 실패한 발행은 `platform` 의 이벤트 재처리 작업이 다시 처리하고, 다시 처리해도 결과가 같다. 임베더 · Nori 를 쓰지 않는다 — 화면 역할에서 돌아도 된다 |
 | 사건 묶기 대기 반복 작업 | `IntakeArticlesJob`(`adapter/in/job`, 작업 역할) | JobRunr 반복 작업 `event-intake` — 1분마다, 재시도 없음 | `EventIntakeRound` → `AssignmentRound` → `RejudgementRound` → `MergeRound` 를 차례로 돌린다(event-R6 · R16 · R18 · R13). 임베더를 받지 않는다 — 회차가 `TextEmbedding` 을 생성자로 받고, 작업 역할이 임베더 없이 뜨지 않는 것은 `evaluation` 이 보장한다(event-R7). 이전 실행이 대기 · 처리 중이면 그 실행은 건너뛴다 |
 | 채우기 | `EventIntakeAdministrationService`(`application`) | `admin` 의 운영자 요청(`EventIntakeAdministration.fill`) | 기간에 처음 본, 배정 없는 기사를 사건 묶기 대기에 넣는다(event-R19). 두 역할 공통 |
-| 사건 조회 | `EventDirectoryService`(`application`) | 다른 모듈의 `EventDirectory` 호출 | 사건 · 사건의 기사 · 기사의 사건 · 대표 기사 · 사건 목록 · 기간 안 사건 · 기간 집계 · 사건 표현 · 이웃 사건 · 말 수 · 채우기 대상(event-R14 · R15 · R20 · R24). 두 역할 공통 |
+| 사건 조회 | `EventDirectoryService`(`application`) | 다른 모듈의 `EventDirectory` 호출 | 사건 · 사건의 기사 · 사건 여럿의 기사 ID · 기사의 사건 · 대표 기사 · 사건 목록 · 기간 안 사건 · 기간 집계 · 사건 표현 · 이웃 사건 · 말 수 · 채우기 대상 · 합쳐진 사건 풀기(event-R14 · R15 · R20 · R24). 두 역할 공통 |
 | 운영자 사건 조회 | `EventReviewService`(`application`) | `admin` 의 `EventReview` 호출 | 사건 배정 기준 · 합쳐진 사건 · 판정 원본의 쓰임 · 기사 하나의 배정과 핵심 말(event-R12 · R13 · R17 · R22). 두 역할 공통 |
 | 사건 정리 반복 작업 | `EventCleanupJob`(`adapter/in/job`, 작업 역할) | JobRunr 반복 작업 `event-cleanup` — 하루 1회, 재시도 없음 | `CleanupRound` 로 닫기 · 장기 검색 인덱스 · 기사 표현 정리를 차례로 한다(event-R13). 임베더 · 평가기를 쓰지 않는다. 실패하면 다음 날 다시 돈다 — 다시 돌려도 결과가 같다 |
 
@@ -823,7 +823,7 @@ sequenceDiagram
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V16__event_intake_and_match_features.sql`(사건 묶기 대기 · 기사 표현)과 `V17__events_and_assignments.sql`(사건 · 사건 핵심 말 · 기준 이력 · 배정 · 저장 후보 · 배정 대기), `V18__event_queries_and_big_criteria.sql`(배정의 발행 시각 인덱스 — 이 파일이 만든 기준 테이블 둘은 `V29__drop_event_big_criteria.sql` 이 지운다), `V19__event_merge_close_and_retention.sql`(사건의 합쳐짐 · 닫기 · 병합 확인 · 대표 기사 컬럼, 배정의 연 사건 표지, 병합 판정 기록), `V21__event_judgement_references.sql`(배정 · 병합 판정 기록이 반영한 판정 원본 ID), `V22__event_intake_rejections.sql`(사건 묶기 대기의 거부 수), `V23__event_unmerged_index.sql`(합쳐지지 않은 사건의 모델 버전 · 마지막 기사 시각 인덱스), `V30__event_key_terms_term_index.sql`(사건 핵심 말의 말 인덱스)이다. 장기 검색 인덱스는 마이그레이션이 아니라 정리 작업이 만든다(event-R13). `article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V16__event_intake_and_match_features.sql`(사건 묶기 대기 · 기사 표현)과 `V17__events_and_assignments.sql`(사건 · 사건 핵심 말 · 기준 이력 · 배정 · 저장 후보 · 배정 대기), `V18__event_queries_and_big_criteria.sql`(배정의 발행 시각 인덱스 — 이 파일이 만든 기준 테이블 둘은 `V29__drop_event_big_criteria.sql` 이 지운다), `V19__event_merge_close_and_retention.sql`(사건의 합쳐짐 · 닫기 · 병합 확인 · 대표 기사 컬럼, 배정의 연 사건 표지, 병합 판정 기록), `V21__event_judgement_references.sql`(배정 · 병합 판정 기록이 반영한 판정 원본 ID), `V22__event_intake_rejections.sql`(사건 묶기 대기의 거부 수), `V23__event_unmerged_index.sql`(합쳐지지 않은 사건의 모델 버전 · 마지막 기사 시각 인덱스), `V30__event_key_terms_term_index.sql`(사건 핵심 말의 말 인덱스), `V54__event_merge_deferral.sql`(병합 미룸의 이어서 미룬 횟수 · 다시 볼 시각)이다. 장기 검색 인덱스는 마이그레이션이 아니라 정리 작업이 만든다(event-R13). `article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|

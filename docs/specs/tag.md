@@ -99,6 +99,7 @@ public interface TagSetDirectory {
 
 public record TagSetNames(TagSetId id, List<TagName> categories, List<TagName> subtopics, List<TagName> regions) {
     Optional<String> topicName(String key);
+    Optional<String> categoryOf(String subtopicKey);
     Optional<String> regionName(String key);
     Map<String, Integer> topicOrder();
     Map<String, Integer> regionOrder();

@@ -226,7 +226,7 @@ sequenceDiagram
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V41__llm_credentials.sql` 이다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V41__llm_credentials.sql` · `V51__llm_provider_openrouter.sql`(공급자 제약에 OpenRouter)이다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
