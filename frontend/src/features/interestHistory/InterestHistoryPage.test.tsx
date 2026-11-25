@@ -124,6 +124,19 @@ describe("InterestHistoryPage", () => {
     expect(within(table).getByText("관심 +0.40")).toBeInTheDocument();
     expect(within(table).getByText("관심 -0.25")).toBeInTheDocument();
     expect(within(table).getByText("신호 없음")).toBeInTheDocument();
+    // 칸의 색 — 관심 쪽 주 색 · 싫어요 쪽 경고 색 · 신호 없음은 바탕, 진하기는 크기(바닥 0.2)
+    const swatch = (text: string) =>
+      within(table)
+        .getByText(text)
+        .closest("td")!
+        .querySelector("[aria-hidden='true']");
+    expect(swatch("관심 +0.40")).toHaveClass("bg-primary");
+    expect(swatch("관심 +0.40")).toHaveStyle({ opacity: "0.4" });
+    expect(swatch("관심 +0.15")).toHaveStyle({ opacity: "0.2" });
+    expect(swatch("관심 -0.25")).toHaveClass("bg-destructive");
+    expect(swatch("관심 -0.25")).toHaveStyle({ opacity: "0.25" });
+    expect(swatch("신호 없음")).toHaveClass("bg-muted");
+    expect(swatch("신호 없음")).toHaveStyle({ opacity: "1" });
     const changes = within(
       screen.getByRole("list", { name: "기간마다 바뀐 것" }),
     ).getAllByRole("listitem");

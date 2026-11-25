@@ -92,20 +92,22 @@ describe("PrivacyPage", () => {
     expect(transfer.getByText("리포트 기간(날짜)")).toBeInTheDocument();
     expect(
       transfer.getByText(
-        "추적한 흐름마다 그 흐름의 정리(제목 · 흐름 요약 · 최근 전개), 상태, 기간 안에 추적을 더했는지, 기간 보도량과 직전 값",
+        "추적한 흐름마다 그 흐름의 정리(제목 · 흐름 요약 · 최근 전개), 상태, 기간 안에 추적을 더했는지, 직전 기간과 견준 보도의 변화(늘었음 · 줄었음 같은 판정 — 기사 수는 보내지 않는다)",
       ),
     ).toBeInTheDocument();
     expect(
       transfer.getByText(
-        "추적한 흐름의 그 기간 사건마다 대표 기사의 제목 · 날짜 · 기사 수 · 기간 안에 시작했는지",
+        "추적한 흐름의 그 기간 사건마다 대표 기사의 제목 · 날짜 · 기간 안에 시작했는지",
       ),
     ).toBeInTheDocument();
     expect(
-      transfer.getByText("구독 주제의 이름과 기간 보도량 · 직전 값"),
+      transfer.getByText(
+        "구독 주제의 이름과 직전 기간과 견준 보도의 변화(판정)",
+      ),
     ).toBeInTheDocument();
     expect(
       transfer.getByText(
-        "관심 변화 — 주제 · 흐름의 관심 값과 새로 생긴 · 사라진 관심, 흐름의 정리, 기간 안에 바꾼 주제 구독(시각 · 구독 · 해제 · 주제 이름)",
+        "관심 변화 — 새로 생기거나 사라진 주제 · 흐름의 관심(관심 값은 보내지 않는다), 흐름의 정리, 기간 안에 바꾼 주제 구독(시각 · 구독 · 해제 · 주제 이름)",
       ),
     ).toBeInTheDocument();
     expect(

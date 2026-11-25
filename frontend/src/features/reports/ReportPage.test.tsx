@@ -138,9 +138,25 @@ describe("ReportPage", () => {
       .getAllByRole("row")
       .slice(1);
     expect(userStorylineRows.map((row) => row.textContent)).toEqual([
-      "의대 정원 갈등82늘었음",
-      "흐름 33 대표 기사이번 기간에 추적 시작5—비교 없음",
+      "의대 정원 갈등늘었음 (이번 기간 8건 · 직전 기간 2건)",
+      "흐름 33 대표 기사이번 기간에 추적 시작비교 없음 (이번 기간 5건 · 직전 기간 없음)",
     ]);
+    // 수는 글자로 보이지 않는다 — 판정 낱말 칸의 title 과 화면 낭독에만 있다
+    const userStorylineTrend = within(userStorylineRows[0]!).getAllByRole(
+      "cell",
+    )[0]!;
+    expect(userStorylineTrend).toHaveAttribute(
+      "title",
+      "이번 기간 8건 · 직전 기간 2건",
+    );
+    expect(within(userStorylineTrend).getByText("늘었음")).toHaveClass(
+      "text-primary",
+    );
+    expect(
+      within(userStorylineTrend).getByText("(이번 기간 8건 · 직전 기간 2건)", {
+        exact: false,
+      }),
+    ).toHaveClass("sr-only");
     expect(
       within(userStorylineRows[0]!).getByRole("link", {
         name: "의대 정원 갈등",
@@ -158,7 +174,7 @@ describe("ReportPage", () => {
         .getAllByRole("row")
         .slice(1)
         .map((row) => row.textContent),
-    ).toEqual(["금융4012늘었음"]);
+    ).toEqual(["금융늘었음 (이번 기간 40건 · 직전 기간 12건)"]);
 
     const interestTopics = screen.getByRole("table", {
       name: "관심의 변화 — 주제",
@@ -169,6 +185,23 @@ describe("ReportPage", () => {
         .slice(1)
         .map((row) => row.textContent),
     ).toEqual(["금융0.42신호 없음사라진 관심"]);
+    // 관심 값은 관심사 히스토리의 칸처럼 색 네모 — 값은 title · 화면 낭독에만, 변화는 색 낱말
+    const [start, end, shift] = within(
+      within(interestTopics).getAllByRole("row")[1]!,
+    ).getAllByRole("cell");
+    expect(start).toHaveAttribute("title", "기간 시작 · 0.42");
+    expect(start!.querySelector("[aria-hidden='true']")).toHaveClass(
+      "bg-primary",
+    );
+    expect(start!.querySelector("[aria-hidden='true']")).toHaveStyle({
+      opacity: "0.42",
+    });
+    expect(within(start!).getByText("0.42")).toHaveClass("sr-only");
+    expect(end).toHaveAttribute("title", "기간 끝 · 신호 없음");
+    expect(end!.querySelector("[aria-hidden='true']")).toHaveClass("bg-muted");
+    expect(within(shift!).getByText("사라진 관심")).toHaveClass(
+      "text-destructive",
+    );
     const interestUserStorylines = screen.getByRole("table", {
       name: "관심의 변화 — 흐름",
     });

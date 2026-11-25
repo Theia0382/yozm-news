@@ -116,6 +116,32 @@ export const shiftLabels = {
   NONE: "변화 없음",
 } as const satisfies Record<InterestShift, string>;
 
+/** 판정 · 변화 칸의 색 갈래 — 오름 · 내림 · 그대로 */
+export type Tone = "up" | "down" | "flat";
+
+/** 보도량 판정의 색 갈래 */
+export const trendTones = {
+  NEW: "up",
+  ROSE: "up",
+  FELL: "down",
+  STEADY: "flat",
+  NO_COMPARISON: "flat",
+} as const satisfies Record<ReportTrend, Tone>;
+
+/** 관심 변화의 색 갈래 */
+export const shiftTones = {
+  ENTERED: "up",
+  LEFT: "down",
+  NONE: "flat",
+} as const satisfies Record<InterestShift, Tone>;
+
+/** 색 갈래마다 낱말 칸의 모양 — 관심사 히스토리의 칸과 같은 주 색 · 경고 색 · 바탕 */
+export const toneClasses = {
+  up: "bg-primary/15 text-primary",
+  down: "bg-destructive/15 text-destructive",
+  flat: "bg-muted text-muted-foreground",
+} as const satisfies Record<Tone, string>;
+
 /** 숫자 표의 열 이름 */
 export const countColumns = {
   userStoryline: "흐름",
@@ -128,8 +154,13 @@ export const countColumns = {
   shift: "변화",
 } as const;
 
-/** 직전 값이 없는 칸 */
-export const NO_PREVIOUS_VALUE = "—";
+/** 직전 값이 없을 때 */
+export const NO_PREVIOUS_VALUE = "없음";
+
+/** 보도량 판정 칸이 수를 알리는 문구 — 화면에는 판정만 보이고 이 문구는 칸의 title · 화면 낭독에만 둔다 */
+export function countsText(current: number, previous: number | null): string {
+  return `${countColumns.current} ${current}건 · ${countColumns.previous} ${previous === null ? NO_PREVIOUS_VALUE : `${previous}건`}`;
+}
 
 /** 관심 값이 없는 칸 */
 export const NO_LEVEL = "신호 없음";

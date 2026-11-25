@@ -25,12 +25,13 @@ import {
   NOT_FOUND,
   NO_LEVEL,
   NO_PREVIOUS,
-  NO_PREVIOUS_VALUE,
   REGENERATE,
   REGENERATIONS_SPENT,
   REGENERATION_FAILED,
   TRACKED_IN_PERIOD,
+  type Tone,
   countColumns,
+  countsText,
   hiddenSectionsText,
   levelText,
   previousLink,
@@ -41,8 +42,11 @@ import {
   reportTitle,
   reportsPath,
   shiftLabels,
+  shiftTones,
   statsTitles,
+  toneClasses,
   trendLabels,
+  trendTones,
   usageText,
 } from "@/features/reports/reportTexts";
 import {
@@ -51,6 +55,7 @@ import {
   userStorylinePath,
 } from "@/features/storylines/storylineTexts";
 import { formatDateTime } from "@/shared/lib/dateTime";
+import { cellColor, cellOpacity } from "@/shared/lib/interestLevel";
 import { Button } from "@/shared/ui/button";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
@@ -257,24 +262,54 @@ function Table({
   );
 }
 
-function previousValue(value: number | null): string {
-  return value === null ? NO_PREVIOUS_VALUE : String(value);
+/** 판정 · 변화 낱말 칸 — 색으로 오름 · 내림 · 그대로를 보인다. 덧붙인 글은 칸의 title 과 화면 낭독에만 */
+function ToneCell({
+  label,
+  tone,
+  detail,
+}: {
+  label: string;
+  tone: Tone;
+  detail?: string;
+}) {
+  return (
+    <td className="py-1 pr-3 whitespace-nowrap" title={detail}>
+      <span
+        className={`rounded px-1.5 py-0.5 text-xs font-medium ${toneClasses[tone]}`}
+      >
+        {label}
+      </span>
+      {detail !== undefined && <span className="sr-only"> ({detail})</span>}
+    </td>
+  );
 }
 
-function level(value: number | null): string {
-  return value === null ? NO_LEVEL : levelText(value);
+/** 관심 값 칸 — 관심사 히스토리의 칸처럼 색 네모만 보이고 값은 칸의 title 과 화면 낭독에만 */
+function LevelCell({
+  column,
+  value,
+}: {
+  column: string;
+  value: number | null;
+}) {
+  const text = value === null ? NO_LEVEL : levelText(value);
+  return (
+    <td className="py-1 pr-3" title={`${column} · ${text}`}>
+      <span
+        aria-hidden="true"
+        className={`block h-4 w-4 rounded-sm ${cellColor(value)}`}
+        style={{ opacity: cellOpacity(value) }}
+      />
+      <span className="sr-only">{text}</span>
+    </td>
+  );
 }
 
 function UserStorylineCounts({ rows }: { rows: ReportUserStorylineCount[] }) {
   return (
     <Table
       caption={statsTitles.STORYLINES}
-      headers={[
-        countColumns.userStoryline,
-        countColumns.current,
-        countColumns.previous,
-        countColumns.trend,
-      ]}
+      headers={[countColumns.userStoryline, countColumns.trend]}
     >
       {rows.map((row) => (
         <tr key={row.storyline.storylineId} className="border-t border-input">
@@ -286,13 +321,11 @@ function UserStorylineCounts({ rows }: { rows: ReportUserStorylineCount[] }) {
               </span>
             )}
           </th>
-          <td className="py-1 pr-3 whitespace-nowrap">{row.articles}</td>
-          <td className="py-1 pr-3 whitespace-nowrap">
-            {previousValue(row.previous)}
-          </td>
-          <td className="py-1 pr-3 whitespace-nowrap">
-            {trendLabels[row.trend]}
-          </td>
+          <ToneCell
+            label={trendLabels[row.trend]}
+            tone={trendTones[row.trend]}
+            detail={countsText(row.articles, row.previous)}
+          />
         </tr>
       ))}
     </Table>
@@ -303,25 +336,18 @@ function TopicCounts({ rows }: { rows: ReportTopicCount[] }) {
   return (
     <Table
       caption={statsTitles.COVERAGE}
-      headers={[
-        countColumns.topic,
-        countColumns.current,
-        countColumns.previous,
-        countColumns.trend,
-      ]}
+      headers={[countColumns.topic, countColumns.trend]}
     >
       {rows.map((row) => (
         <tr key={row.name} className="border-t border-input">
           <th scope="row" className="py-1 pr-3 text-left font-normal">
             {row.name}
           </th>
-          <td className="py-1 pr-3 whitespace-nowrap">{row.articles}</td>
-          <td className="py-1 pr-3 whitespace-nowrap">
-            {previousValue(row.previous)}
-          </td>
-          <td className="py-1 pr-3 whitespace-nowrap">
-            {trendLabels[row.trend]}
-          </td>
+          <ToneCell
+            label={trendLabels[row.trend]}
+            tone={trendTones[row.trend]}
+            detail={countsText(row.articles, row.previous)}
+          />
         </tr>
       ))}
     </Table>
@@ -342,13 +368,12 @@ function InterestLevels({ interests }: { interests: ReportInterests }) {
               <th scope="row" className="py-1 pr-3 text-left font-normal">
                 {row.name}
               </th>
-              <td className="py-1 pr-3 whitespace-nowrap">
-                {level(row.start)}
-              </td>
-              <td className="py-1 pr-3 whitespace-nowrap">{level(row.end)}</td>
-              <td className="py-1 pr-3 whitespace-nowrap">
-                {shiftLabels[row.shift]}
-              </td>
+              <LevelCell column={countColumns.start} value={row.start} />
+              <LevelCell column={countColumns.end} value={row.end} />
+              <ToneCell
+                label={shiftLabels[row.shift]}
+                tone={shiftTones[row.shift]}
+              />
             </tr>
           ))}
         </Table>
@@ -366,13 +391,12 @@ function InterestLevels({ interests }: { interests: ReportInterests }) {
               <th scope="row" className="py-1 pr-3 text-left font-normal">
                 <StorylineName storyline={row.storyline} />
               </th>
-              <td className="py-1 pr-3 whitespace-nowrap">
-                {level(row.start)}
-              </td>
-              <td className="py-1 pr-3 whitespace-nowrap">{level(row.end)}</td>
-              <td className="py-1 pr-3 whitespace-nowrap">
-                {shiftLabels[row.shift]}
-              </td>
+              <LevelCell column={countColumns.start} value={row.start} />
+              <LevelCell column={countColumns.end} value={row.end} />
+              <ToneCell
+                label={shiftLabels[row.shift]}
+                tone={shiftTones[row.shift]}
+              />
             </tr>
           ))}
         </Table>
