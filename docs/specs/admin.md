@@ -103,7 +103,7 @@ HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는
 | `GET /api/admin/sign-up-policy` | 가입 정책 — 공개 가입이 열렸는가와 이력(최근부터 — 앞 값 · 값 · 행위자 · 시각)([account-R25](account.md#가입-정책)) |
 | `PUT /api/admin/sign-up-policy` | 가입 정책 변경 — 본문 `open`, 행위자는 운영자 |
 | `GET /api/admin/invitations` | 최근 초대 50개(발급 역순) — 메모 · 발급 · 만료 · 상태 · 쓴 시각 · 가입한 계정의 이메일 · 취소 시각. 토큰은 없다([account-R24](account.md#초대)) |
-| `POST /api/admin/invitations` | 초대 발급 — 본문 `memo`(선택). `id` · `token` · `expiresAt` — 토큰은 이 응답에만 나간다. 링크는 화면이 `/invite#토큰` 으로 만든다 |
+| `POST /api/admin/invitations` | 초대 발급 — 본문 `memo`(선택). `id` · `token` · `expiresAt` — 토큰은 이 응답에만 나간다. 링크의 꼴은 [web-R6](web.md#로그인과-계정)이다 |
 | `POST /api/admin/invitations/{id}/revoke` | 초대 취소 |
 | `POST /api/admin/accounts` | 계정 생성 — 본문 `email` · `displayName` · `initialPassword`. 만든 계정은 일반 사용자이고 첫 로그인에서 비밀번호를 바꾼다([account-R28](account.md#첫-운영자와-운영자의-계정-운영)) |
 | `PUT /api/admin/accounts/initial-password` | 첫 로그인 전 계정의 초기 비밀번호 다시 정하기 — 본문 `email` · `initialPassword`. 그 계정의 세션이 모두 끝난다 |
@@ -230,7 +230,7 @@ HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는
   - 스토리라인 목록 행은 스토리라인 값(ID · 상태 · 상위 · 사건 수 · 전체 기사 수 · 첫 · 마지막 기사 시각 — 닫은 사건 집합의 값)과 기간 안 기사 수 · 소스 수 · 중요도 평균 · 보도 강도 · 큰 여부(`StorylineSummary`), 대표 기사를 싣는다. 대표 기사는 큰 스토리라인과 같은 정본이다(`AdminRepresentatives`). 응답은 그 기간의 소속 없는 사건 수 · 기사 수와 지금 잇기 기준(창은 초 · 아래 기준 · 위 기준 · 확률 기준) · 관계 기준(창은 초)을 함께 싣는다. 쪽 크기는 질의로 받지 않는다
   - 스토리라인 상세는 경로의 ID 를 `requestedId` 로 싣는다 — 합쳐진 스토리라인의 ID 면 남는 스토리라인(`id`)과 다르다. 타임라인은 `StorylineDirectory.events` 의 사건마다 대표 기사와, 그 사건의 소속 근거(`StorylineReview.memberships` — 사건을 직접 가진 스토리라인 ID · 정한 것 · 점수 · 코사인 · 겹침 · 잇기 기준 · 판정 확률 · 판정 원본 ID · 시각, `MERGE` 면 점수 · 기준 · 확률이 null, 띠 안 판정으로 정하지 않았으면 확률 · 원본 ID 가 null)를 싣는다. 잇기 기준의 확률 기준은 띠가 생기기 전의 기준 이력이면 null 이다([storyline-R14](storyline.md#잇기-규칙) · [R36](storyline.md#띠-판정)). 타임라인에 없는 사건의 소속 근거는 싣지 않는다
   - 스토리라인 상세의 관계 · 물은 쌍은 판정 원본 ID 와 원본(`RelationJudgementLog`)을 싣는다. 원본은 판별자 `reading` 하나의 평평한 값이다 — `READ`(그 원본을 남긴 문구 판의 답마다 확률 · 스토리라인마다 한 사안 확률이 있고 문구가 null — 같은 사안의 조각 `sameMatter` 는 그 답이 없는 판의 원본이면 null), `NO_EVALUATOR` · `OTHER_EVALUATOR` · `UNREADABLE`(확률이 null 이고 문구가 있다). 확률의 방향은 원본의 first · second 스토리라인 ID(`firstId` · `secondId`) 기준이다. 원본 ID 가 있는데 원본이 없으면(지워짐) 원본 칸이 null 이고, 물은 쌍의 원본 ID 가 null 이면 판정 원본이 남지 않은 결말(`NOTHING_TO_ASK` · `REJECTED`)이다. 원본은 `RelationJudgementLog.MAX_IDS` 개씩 나눠 찾는다 — 지워지지 않은 원본이 빠지지 않는다
-  - 큰 스토리라인 응답은 그 기간의 소속 없는 사건 수 · 기사 수(`UnlinkedEvents`)를 함께 싣는다. 미리보기는 같은 기간을 지금 기준과 제안 기준으로 판정한 두 목록을 싣는다 — 들어오고 빠지는 스토리라인은 화면이 스토리라인 ID 로 가린다
+  - 큰 스토리라인 응답은 그 기간의 소속 없는 사건 수 · 기사 수(`UnlinkedEvents`)를 함께 싣는다. 미리보기는 같은 기간을 지금 기준과 제안 기준으로 판정한 두 목록을 싣는다. 들어오고 빠지는 스토리라인은 화면이 가린다([web-R24](web.md#운영자-화면))
   - 판정 기록 행은 판별자 `use` 하나의 평평한 행이다 — `ASSIGNMENT`(이 판정을 반영한 배정 — 그 기사의 지금 사건 · 정한 것), `MERGE`(이 판정이 남긴 쌍마다 지금 같은 사건이면 그 사건), `UNUSED`(가리키는 기록이 없다 — 셋 다 비어 있다). 후보 사건 ID 는 판정 당시 값이고, 결과는 조회 시점 값이다. 입력 토큰만 싣고 원본 응답은 싣지 않는다
   - 판정 기록은 지금 사건 배정 기준(창은 초)을 함께 싣는다 — 읽기 전용이다
   - 컨트롤러는 트랜잭션을 열지 않는다 — 여러 공개 조회는 한 스냅숏이 아니다. 그새 지운 기사는 기사 정보가 `null` 이다

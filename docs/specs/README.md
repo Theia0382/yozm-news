@@ -31,6 +31,7 @@
 | `storyline` | [storyline.md](storyline.md) |
 | `tag` | [tag.md](tag.md) |
 | `user` | [user.md](user.md) |
+| 프론트엔드(화면 Spec) | [web.md](web.md) |
 
 ## 2. 공통 구조
 

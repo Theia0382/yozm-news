@@ -654,7 +654,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 머리의 꼭대기는 `storyline` 의 `StorylineDirectory.topsOfStorylines`(storyline-R37)로 행의 머리를 한 번에 물어 정한다(`StorylineTopsQueries` · `BigRow.resolved`). 결과에 없는 머리(조회 사이에 지워진 스토리라인)는 머리 자신을 꼭대기로 본다
   - 행마다 닫은 사건 집합 가운데 기간 안 기사가 있는 사건을 기간 안 중요도 합 내림차순(같으면 사건 ID 오름차순)으로 `SelectionRules.BIG_EVENTS_PER_STORYLINE`(10) 개까지 — 후보가 없거나 앞 행이 쓴 사건은 세지 않고 다음 사건으로 간다
   - 사건의 후보는 그 사건의 기간 안 기사 가운데 평가가 있고 기사 제외(digest-R17 의 형식 · 소스)를 지난 기사가 있고 사건 제외(digest-R17 — 사건의 지역(digest-R44)이 제외 지역과 겹치지 않고 싫어요인 사건이 아니고 꼭대기가 모두 거른 꼭대기는 아님)를 지나고, 주제 관심의 평균이 거름 기준 `InterestRules.EXCLUSION_THRESHOLD`(−0.2) 이하(경계 포함)가 아닐 때다(`InterestLevels.excluded` — 사건 주제 중분류 가중치의 평균(digest-R23)을 거름 기준을 같은 식으로 옮긴 가중치와 견준다, 주제가 없는 사건은 걸리지 않는다) — 그 기사들이 후보 사건의 기사다. 값이 없는 사건은 후보가 없다. 구독 필터(주제)는 보지 않고, 주제 거름은 큰 슬롯 사건에만 건다(구독 후보 · digest-R52 에는 걸지 않는다)
-  - 큰 슬롯 사건은 최대 후보 수(사건 수) × `SelectionRules.BIG_SHARE`(0.5)를 내림한 수(`bigSeats`)를 넘지 않는다 — 넘으면 행 순서(놓은 순서)로 하나씩 돌며 담아 행마다 고르게 줄인다. 이 값은 관심 설정 화면의 안내 문구가 말로 적는다
+  - 큰 슬롯 사건은 최대 후보 수(사건 수) × `SelectionRules.BIG_SHARE`(0.5)를 내림한 수(`bigSeats`)를 넘지 않는다 — 넘으면 행 순서(놓은 순서)로 하나씩 돌며 담아 행마다 고르게 줄인다. 관심 설정 화면의 안내는 [web-R22](web.md#관심-설정)다
   - 큰 판정 목록은 포함 나무마다 한 행이다([storyline-R19](storyline.md#큰-판정)) — 한 포함 나무는 슬롯 하나를 쓰고, 행의 닫은 사건 집합에 그 아래 하위의 사건이 함께 든다. 행의 아래 행(`BigStoryline.branches`)은 따로 슬롯을 쓰지 않는다
   - 큰 슬롯 사건마다 그 사건이 나온 큰 판정 행의 위치를 함께 나른다 — 자르기(digest-R22)가 사건을 빼면 위치도 뺀다. 항목 묶기(digest-R46)가 그 위치로 큰 슬롯 항목을 정한다
 - **digest-R20** — (폐지 — 후보가 사건이라 같은 사건은 후보로 한 번 든다(digest-R17). 큰 슬롯이 쓴 사건을 구독 후보에서 빼는 일은 digest-R21)

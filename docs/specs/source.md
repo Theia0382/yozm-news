@@ -912,7 +912,7 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 
 ### 숨김과 삭제
 
-숨김은 끄고 목록에서 빼되 남기고 되돌릴 수 있다. 삭제는 그 소스 · 피드만 가진 기사까지 지우고 되돌릴 수 없다. 운영자 화면은 두 기능의 차이를 확인 대화상자로 밝힌다([ADR-0051](../adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md)).
+숨김은 끄고 목록에서 빼되 남기고 되돌릴 수 있다. 삭제는 그 소스 · 피드만 가진 기사까지 지우고 되돌릴 수 없다. 운영자 화면은 두 기능의 차이를 밝힌다([web-R23](web.md#운영자-화면)). 판단의 이유는 [ADR-0051](../adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md)에 있다.
 
 - **source-R53** — 숨김: 소스를 숨기면 소스와 그 피드를 모두 끄고 숨긴 시각을 남긴다 — 한 트랜잭션이고, 소스 행 뒤에 피드를 읽어 먼저 커밋된 원문 수정이 더한 피드까지 끈다. 피드를 숨기면 그 피드를 끄고 숨긴 시각을 남긴다(대상은 source-R54).
   - 행 · 운영자 원문 · 수집 상태 · 받은 기사는 그대로다. 숨긴 것을 자동으로 지우지 않는다
