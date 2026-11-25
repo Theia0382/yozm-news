@@ -9,7 +9,7 @@ import {
   type InterestVolume,
 } from "@/features/interests/interestQueries";
 import { InterestsPage } from "@/features/interests/InterestsPage";
-import { json, type Handler } from "@/test/fakeServer";
+import { json, problem, type Handler } from "@/test/fakeServer";
 import { bodiesOf, renderRoutes } from "@/test/renderRoutes";
 
 /** 체계 버전 1 — 분야 둘, 지역 하나, 형식 둘(하나는 기본 제외) */
@@ -100,6 +100,8 @@ function renderInterests(
       "GET /api/interests/settings": () => json(SETTINGS),
       "GET /api/interests/model": () => json(NO_KEY_MODEL),
       "GET /api/interests/volume": () => json(VOLUME),
+      "GET /api/reports/conditions": () =>
+        json({ minDigestDays: 3, minWeeklyReports: 2 }),
       ...handlers,
     },
   );
@@ -114,6 +116,30 @@ afterEach(() => {
 });
 
 describe("InterestsPage", () => {
+  it("리포트 설명은 서버가 낸 생성 조건의 수로 만들지 않는 경우를 안내한다", async () => {
+    renderInterests({});
+    const schedule = await section("일정 · 변화 리포트");
+
+    expect(
+      await schedule.findByText(
+        /그 주에 다이제스트를 받은 날이 3일보다 적으면 주간 리포트를, 그 기간 안의 주간 리포트가 2편보다 적으면 월간 리포트를 만들지 않습니다\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("생성 조건을 읽지 못하면 수 없이 안내한다", async () => {
+    renderInterests({
+      "GET /api/reports/conditions": () => problem(500, "읽지 못함"),
+    });
+    const schedule = await section("일정 · 변화 리포트");
+
+    expect(
+      await schedule.findByText(
+        /그 기간에 받은 다이제스트\(주간\)나 주간 리포트\(월간\)가 적으면 만들지 않습니다\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("주소에 절의 id 가 있으면 조회가 모두 끝난 뒤 그 절로 한 번 내려간다", async () => {
     // jsdom 에는 scrollIntoView 가 없다
     const scroll = vi.fn();

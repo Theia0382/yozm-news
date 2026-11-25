@@ -117,6 +117,11 @@ public final class ReportScheduleRules {
 		return month.atDay(Math.min(day, month.lengthOfMonth()));
 	}
 
+	/** 실패한 리포트를 더 다시 만들 수 있는 횟수 — {@link #MAX_REGENERATIONS} 에서 다시 만든 횟수를 뺀 값(0 아래로 내려가지 않는다) */
+	public static int regenerationsLeft(int regenerations) {
+		return Math.max(0, MAX_REGENERATIONS - regenerations);
+	}
+
 	/** 주간 리포트의 생성 조건 — 그 주에 READY 다이제스트가 {@link #MIN_DIGEST_DAYS} 날 이상 */
 	public static boolean enoughDigestDays(int readyDigestDays) {
 		return readyDigestDays >= MIN_DIGEST_DAYS;

@@ -185,6 +185,11 @@ class ReportScheduleRulesTests {
 		assertThat(ReportScheduleRules.enoughDigestDays(3)).isTrue();
 		assertThat(ReportScheduleRules.RUN_LEASE).isEqualTo(Duration.ofMinutes(40));
 		assertThat(ReportScheduleRules.CATCH_UP).isEqualTo(Duration.ofHours(2));
+		// 다시 만들기 — 리포트마다 세 번, 다 쓰면 0(음수로 내려가지 않는다)
+		assertThat(ReportScheduleRules.regenerationsLeft(0)).isEqualTo(3);
+		assertThat(ReportScheduleRules.regenerationsLeft(2)).isEqualTo(1);
+		assertThat(ReportScheduleRules.regenerationsLeft(3)).isZero();
+		assertThat(ReportScheduleRules.regenerationsLeft(5)).isZero();
 	}
 
 	private static Weekly weekly(long id, String start, String end, ReportStatus status) {

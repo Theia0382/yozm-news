@@ -43,7 +43,7 @@ import {
   NO_TOPIC_TEXT,
   REASONING_EFFORT_HELP_TEXT,
   type ReasoningEffort,
-  REPORT_SCHEDULE_HELP_TEXT,
+  reportScheduleHelpText,
   reasoningEffortNames,
   SUMMARY_LENGTH_HELP_TEXT,
   type SummaryLength,
@@ -53,6 +53,7 @@ import {
 } from "@/features/interests/interestTexts";
 import { providers } from "@/features/keys/keyTexts";
 import { PRIVACY_PATH } from "@/features/privacy/privacyTexts";
+import { useReportConditions } from "@/features/reports/reportQueries";
 import {
   INTERESTS_LINK as REPORTS_INTERESTS_LINK,
   REPORTS_PATH,
@@ -455,6 +456,7 @@ const WEEKDAYS = Object.keys(weekdayNames) as Weekday[];
 
 function ScheduleForm({ data, setMessage }: FormProps<InterestSettings>) {
   const client = useApiClient();
+  const conditions = useReportConditions();
   const queryClient = useQueryClient();
   const [timezone, setTimezone] = useState(data.timezone);
   const [digestTime, setDigestTime] = useState(data.digestTime);
@@ -591,7 +593,7 @@ function ScheduleForm({ data, setMessage }: FormProps<InterestSettings>) {
       </label>
       <p className="text-sm text-muted-foreground">{MONTHLY_DAY_HELP_TEXT}</p>
       <p className="text-sm text-muted-foreground">
-        {REPORT_SCHEDULE_HELP_TEXT}
+        {reportScheduleHelpText(conditions.data)}
       </p>
       <Button type="submit" disabled={busy}>
         일정 · 리포트 저장

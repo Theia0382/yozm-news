@@ -1,4 +1,9 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useApiClient } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
 
@@ -18,6 +23,11 @@ export type ReportStatus = ReportSummary["status"];
 export type ReportFailure = NonNullable<ReportSummary["failure"]>;
 export type ReportTrend = ReportTopicCount["trend"];
 export type InterestShift = ReportInterests["topics"][number]["shift"];
+export type ReportRegeneration =
+  components["schemas"]["ReportRegenerationResponse"];
+export type ReportRegenerationResult = ReportRegeneration["result"];
+export type ReportConditions =
+  components["schemas"]["ReportConditionsResponse"];
 
 /** 변화 리포트 조회 키의 접두 */
 export const REPORTS_QUERY_KEY = ["reports"] as const;
@@ -67,5 +77,41 @@ export function useReport(id: number) {
       }
       return data;
     },
+  });
+}
+
+/** 실패한 리포트 다시 만들기(docs/specs/reader.md reader-R16) — 끝나면 리포트 조회를 다시 읽는다 */
+export function useRegenerateReport(id: number) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<ReportRegeneration> => {
+      const { data, response } = await client.POST(
+        "/api/reports/{id}/regeneration",
+        { params: { path: { id } } },
+      );
+      if (!response.ok || !data) {
+        throw new ReportRequestError(response.status);
+      }
+      return data;
+    },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: REPORTS_QUERY_KEY }),
+  });
+}
+
+/** 리포트의 생성 조건(docs/specs/reader.md reader-R17) — 사용자와 무관한 값이라 한 번 읽어 둔다 */
+export function useReportConditions() {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: [...REPORTS_QUERY_KEY, "conditions"],
+    queryFn: async (): Promise<ReportConditions> => {
+      const { data, response } = await client.GET("/api/reports/conditions");
+      if (!response.ok || !data) {
+        throw new ReportRequestError(response.status);
+      }
+      return data;
+    },
+    staleTime: Number.POSITIVE_INFINITY,
   });
 }

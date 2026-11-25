@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router";
 import {
   type ReportCitation,
@@ -9,6 +10,7 @@ import {
   ReportRequestError,
   type ReportSection,
   type ReportTopicCount,
+  useRegenerateReport,
   useReport,
 } from "@/features/reports/reportQueries";
 import {
@@ -24,6 +26,9 @@ import {
   NO_LEVEL,
   NO_PREVIOUS,
   NO_PREVIOUS_VALUE,
+  REGENERATE,
+  REGENERATIONS_SPENT,
+  REGENERATION_FAILED,
   TRACKED_IN_PERIOD,
   countColumns,
   hiddenSectionsText,
@@ -31,6 +36,8 @@ import {
   previousLink,
   reportFailureTexts,
   reportPath,
+  regenerationResultTexts,
+  regenerationsLeftText,
   reportTitle,
   reportsPath,
   shiftLabels,
@@ -44,6 +51,7 @@ import {
   userStorylinePath,
 } from "@/features/storylines/storylineTexts";
 import { formatDateTime } from "@/shared/lib/dateTime";
+import { Button } from "@/shared/ui/button";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 /** 경로의 리포트 ID — 1 이상의 정수가 아니면 null */
@@ -60,13 +68,22 @@ export function ReportPage() {
   const id = readId(useParams().id);
   return (
     <section className={`${PAGE_FRAME} ${NARROW_WIDTH} space-y-6`}>
-      {id === null ? <p role="alert">{NOT_FOUND}</p> : <Detail id={id} />}
+      {id === null ? (
+        <p role="alert">{NOT_FOUND}</p>
+      ) : (
+        // 다른 리포트로 옮기면 그 리포트의 다시 만들기 안내를 새로 시작한다
+        <Detail key={id} id={id} />
+      )}
     </section>
   );
 }
 
 function Detail({ id }: { id: number }) {
   const detail = useReport(id);
+  // 다시 만들기가 받지 않은 까닭 — 응답 뒤 다시 읽어 실패가 아닌 상태가 되어도(만드는 중 등) 남는다
+  const [regenerationMessage, setRegenerationMessage] = useState<string | null>(
+    null,
+  );
   if (detail.isPending) {
     return <p className="text-muted-foreground">불러오는 중…</p>;
   }
@@ -87,7 +104,12 @@ function Detail({ id }: { id: number }) {
       <h1 className="text-2xl font-bold tracking-tight break-words">
         {reportTitle(summary.kind, summary.firstDay, summary.lastDay)}
       </h1>
-      <Body report={report} />
+      <Body report={report} onRegenerationResult={setRegenerationMessage} />
+      {regenerationMessage !== null && (
+        <p role="status" className="text-sm">
+          {regenerationMessage}
+        </p>
+      )}
       <Previous report={report} />
       <Usage report={report} />
     </>
@@ -95,7 +117,13 @@ function Detail({ id }: { id: number }) {
 }
 
 /** 상태마다 본문 — 내용이 있는 리포트만 섹션을 그린다 */
-function Body({ report }: { report: ReportDetail }) {
+function Body({
+  report,
+  onRegenerationResult,
+}: {
+  report: ReportDetail;
+  onRegenerationResult: (message: string | null) => void;
+}) {
   const summary = report.report;
   switch (summary.status) {
     case "SCHEDULED":
@@ -110,6 +138,11 @@ function Body({ report }: { report: ReportDetail }) {
           {summary.failure !== null && (
             <p className="text-sm">{reportFailureTexts[summary.failure]}</p>
           )}
+          <Regenerate
+            id={summary.id}
+            left={report.regenerationsLeft ?? 0}
+            onResult={onRegenerationResult}
+          />
         </div>
       );
     case "READY":
@@ -129,6 +162,44 @@ function Body({ report }: { report: ReportDetail }) {
         </div>
       );
   }
+}
+
+/**
+ * 실패한 리포트 다시 만들기 — 남은 횟수가 있으면 버튼, 다 썼으면 안내. 받으면 다시 읽어 만드는 중이 된다. 받지 않은 까닭은 부르는 쪽이
+ * 보인다(다시 읽은 상태가 실패가 아니면 이 부분은 사라진다)
+ */
+function Regenerate({
+  id,
+  left,
+  onResult,
+}: {
+  id: number;
+  left: number;
+  onResult: (message: string | null) => void;
+}) {
+  const regenerate = useRegenerateReport(id);
+  if (left === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">{REGENERATIONS_SPENT}</p>
+    );
+  }
+  function request() {
+    onResult(null);
+    regenerate.mutate(undefined, {
+      onSuccess: (result) => onResult(regenerationResultTexts[result.result]),
+      onError: () => onResult(REGENERATION_FAILED),
+    });
+  }
+  return (
+    <div className="space-y-1 pt-2">
+      <p className="text-sm text-muted-foreground">
+        {regenerationsLeftText(left)}
+      </p>
+      <Button type="button" disabled={regenerate.isPending} onClick={request}>
+        {REGENERATE}
+      </Button>
+    </div>
+  );
 }
 
 function Section({ section }: { section: ReportSection }) {
@@ -387,10 +458,14 @@ function CitationLine({ citation }: { citation: ReportCitation }) {
   }
 }
 
-/** 비교한 직전 리포트 — 내용 · 실패 리포트만(만드는 중 · 비어 있는 리포트는 비교가 없다) */
+/** 비교한 직전 리포트 — 생성 때 직전 값과 견준 리포트(내용 · 시작한 실패)에만. 시작하지 않고 실패한 리포트는 견주지 않았다 */
 function Previous({ report }: { report: ReportDetail }) {
   const status = report.report.status;
   if (status !== "READY" && status !== "FAILED") {
+    return null;
+  }
+  // 사용량(공급자 · 모델)은 시작한 리포트에만 있다
+  if (status === "FAILED" && report.usage === null) {
     return null;
   }
   if (report.previous === null) {

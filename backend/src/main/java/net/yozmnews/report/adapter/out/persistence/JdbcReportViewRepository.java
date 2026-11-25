@@ -37,7 +37,8 @@ class JdbcReportViewRepository implements ReportViewRepository {
 
 	private static final String ROW_COLUMNS = """
 			id, period_kind, period_start, period_end, status, error_code, created_at, completed_at, zone,
-			previous_report_id, provider, model, input_tokens, output_tokens, stats_snapshot::text as stats_snapshot""";
+			previous_report_id, provider, model, input_tokens, output_tokens, stats_snapshot::text as stats_snapshot,
+			regenerations""";
 
 	private final JdbcClient jdbc;
 
@@ -133,7 +134,8 @@ class JdbcReportViewRepository implements ReportViewRepository {
 				(failure == null) ? null : ReportFailure.valueOf(failure), instant(rs, "created_at"),
 				optionalInstant(rs, "completed_at"), (zone == null) ? null : ZoneId.of(zone),
 				previous, rs.getString("provider"), rs.getString("model"),
-				integer(rs, "input_tokens"), integer(rs, "output_tokens"), rs.getString("stats_snapshot"));
+				integer(rs, "input_tokens"), integer(rs, "output_tokens"), rs.getString("stats_snapshot"),
+				rs.getInt("regenerations"));
 	}
 
 	private static ReportSectionKind kind(ResultSet rs) {

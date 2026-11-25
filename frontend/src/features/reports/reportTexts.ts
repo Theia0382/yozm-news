@@ -4,6 +4,7 @@ import type {
   InterestShift,
   ReportFailure,
   ReportKind,
+  ReportRegenerationResult,
   ReportStatus,
   ReportTrend,
 } from "@/features/reports/reportQueries";
@@ -212,7 +213,31 @@ export const reportFailureCauseTexts: Record<ReportFailureCause, string> = {
   PROVIDER_ACCOUNT:
     "공급자 계정의 권한이나 잔액 때문에 만들지 못했습니다. 공급자 계정을 확인하세요.",
   TEMPORARY:
-    "공급자가 잠시 답하지 못했거나 만들기가 정한 시간 안에 끝나지 않았습니다.",
+    "공급자가 잠시 답하지 못했거나 만들기가 정한 시간 안에 끝나지 않았습니다. 잠시 뒤 리포트 화면에서 다시 만들어 보세요.",
   OUTPUT:
-    "모델의 출력을 리포트로 쓰지 못했습니다. 관심 설정에서 다른 모델을 골라 볼 수 있습니다.",
+    "모델의 출력을 리포트로 쓰지 못했습니다. 리포트 화면에서 다시 만들거나 관심 설정에서 다른 모델을 골라 보세요.",
 };
+
+/** 실패한 리포트의 다시 만들기 버튼 */
+export const REGENERATE = "다시 만들기";
+
+/** 다시 만들기를 더 할 수 있는 횟수 */
+export function regenerationsLeftText(left: number): string {
+  return `이 리포트는 ${left}번 더 다시 만들 수 있습니다.`;
+}
+
+/** 다시 만들기 횟수를 다 썼을 때 */
+export const REGENERATIONS_SPENT =
+  "이 리포트는 다시 만들 수 있는 횟수를 다 썼습니다.";
+
+/** 다시 만들기가 받아지지 않은 까닭 — 받았으면 문구 없이 만드는 중이 된다 */
+export const regenerationResultTexts = {
+  REQUESTED: null,
+  NOT_FAILED: "실패한 리포트가 아니라 다시 만들지 않았습니다.",
+  LIMIT_REACHED: REGENERATIONS_SPENT,
+  NO_USABLE_MODEL:
+    "쓸 수 있는 모델이 없어 다시 만들지 않았습니다. 유효한 LLM 키와 고른 모델을 확인하세요.",
+} as const satisfies Record<ReportRegenerationResult, string | null>;
+
+/** 다시 만들기 요청이 닿지 못했을 때 */
+export const REGENERATION_FAILED = "다시 만들기를 요청하지 못했습니다.";
