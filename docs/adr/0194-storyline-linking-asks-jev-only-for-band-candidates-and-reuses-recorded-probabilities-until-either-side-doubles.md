@@ -51,3 +51,4 @@
 ## 후속 기록
 
 - 2026-11-25: 결정 "판정은 evaluation 의 새 공개 API(흐름 소속 판정) 하나다"의 이름 — [ADR-0326](0326-development-names-call-a-shared-storyline-storyline-a-user-storyline-user-storyline-and-a-judgement-candidate-of-unknown-kind-candidate.md) · [evaluation Spec §3](../specs/evaluation.md#3-공개-인터페이스)
+- 2026-11-17: 결과 절 "하루 비용은 운영에서 잰다" 의 실측 — 평가 인스턴스에서 스토리라인 소속 판정 요청 하나(후보 5개까지)의 입력은 약 600 ~ 700토큰이다(운영 설정 문서의 측정 기록, a428526)
