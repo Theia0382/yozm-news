@@ -39,3 +39,5 @@
 ## 후속 기록
 
 - 2026-11-04: 결과 절 "체계를 바꾸면 최근 기사만 재평가한다"의 방식 — [ADR-0062](0062-tag-set-versions-from-operator-text-activated-forward-with-key-lineage-and-recent-reevaluation.md) · [`operations/tag-sets` "재평가 기간"](../operations/tag-sets.md#재평가-기간)
+- 2026-11-02: 맥락 절 "지연은 요청당 70–500ms" 의 실측 — 요청당 0.2 ~ 0.42초(evaluation Spec 의 측정 기록, 5415b4b)
+- 2026-11-08: 결과 절 "피드 20개, 하루 4,000건 기준 월 약 $5로 추정한다" 의 실측 — 기본 태그 체계(질문 57개: 주제 중분류 48 · 지역 7 · 형식 1 · 중요도 1)로 평가한 요청의 입력은 기사당 평균 약 3,500토큰이고, 입력 100만 토큰당 $0.042 · 출력 무료로 하루 약 4,000건이면 하루 약 14M 토큰 · 약 $0.59 · 월 약 $18 이다(evaluation Spec 의 측정 기록, a49d5f2)

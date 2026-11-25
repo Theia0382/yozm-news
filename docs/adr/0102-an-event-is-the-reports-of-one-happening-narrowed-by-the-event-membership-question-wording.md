@@ -48,3 +48,4 @@
 ## 후속 기록
 
 - 2026-11-11: 결정 절 "반감기는 코드 상수로 두고, 값은 평가 세트에서 시간 창과 함께 견줘 정한다"의 값 — [ADR-0109](0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) · [event Spec §4](../specs/event.md#4-내부-구조) `CandidateScoring`
+- 2026-11-09: 결과 절 "문구가 후보마다 질문에 들어가므로 사건 소속 판정 요청의 입력 토큰이 후보 수만큼 늘어난다" 의 실측 — 문구 버전 `membership-2` 로 잰 요청 하나(후보 3 · 서술 제목 4건)의 입력은 800토큰이고, 요약 줄을 빼면 705토큰이다(evaluation Spec 의 측정 기록, f8caa25)
