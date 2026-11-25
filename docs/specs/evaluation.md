@@ -282,7 +282,7 @@ public record RelationJudgementId(long value) {}             // 1 이상 — 아
 | `StorylineHappening.articleId` | 그 사건의 대표 기사 — 제목(과 요약문)을 읽는다 | 두 스토리라인에 걸쳐 같은 기사가 있어도 된다(두 스토리라인이 함께 가진 사건) |
 | `StorylineHappening.at` | 그 사건의 시각 — 요청에 날짜로 싣는다 | — |
 | `StorylineHappening.summarized` | 요약문을 싣는가 — 요약문이 없는 기사면 싣지 않는다 | — |
-| `RelationAnswer` | 답 — 해당 없음, 같은 사안의 조각(두 스토리라인이 둘로 기록된 하나의 같은 스토리라인), second 가 first 의 부분, first 가 second 의 부분, first 가 second 를 낳음, second 가 first 를 낳음. 선언 순서는 부르는 쪽이 확률이 같을 때 쓰는 순서다. 옛 문구 판(`relation-1`)에는 조각이 없다 | — |
+| `RelationAnswer` | 답 — 해당 없음, 같은 사안의 조각(두 스토리라인이 둘로 기록된 하나의 같은 흐름), second 가 first 의 부분, first 가 second 의 부분, first 가 second 를 낳음, second 가 first 를 낳음. 선언 순서는 부르는 쪽이 확률이 같을 때 쓰는 순서다. 옛 문구 판(`relation-1`)에는 조각이 없다 | — |
 | `Judged.judgement` | 남긴 판정 원본의 ID. 판정을 반영한 쪽이 자기 기록에 남긴다(evaluation-R49) | — |
 | `Judged.probabilities` | 답 모두의 확률 — 판정은 언제나 지금 문구 판으로 묻고 그 판의 답은 `RelationAnswer` 모두다 | 모든 답이 있고 0 ~ 1 의 유한값이다. 합은 계약하지 않는다 |
 | `Judged.firstOneMatter` · `secondOneMatter` | 그 스토리라인이 한 사안의 전개일 확률 — 비슷한 종류의 일을 모은 묶음이면 낮다 | 0 ~ 1 의 유한값 |
@@ -497,7 +497,7 @@ public enum EmbedderFailureKind { TRANSIENT, INPUT_REJECTED, EMBEDDER_UNAVAILABL
 
 태그 판정: `ArticleTaggingService.judge` 는 트랜잭션 밖인지 · 평가기가 있는지(`ObjectProvider` 로 부를 때 찾는다) 본 뒤, `article` 의 `ArticleDirectory.findAll` 로 기사를, `source` 의 `FeedLabels` 로 그 엔트리 피드의 출처 이름 · 섹션을 읽는다. `TaggingInput` 이 포트 입력(`EvaluationInput` — 피드 맥락은 `FeedContext.limited`, 요약은 `EvaluationInput.presentSummary`)을 만들고 포트 `ArticleEvaluator.evaluate` 를 부른다. 성공이면 `ResultCheck` 로 질문 묶음과 대조하고 `TagJudgementRecord` 로 저장할 모양을 만들어 `TagJudgementRepository` 에 쓰고(넣은 행의 ID 를 결과에 싣는다), 커밋 뒤 `findAll` 로 기사를 다시 본다. 다시 읽기는 `TagJudgementRepository.find` 로 원본을 읽어 포트 `ArticleEvaluator.reread` 를 부르고 `ResultCheck` 로 대조한다. 원본 조회는 `TagJudgementRepository.views` 다.
 
-사건 소속 판정: `EventMembershipService` 는 트랜잭션 밖인지 · 평가기가 있는지 본 뒤, `article` 의 `ArticleDirectory.findAll` 로 판정할 기사와 서술 기사를 한 번에 읽는다. `MembershipPlan` 이 물을 후보와 포트 입력(`MembershipInput` — 서술 제목은 `CandidateEvent.limited`, 문구는 `MembershipWording.CURRENT`)을 만들고 포트 `ArticleEvaluator.judgeMembership` 을 부른다. 성공이면 `MembershipCheck` 로 물은 후보와 대조하고 `MembershipRecord` 로 저장할 모양을 만들어 `EventJudgementRepository` 에 쓰고(넣은 행의 ID 를 결과에 싣는다), 커밋 뒤 `findAll` 로 기사를 다시 본다. 판정 원본 조회는 `EventJudgementLogService` 가 `EventJudgementRepository.page` · `find` 를 부른다. 읽기 · 조립 · 호출 · 대조 · 기록 · 다시 보기의 스토리라인은 패키지 비공개 `MembershipCall` 하나가 맡는다.
+사건 소속 판정: `EventMembershipService` 는 트랜잭션 밖인지 · 평가기가 있는지 본 뒤, `article` 의 `ArticleDirectory.findAll` 로 판정할 기사와 서술 기사를 한 번에 읽는다. `MembershipPlan` 이 물을 후보와 포트 입력(`MembershipInput` — 서술 제목은 `CandidateEvent.limited`, 문구는 `MembershipWording.CURRENT`)을 만들고 포트 `ArticleEvaluator.judgeMembership` 을 부른다. 성공이면 `MembershipCheck` 로 물은 후보와 대조하고 `MembershipRecord` 로 저장할 모양을 만들어 `EventJudgementRepository` 에 쓰고(넣은 행의 ID 를 결과에 싣는다), 커밋 뒤 `findAll` 로 기사를 다시 본다. 판정 원본 조회는 `EventJudgementLogService` 가 `EventJudgementRepository.page` · `find` 를 부른다. 읽기 · 조립 · 호출 · 대조 · 기록 · 다시 보기의 흐름은 패키지 비공개 `MembershipCall` 하나가 맡는다.
 
 스토리라인 소속 판정: `StorylineMembershipService` 는 같은 `MembershipCall` 을 판정 이름 · 후보의 이름(스토리라인) · 문구 `MembershipWording.SAME_MATTER` · 원본 저장소 `StorylineMembershipJudgementRepository` · 결과 꼴(`StorylineMembershipJudgement`)만 바꿔 부른다 — 포트 메서드는 같은 `ArticleEvaluator.judgeMembership` 이다(evaluation-R51 · R52).
 
@@ -1043,7 +1043,7 @@ public interface ArticleEmbedder {
 - **evaluation-R51** — 판정 요청과 질문:
   - 판정할 기사(ID)와 후보(후보 ID 와 서술 기사 ID)를 받는다. 상한 · 겹침 · 판정할 기사의 제약, 트랜잭션 밖 · 평가기 확인, 질문 이름(`event.{후보 ID}`) · 문장 조립 · state · 서술 제목 자르기 · 문맥 초과 확인은 evaluation-R37 과 같다 — 검사와 조립은 사건 소속 판정과 같은 정본(`MembershipChecks` · `MembershipPlan` · `JevRequest`)을 쓴다
   - 평가기 포트의 메서드는 사건 소속 판정과 같은 `judgeMembership` 이고, 문구만 다르다
-  - 문구는 코드 상수 하나(`MembershipWording.SAME_MATTER`)이고 판 `matter-1` 의 영어 문장이다. 판정할 기사와 서술 기사들이 한 사안의 전개를 다루는지 — 비슷한 종류의 따로 일어난 일들이 아니라 — 묻는다. "예"가 같은 스토리라인이다. 문구는 분야 예시를 들지 않고 일반 원리로 쓴다. 문구나 질문 조립 모양을 바꾸면 판을 올린다 — 판을 바꾸는 변경은 `storyline` 의 잇기 물은 기록을 비운다(storyline-R36)
+  - 문구는 코드 상수 하나(`MembershipWording.SAME_MATTER`)이고 판 `matter-1` 의 영어 문장이다. 판정할 기사와 서술 기사들이 한 사안의 전개를 다루는지 — 비슷한 종류의 따로 일어난 일들이 아니라 — 묻는다. "예"가 같은 흐름이다. 문구는 분야 예시를 들지 않고 일반 원리로 쓴다. 문구나 질문 조립 모양을 바꾸면 판을 올린다 — 판을 바꾸는 변경은 `storyline` 의 잇기 물은 기록을 비운다(storyline-R36)
 - **evaluation-R52** — 판정 결과와 판정 원본:
   - 기사 없음 · 빼고 묻기 · 빈 판정 · 실패 갈래 · 결과 대조 · 커밋 뒤 다시 보기는 evaluation-R38 과 같다 — 대조 문구는 후보의 이름을 "후보"로 싣는다
   - 판정 원본은 스토리라인 소속 판정 원본 표(`storyline_membership_judgements`)에 한 행 — 판정할 기사, 물은 후보마다 후보 ID(키 `candidateId`) · 서술 기사 ID · 확률(요청 순서), 평가기 · 모델 버전 · 문구 판 · 원본 응답 · 입력 토큰 · 판정 시각. 사건 소속 판정 원본과 ID 가 섞이지 않는다(`StorylineMembershipJudgementId`)
@@ -1064,7 +1064,7 @@ public interface ArticleEmbedder {
     - 관계 질문 — 두 스토리라인의 관계가 무엇인가
     - 부분 — 한쪽이 다른 쪽보다 좁고 그 안에 든다: 다른 쪽에 대한 반응 하나, 다른 쪽의 한 단계, 다른 쪽의 한 갈래이고 여전히 다른 쪽의 사안에 관한 것이다
     - 낳음 — 한쪽이 다른 쪽과 다른 사안이다: 자기 주체와 자기 경로를 갖고 다른 쪽이 끝나도 이어지지만 다른 쪽에서 일어난 일 때문에 생겼다
-    - 조각 — 두 스토리라인이 둘로 기록된 하나의 같은 스토리라인이다: 같은 주체와 같은 경로로 같은 사안을 따르고, 한 스토리라인으로 읽힌다
+    - 조각 — 두 스토리라인이 둘로 기록된 하나의 같은 흐름이다: 같은 주체와 같은 경로로 같은 사안을 따르고, 한 흐름으로 읽힌다
     - 해당 없음 — 두 스토리라인이 별개의 사안이거나, 한쪽이 한 사안이 아니라 따로 일어난 일들의 모음이다. 종류가 비슷하거나, 같은 분야나 되풀이되는 같은 일정에 속하거나, 같은 사람이 나오거나 원인이 같아도, 어느 쪽도 다른 쪽 안에 들지 않고 다른 쪽에서 비롯되지 않았다
     - 한 사안 질문 — 그 스토리라인이 종류만 비슷한 따로 일어난 일들의 모음이 아니라 한 사안의 전개인가
   - 문맥을 넘으면 같은 질문 · 빈 state 로 확인한다 — 받으면 기사 거부, 그것도 넘으면 평가기 사용 불가다(evaluation-R40 의 확인 요청과 같다)
