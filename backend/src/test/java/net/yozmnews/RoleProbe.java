@@ -19,6 +19,7 @@ import net.yozmnews.digest.adapter.in.job.ScheduleDueDigestsJob;
 import net.yozmnews.event.adapter.in.job.EventCleanupJob;
 import net.yozmnews.event.adapter.in.job.IntakeArticlesJob;
 import net.yozmnews.platform.adapter.in.job.EventResubmissionJob;
+import net.yozmnews.platform.adapter.in.job.ForgetRoundRunsJob;
 import net.yozmnews.report.adapter.in.job.GenerateReportJob;
 import net.yozmnews.report.adapter.in.job.RecoverStalledReportsJob;
 import net.yozmnews.report.adapter.in.job.ScheduleDueReportsJob;
@@ -42,7 +43,7 @@ final class RoleProbe {
 	static final List<Class<?>> JOB_ENTRY_POINTS = List.of(PollDueFeedsJob.class, PollFeedJob.class,
 			FeedHealthCheckJob.class, EventResubmissionJob.class, EvaluatePendingArticlesJob.class,
 			BackfillMissingTagsJob.class, IntakeArticlesJob.class, EventCleanupJob.class, ExpireSessionsJob.class,
-			ForgetLoginFailuresJob.class, ForgetReadNoticesJob.class, RewrapKeysJob.class, CandidateCleanupJob.class,
+			ForgetLoginFailuresJob.class, ForgetRoundRunsJob.class, ForgetReadNoticesJob.class, RewrapKeysJob.class, CandidateCleanupJob.class,
 			ScheduleDueDigestsJob.class, GenerateDigestJob.class, RecoverStalledDigestsJob.class,
 			ScheduleDueReportsJob.class, GenerateReportJob.class, RecoverStalledReportsJob.class);
 
