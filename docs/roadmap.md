@@ -134,10 +134,23 @@
 
 | 단계 | 내용 |
 |---|---|
-| 외부 API | Personal Access Token, `/public-api/v1` 읽기 전용, 요청 제한. 조회 대상은 [architecture.md](architecture.md) |
-| MCP 어댑터 | Spring AI MCP 서버 + OAuth 2.1 인가 서버. ChatGPT 등에서 다이제스트를 불러와 후속 대화 |
+| 외부 API | Personal Access Token, `/public-api/v1` 읽기 전용, 요청 제한. 초안은 아래 [외부 API · MCP](#외부-api--mcp) |
+| MCP 어댑터 | Spring AI MCP 서버 + OAuth 2.1 인가 서버. ChatGPT 등에서 다이제스트를 불러와 후속 대화. 초안은 아래 [외부 API · MCP](#외부-api--mcp) |
 | 리포트 확장 | 분기 · 연간 변화 리포트(월간 리포트를 입력으로) |
 | 구독 확장 | 키워드 구독 |
 | 소스 확장 | 사용자 피드 추가(상한 포함), 해외 뉴스, 본문 추출(허용 소스 한정) |
 | 메일 | 이메일 인증, 메일 기반 비밀번호 재설정, 다이제스트 알림 ([ADR-0011](adr/0011-no-email-in-v1.md)) |
 | 외부 로그인 | OIDC 공급자 로그인(기본 Google), 외부 계정 연결 ([ADR-0123](adr/0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md)) |
+
+### 외부 API · MCP
+
+위 표의 외부 API · MCP 어댑터 단계의 초안이다.
+
+- 경로는 화면용 `/api/**`(세션 쿠키)와 나눈다. MCP 는 `/mcp` 이고, 외부 API 의 경로는 위 표에 있다
+- MCP 서버는 Streamable HTTP 로 열고 외부 API 와 같은 서비스 계층을 부른다. 인가 서버는 Spring Authorization Server 로 둔다
+- 조회 대상은 아래다. 사용자 데이터는 토큰 주인의 범위로 한정한다
+  - 다이제스트(주요 뉴스 · 헤드라인)
+  - 기사 메타데이터 · 검색
+  - 사건, 스토리라인과 타임라인
+  - 관심사 히스토리, 변화 리포트
+- 외부 API 는 하위 호환을 지키는 공개 계약이다. 화면용 API 와 계약을 따로 관리하는 결정은 [ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md)에, 외부에 내는 범위는 [security.md "저작권과 소스 이용조건"](security.md#저작권과-소스-이용조건)에 있다

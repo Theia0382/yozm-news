@@ -26,7 +26,6 @@
 
 | 문서 | 남은 내용의 행선지 |
 |---|---|
-| [architecture.md](architecture.md) | 모듈 포트 · 작업 → 그 모듈의 Spec(모듈을 만드는 이슈가 옮긴다). 외부 API · MCP → 1층 또는 그 기능을 가진 모듈의 Spec(그 기능을 설계하는 이슈가 고른다) |
 | [data-model.md](data-model.md) | 모듈 테이블 → 그 모듈 Spec 의 데이터 절. 모듈 사이 관계(ER 개요) · 보존 정책 · 프레임워크 테이블은 이 문서에 남는다 — 전환이 끝나면 데이터 개요 문서로 남는다 |
 | [security.md](security.md) | 한 모듈이 구현하는 규칙 → 그 모듈의 Spec. 횡단 정책(인가 · 데이터 격리 · 개인정보 · 저작권 · 악용 방지)은 이 문서에 남는다 — 전환이 끝나면 횡단 보안 문서로 남는다 |
 
@@ -41,7 +40,6 @@
 | 처음 읽기 | [overview.md](overview.md) | 시스템 개요 (1층) |
 | 설계 | [specs/](specs/README.md) | 모듈 · 화면 Spec (2층)의 목록 · 공통 구조 · 쓰는 규칙 |
 | | [adr/](adr/README.md) | 아키텍처 결정 기록 |
-| | [architecture.md](architecture.md) | 모듈 인터페이스 초안, 백그라운드 작업, 외부 API · MCP (전환 중) |
 | | [data-model.md](data-model.md) | 데이터 모델과 보존 정책 (전환 중) |
 | | [security.md](security.md) | 인증과 인가, BYOK 키 보관, 저작권과 개인정보 (전환 중) |
 | 개발 | [CONTRIBUTING.md](../CONTRIBUTING.md) | 개발 환경과 검사 명령, 이슈 · 브랜치 · 커밋 · PR 규약 |

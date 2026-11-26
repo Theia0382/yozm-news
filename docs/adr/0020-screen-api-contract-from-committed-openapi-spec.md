@@ -7,7 +7,7 @@
 
 ## 맥락
 
-- 화면용 API(`/api/**`)는 프론트엔드와 함께 바뀌는 내부 계약이고, 외부 API(`/public-api/v1/**`)와 따로 관리한다([architecture.md](../architecture.md)). 백엔드 코드와 프론트엔드가 기대하는 모양이 어긋나면 검사에서 드러나야 한다.
+- 화면용 API(`/api/**`)는 프론트엔드와 함께 바뀌는 내부 계약이고, 외부 API(`/public-api/v1/**`)와 따로 관리한다([roadmap "외부 API · MCP"](../roadmap.md#외부-api--mcp)). 백엔드 코드와 프론트엔드가 기대하는 모양이 어긋나면 검사에서 드러나야 한다.
 - springdoc 은 실행 중인 앱이 명세를 낸다. 이 앱은 DB 없이 기동하지 않는다.
 - 검사는 `backend` · `frontend` 두 서비스로 돌고, 서로 산출물을 주고받지 않는다. 프론트엔드 검사에는 JDK · DinD 가 없다([ADR-0016](0016-containerized-checks.md)).
 - springdoc 기본 설정은 응답 필드를 모두 선택으로 내고 JSpecify `@Nullable` 을 반영하지 않는다. 그대로 두면 생성 타입이 `name?: string` 이 되어 필드를 빼거나 null 로 바꿔도 프론트엔드 타입이 달라지지 않는다.

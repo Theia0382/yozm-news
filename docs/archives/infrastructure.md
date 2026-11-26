@@ -126,5 +126,5 @@ Cloudflare는 권장 구성이지 필수가 아니다. 셀프 호스팅에서는
 
 ## 데이터 보존 설정
 
-- 보존 기간의 정본은 [data-model.md](../data-model.md) 보존 정책이고, 정리는 보존 정리 작업(`Retention` — [architecture.md](../architecture.md))이 한다.
+- 보존 기간의 정본은 [data-model.md](../data-model.md) 보존 정책이고, 정리는 보존 정리 작업(`Retention` — [architecture.md](architecture.md))이 한다.
 - RSS 요약문은 기본으로 지우지 않는다. 운영자는 보존 일수를 정해 자동 삭제를 켤 수 있다(기본 꺼짐). 설정 이름은 보존 정리 기능을 만들 때 정한다 ([ADR-0029](../adr/0029-indefinite-summary-retention-with-optional-deletion.md)).
