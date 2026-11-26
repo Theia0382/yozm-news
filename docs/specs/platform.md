@@ -22,6 +22,7 @@
 - **YAML 원문 읽기** — YAML 원문을 이벤트 API 로 읽어 트리로 옮기고, 문서 종류와 무관한 공통 거부를 하는 공개 타입(platform-R17). 수집 프로필(`source`)과 기본 태그 체계(`tag`)가 쓴다
 - **LLM 출력 읽기** — LLM 출력의 구조를 적는 서술 마디(`OutputShape`), 서술을 따라 출력 원문을 읽는 공개 타입(`StructuredOutputReader`), 서술을 JSON Schema 문서로 그리는 공개 타입(`StructuredOutputSchema`)(platform-R31 · R32). 읽은 값은 `OutputValue`, 읽기 결과는 `StructuredRead` 다. 다이제스트(`digest`)와 변화 리포트(`report`)가 자기 출력 서술로 쓴다
 - **코드 포인트 자르기** — 텍스트를 앞 몇 코드 포인트로 자르는 공개 타입(`CodePoints`). 피드 요약문(`source`) · 판정 입력(`evaluation`) · 기사 표현 텍스트(`event`) · 첫 운영자의 표시 이름(`account`)의 길이 상한이 쓴다
+- **확률 범위** — 확률이 0 이상 1 이하의 유한값인지 판정하는 공개 타입(`ProbabilityRange`). 평가기 판정의 값 · 판정 원본 · 응답 읽기(`evaluation`), 띠 안 판정의 물은 결과(`storyline`), 확률 칸 고르기(`tag`)가 쓴다
 - **날짜 범위 변환** — 날짜 범위를 시간대의 자정으로 시각 범위에 옮기고, 시간대 전환 여유를 더한 시각 길이 상한을 내는 공개 타입(`DayRange`). 집계 기간(`tag` 의 `EvaluationPeriod`) · 판정 원본 조회 기간(`evaluation` 의 `JudgementPeriod`) · 사건 조회 기간(`event` 의 `EventPeriod`)이 쓴다
 - **운영 설정의 행위자 종류** — 운영 설정을 정한 주체의 종류(`ChangeActor`). 시스템과 운영자 둘이다. `tag` 의 태그 체계 설정(태그 기준 · 저장 기준 · 태그 체계 버전), `storyline` 의 큰 판정 기준, `account` 의 가입 정책이 이력에 쓴다
 - **HTTP 응답 본문 상한** — JDK `HttpClient` 의 응답 본문을 상한까지만 받는 공개 타입(`CappedBody`). 외부 API 를 부르는 어댑터(`evaluation` 의 Jev · 외부 임베딩, `llm` 의 공급자 전송, `account` 의 Turnstile 검증)가 쓴다
@@ -90,6 +91,7 @@
 | YAML 원문 읽기 | 파일 8개(아래 하위 절) |
 | LLM 출력 읽기 | `OutputShape` · `OutputValue` · `StructuredOutputReader` · `StructuredOutputSchema` · `StructuredRead` |
 | 코드 포인트 자르기 | `CodePoints` |
+| 확률 범위 | `ProbabilityRange` |
 | 날짜 범위 변환 | `DayRange` |
 | HTTP 응답 본문 수신자 | `CappedBody`. 중첩 타입을 더하면 넷이다 |
 | 벡터의 pgvector 텍스트 표현 | `VectorText` |
@@ -424,6 +426,25 @@ public final class CodePoints {
 
 관련 규칙: 없음. 상한 값은 쓰는 모듈이 갖는다.
 
+### ProbabilityRange
+
+확률이 0 이상 1 이하의 유한값인지 판정한다. 빈이 아닌 정적 함수다.
+
+```java
+public final class ProbabilityRange {
+    public static boolean contains(double value);
+    public static double require(double value, String name);
+}
+```
+
+- 계약
+  - `contains` 는 값이 0 이상 1 이하이고 유한할 때 참이다. 경계 0 · 1 은 든다. NaN · 무한대는 들지 않는다
+  - `require` 는 범위 안의 값을 그대로 돌려준다. 범위 밖이면 `IllegalArgumentException` 이고 문구는 "확률은 0 ~ 1 의 유한값이다 — {name}: {value}" 다
+  - `name` 은 값의 이름이다. 레코드 칸이면 `타입.칸`(중첩 레코드는 바깥 타입부터), 함수 인자면 인자 이름이다. null 이면 `NullPointerException`, 공백뿐이면 `IllegalArgumentException`
+  - 응답을 읽다 범위 밖 값을 만나 "읽을 수 없음"으로 바꾸는 쪽은 `contains` 를 부르고 자기 실패를 낸다
+
+관련 규칙: 없음. 운영 기준(임계값)의 범위는 기준마다 정하는 정책이라 이 판정을 쓰지 않는다.
+
 ### CappedBody
 
 JDK `HttpClient` 의 응답 본문을 상한까지만 모으는 수신자다. 빈이 아니고, 요청마다 `sendAsync` 가 새로 만든다(생성자는 공개하지 않는다).
@@ -745,7 +766,7 @@ HTTP 엔드포인트:
 - **앱 시계의 기동** — `ClockConfiguration` 이 profile 과 `MeasurementClockRows` 의 시계 행을 `ClockStart` 로 판정해 `SystemClock` 이나 `MeasurementClock` 하나를 `AppClock` bean 으로 만든다. 두 구현의 경과 판정은 `ClockJumps` 에 맡긴다(platform-R26 · R27, 그림 "앱 시계의 기동")
 - **측정용 시계의 넘기기** — `admin` 의 운영자 API 가 `MeasurementClockAdministrationService` 를 부른다. 서비스는 측정용 시계 bean 이 있을 때만 그 시계로 상태를 내고 넘긴다. 넘긴 구간은 시계가 `MeasurementClockRows` 에 먼저 쓴다(platform-R29, 그림 "측정용 시계의 넘기기")
 - **실제 시간 요구** — 실제 시간의 외부 요청을 하는 길이 `AppClock.requireRealTime()` 을 부른다. 화면용 API 에서 나온 `RealTimeRequiredException` 은 `ProblemResponseAdvice` 가 409 로 낸다(platform-R30)
-- **협력하지 않는 타입** — YAML 원문 읽기 · `CodePoints` · `DayRange` 는 다른 구성 요소와 협력하지 않는다. 다른 모듈이 `YamlTextReader` 로 읽은 트리를 `StrictYamlBinding` 으로 바인딩한다
+- **협력하지 않는 타입** — YAML 원문 읽기 · `CodePoints` · `ProbabilityRange` · `DayRange` 는 다른 구성 요소와 협력하지 않는다. 다른 모듈이 `YamlTextReader` 로 읽은 트리를 `StrictYamlBinding` 으로 바인딩한다
 
 구성 요소의 역할(platform-R9):
 

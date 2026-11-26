@@ -265,7 +265,7 @@ public record StorylineMembershipJudgementId(long value) {}
 | `StorylineMembershipJudgementId` | 스토리라인 소속 판정 원본의 ID(`storyline_membership_judgements.id`). 사건 소속 판정 원본 ID 와 다른 수 공간이다 | 1 이상 |
 
 - 계약
-  - `EventMembership` 의 계약과 같다(evaluation-R81 · R83). 요청 값의 검사는 사건 소속 판정의 요청과 같은 규칙 하나를 쓴다(패키지 비공개 `MembershipChecks`)
+  - `EventMembership` 의 계약과 같다(evaluation-R81 · R83). 요청 값의 검사는 사건 소속 판정의 요청과 같은 규칙 하나를 쓴다(패키지 비공개 `MembershipChecks`). 후보 목록의 수 · 겹침은 포트 입력과 같은 정본(`MembershipCandidate.requireCandidates`)이다
 
 관련 규칙: evaluation-R51 · evaluation-R52 · evaluation-R44.
 
@@ -745,7 +745,9 @@ sequenceDiagram
 
 - 포트 `ArticleEvaluator`(나가는 쪽)와 그 값 · 결과 타입. 선언은 나가는 쪽에 있다
 - `FeedContext.limited` — 피드 맥락의 카테고리 상한을 적용하는 정본(evaluation-R17)
-- `CandidateEvent.limited` — 서술 제목 상한을 적용하는 정본(evaluation-R71). 카테고리 · 서술 제목의 자르기는 `platform` 의 `CodePoints` 다
+- `MembershipCandidate.limited` — 서술 제목 상한을 적용하는 정본(evaluation-R71). 카테고리 · 서술 제목의 자르기는 `platform` 의 `CodePoints` 다
+- `MembershipCandidate.requireCandidates` — 소속 판정의 후보 목록(1 ~ `MembershipQuery.MAX_CANDIDATES`개 · 후보 ID 겹침 없음) 검사의 정본. 공개 요청(`MembershipChecks`)과 포트 입력(`MembershipInput`)이 함께 쓴다
+- 확률 값(`Evaluation` · `Membership` · `Relation` 과 공개 결과 · 판정 원본 값)의 범위 검사는 `platform` 의 `ProbabilityRange` 다. 실패 문구는 값의 이름(`타입.칸`)을 싣는다
 - `EvaluationInput.presentSummary` — 공백뿐인 요약은 없는 요약이라는 규칙의 정본. 태그 판정 · 사건 소속 판정 · 관계 판정이 함께 쓴다
 - `ResultCheck` — 결과와 질문의 대조의 정본(evaluation-R60 · R64)
   - `mismatch` — 태그 판정의 결과 · 다시 읽은 결과와 태그 질문의 키 집합
@@ -761,7 +763,7 @@ sequenceDiagram
   - 질문 이름은 태그 종류 접두에 키를 붙인다. 주제 `topic.{전체 키}`, 지역 `region.{키}`, 형식 `format`, 중요도 `importance` 다
   - 질문 문장은 `instructions` 다. 형식 선택지는 태그 질문 순서의 `criteria`(키 → 설명), 중요도는 수준 순의 `criteria`(설명 배열)다
   - state 문자열(나가는 쪽)과 문맥 초과 확인 요청(같은 질문 · 빈 state)도 만든다
-  - 사건 소속 판정은 후보마다 `event.{사건 ID}` Yes/No 질문이고, 문장은 넘긴 문구로 만든다. state 는 제목 · 요약 줄이고, 제목 · 요약 줄은 태그 판정 state 와 함께 쓴다
+  - 소속 판정은 후보마다 `event.{후보 ID}` Yes/No 질문이고, 문장은 넘긴 문구로 만든다. state 는 제목 · 요약 줄이고, 제목 · 요약 줄은 태그 판정 state 와 함께 쓴다
 - `JevResponse` — 200 응답을 포트 결과로 옮긴다
   - 평가기 이름은 `jev`, 모델 버전은 응답의 `model`, 입력 토큰은 `usage.input_tokens`, 원본 응답은 본문이다
   - 중요도는 수준 위치(`"0"` 부터)를 태그 질문의 수준 순서로 되찾는다
@@ -784,7 +786,7 @@ sequenceDiagram
 - `MembershipPlan` — 물을 후보 고르기의 정본(evaluation-R74 · R83). 후보 ID 에서 서술 기사로 가는 맵, 판정할 기사 내용, 읽은 기사, 문구를 받는다
 - `MembershipCheck` — 판정 결과와 물은 후보의 대조의 정본(evaluation-R75 · R83). 후보 ID 집합은 `ResultCheck.keyDifference` 로, 원본 응답의 저장 가능성은 `ResultCheck.rawResponseProblem` 으로 본다. 문구에 후보의 이름을 싣는다
 - `MembershipRecord` — 저장할 판정 원본(`of`)의 정본. 사건 소속 · 스토리라인 소속이 함께 쓴다(evaluation-R76 · R84)
-- `RecordedCandidate` — 판정 원본의 물은 후보 하나(후보 ID · 서술 기사 · 확률). 후보 ID 1 미만 · 서술 기사 없음 · 확률이 0 ~ 1 의 유한값이 아니면 `IllegalArgumentException` 이다
+- `RecordedCandidate` — 판정 원본의 물은 후보 하나(후보 ID · 서술 기사 · 확률). 후보 ID 1 미만 · 서술 기사 없음 · 확률이 0 ~ 1 의 유한값이 아니면 `IllegalArgumentException` 이다. 이 검사의 정본은 `RecordedCandidate.checked` 이고, 원본을 읽을 때의 공개 값 `JudgedEvent` 도 부른다(ID 의 이름만 사건이다)
 - `EventJudgementRepository` — 사건 소속 판정 원본 저장소. 넣기와 넣은 행의 ID, 기간 쪽 읽기, ID 로 찾기, 지운 기사 따르기를 맡는다
 - `StorylineMembershipJudgementRepository` — 스토리라인 소속 판정 원본 저장소. 넣기와 넣은 행의 ID, 지운 기사 따르기를 맡는다
 
@@ -864,12 +866,13 @@ public record RereadFailure(Kind kind, String message) implements RereadResult, 
     public enum Kind { OTHER_EVALUATOR, UNREADABLE }
 }
 
-public record MembershipInput(String title, @Nullable String summary, List<CandidateEvent> candidates,
+public record MembershipInput(String title, @Nullable String summary, List<MembershipCandidate> candidates,
         MembershipWording wording) {}
 
-public record CandidateEvent(long eventId, List<String> titles) {
+public record MembershipCandidate(long candidateId, List<String> titles) {
     public static final int MAX_TITLE_CODE_POINTS = 200;
-    public static Optional<CandidateEvent> limited(long eventId, List<String> titles);
+    public static Optional<MembershipCandidate> limited(long candidateId, List<String> titles);
+    public static <T> void requireCandidates(List<T> candidates, ToLongFunction<T> id);
 }
 
 public record MembershipWording(String version, String text) {
@@ -935,15 +938,16 @@ public record Relation(Map<RelationAnswer, Double> probabilities, double firstOn
 | `MembershipInput.title` · `summary` | 판정할 기사의 제목 · RSS 요약문(없으면 null) | 제목 · 요약은 공백뿐이 아니다 |
 | `MembershipInput.candidates` | 물을 후보. 넘긴 순서로 묻는다. 후보 ID 는 사건 ID 또는 스토리라인 소속의 후보 ID 다 | 1 ~ `MembershipQuery.MAX_CANDIDATES`개, 후보 ID 가 겹치지 않는다 |
 | `MembershipInput.wording` | 질문 문구. 구현은 이것으로 질문 문장을 만든다 | — |
-| `CandidateEvent.titles` | 서술 기사의 제목. 서술 순서다 | 1 ~ `EventDescriptor.MAX_ARTICLES`개, 공백뿐이 아니고 하나에 `MAX_TITLE_CODE_POINTS` 코드 포인트 이하. 상한을 모르는 값은 `limited` 로 만든다 |
+| `MembershipCandidate.candidateId` | 후보 ID. 사건 소속 판정이면 사건 ID, 스토리라인 소속 판정이면 부르는 쪽이 정한 후보 ID 다 | 1 이상 |
+| `MembershipCandidate.titles` | 서술 기사의 제목. 서술 순서다 | 1 ~ `EventDescriptor.MAX_ARTICLES`개, 공백뿐이 아니고 하나에 `MAX_TITLE_CODE_POINTS` 코드 포인트 이하. 상한을 모르는 값은 `limited` 로 만든다 |
 | `MembershipWording` | 문구 버전과 문구. `question(titles)` 는 문구 뒤에 제목을 한 줄씩 `- ` 로 붙인 질문 문장이다 | 문구 버전 · 문구는 공백뿐이 아니다 |
-| `Membership.probabilities` | 후보 사건 ID 마다의 확률 | 0 이상 1 이하의 유한값 |
+| `Membership.probabilities` | 후보 ID 마다의 확률 | 0 이상 1 이하의 유한값 |
 | `Membership.evaluator` · `modelVersion` · `inputTokens` · `rawResponse` | 평가기 이름 · 모델 버전 · 입력 토큰 · 원본 응답(JSON 텍스트) | `Evaluation` 의 같은 값과 같다 |
 | `judgeRelation` | 두 스토리라인의 관계를 묻는다. 넘긴 문구 버전의 답마다 확률과 스토리라인마다 한 사안일 확률을 얻는다 | — |
 | `rereadRelation` | 저장된 관계 판정 원본 응답을 그 원본을 남긴 문구 버전(`wording`)의 답으로 다시 읽는다. 외부를 부르지 않는다. `evaluator` 는 그 원본을 남긴 평가기 이름이고, 읽은 `Relation` 의 입력 토큰은 원본 응답에 없으면 0 이다 | — |
 | `RelationInput.first` · `second` | 두 스토리라인의 서술. first 가 요청의 A, second 가 B 다 | 스토리라인마다 서술이 하나 이상이다 |
 | `StorylineText.happenings` · `firstAt` · `lastAt` | 스토리라인의 사건 수 · 첫 · 마지막 기사 시각 | `StorylineDescriptor` 의 같은 값과 같다 |
-| `HappeningText.title` · `summary` | 서술 사건의 대표 기사 제목 · 요약문(싣지 않으면 null) | 제목은 공백뿐이 아니고 `CandidateEvent.MAX_TITLE_CODE_POINTS` 코드 포인트 이하다. 요약문은 공백뿐이 아니고 `MAX_SUMMARY_CODE_POINTS`(160) 코드 포인트 이하다. 상한을 모르는 값은 `limited` 로 만든다 |
+| `HappeningText.title` · `summary` | 서술 사건의 대표 기사 제목 · 요약문(싣지 않으면 null) | 제목은 공백뿐이 아니고 `MembershipCandidate.MAX_TITLE_CODE_POINTS` 코드 포인트 이하다. 요약문은 공백뿐이 아니고 `MAX_SUMMARY_CODE_POINTS`(160) 코드 포인트 이하다. 상한을 모르는 값은 `limited` 로 만든다 |
 | `RelationWording` | 관계 판정의 문구 하나. 멤버의 뜻과 생성 제약은 아래 목록이다 | 생성 제약을 어기면 `IllegalArgumentException` |
 | `Relation.probabilities` | 답마다의 확률 | 0 이상 1 이하의 유한값 |
 | `Relation.firstOneMatter` · `secondOneMatter` | 스토리라인마다 한 사안일 확률 | 0 이상 1 이하의 유한값 |
@@ -1222,7 +1226,7 @@ evaluation-R54 · R58 · R59 는 태그 판정만이 아니라 모든 판정(태
 - **evaluation-R70** — 사건 소속 판정은 모든 후보를 한 요청에 묶는다. 질문은 후보마다 Yes/No 하나이고, 이름은 `event.{사건 ID}` 다
   - 질문 문장은 문구 뒤에 서술 제목을 요청 순서로 한 줄씩(`- `) 붙인 것이다
   - state 는 판정할 기사의 제목 줄과 요약 줄이다. 공백뿐인 요약은 없는 요약이고, 피드 맥락 줄은 넣지 않는다
-- **evaluation-R71** — 서술 제목은 하나에 200 코드 포인트(`CandidateEvent.MAX_TITLE_CODE_POINTS`)까지로 자르고(서로게이트 쌍을 가르지 않는다) 끝 공백을 지운다. 정본은 `CandidateEvent.limited` 다
+- **evaluation-R71** — 서술 제목은 하나에 200 코드 포인트(`MembershipCandidate.MAX_TITLE_CODE_POINTS`)까지로 자르고(서로게이트 쌍을 가르지 않는다) 끝 공백을 지운다. 정본은 `MembershipCandidate.limited` 다
 - **evaluation-R72** — 사건 소속 판정의 문구는 코드 상수 하나(`MembershipWording.CURRENT`)이고, 문구 버전 `membership-2` 의 영어 문장이다. 문구나 질문 조립 모양을 바꾸면 문구 버전을 올린다. 문구가 묻는 것은 아래다
   - 판정할 기사가 후보 사건의 기사들이 이미 보도한 일 밖의 새 일을 전하지 않는가. "예"가 같은 사건이다
   - 일은 한 번 일어난 행위 · 사건 · 발언 · 결정 하나다
@@ -1305,7 +1309,7 @@ evaluation-R54 · R58 · R59 는 태그 판정만이 아니라 모든 판정(태
   - 두 스토리라인 ID 는 다르다
   - 한 스토리라인 안의 서술 기사는 겹치지 않는다
 - **evaluation-R87** — 관계 판정은 두 스토리라인의 서술 기사를 한 번에 읽는다. state 는 두 스토리라인의 서술이고(§4 나가는 쪽), first 가 `Flow A`, second 가 `Flow B` 다. 날짜는 UTC 의 월-일이다
-- **evaluation-R88** — 관계 판정 서술의 제목은 하나에 200 코드 포인트(`CandidateEvent.MAX_TITLE_CODE_POINTS`), 요약문은 160 코드 포인트(`HappeningText.MAX_SUMMARY_CODE_POINTS`)까지로 자르고(서로게이트 쌍을 가르지 않는다) 끝 공백을 지운다. 정본은 `HappeningText.limited` 다
+- **evaluation-R88** — 관계 판정 서술의 제목은 하나에 200 코드 포인트(`MembershipCandidate.MAX_TITLE_CODE_POINTS`), 요약문은 160 코드 포인트(`HappeningText.MAX_SUMMARY_CODE_POINTS`)까지로 자르고(서로게이트 쌍을 가르지 않는다) 끝 공백을 지운다. 정본은 `HappeningText.limited` 다
 - **evaluation-R89** — 관계 판정의 질문은 셋이고 한 요청에 묶는다. 관계(Choice, 선택지 여섯)와 스토리라인마다 한 사안인가(Yes/No)다
 - **evaluation-R90** — 관계 판정의 문구는 코드 상수(`RelationWording.CURRENT`)이고, 문구 버전 `relation-2` 의 영어 문장이다. 분야의 예를 들지 않는다
   - 문구나 state · 질문의 조립 모양을 바꾸면 문구 버전을 올린다
