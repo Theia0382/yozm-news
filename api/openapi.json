@@ -2239,6 +2239,44 @@
         "tags" : [ "admin-preset-controller" ]
       }
     },
+    "/api/admin/processing" : {
+      "get" : {
+        "operationId" : "processingRounds",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProcessingResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다 · 운영자 토큰(Bearer)이 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다 · 운영자 권한이 없다"
+          }
+        },
+        "tags" : [ "admin-processing-controller" ]
+      }
+    },
     "/api/admin/profile-previews" : {
       "post" : {
         "operationId" : "previewProfile",
@@ -10001,6 +10039,76 @@
           }
         },
         "required" : [ "buckets", "storeThreshold", "storeThresholdChanged" ]
+      },
+      "ProcessingLastRunResponse" : {
+        "type" : "object",
+        "properties" : {
+          "batches" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "endedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "endedBy" : {
+            "type" : "string",
+            "enum" : [ "DRAINED", "BUDGET", "BACKED_OFF", "STOPPED", "FAILED" ]
+          },
+          "handled" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "startedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "batches", "endedAt", "endedBy", "handled", "startedAt" ]
+      },
+      "ProcessingResponse" : {
+        "type" : "object",
+        "properties" : {
+          "rounds" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ProcessingRoundResponse"
+            }
+          }
+        },
+        "required" : [ "rounds" ]
+      },
+      "ProcessingRoundResponse" : {
+        "type" : "object",
+        "properties" : {
+          "deferred" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "lastRun" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ProcessingLastRunResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "recentHandled" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "recentRuns" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "round" : {
+            "type" : "string"
+          },
+          "waiting" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "deferred", "lastRun", "recentHandled", "recentRuns", "round", "waiting" ]
       },
       "ProfileProblemView" : {
         "type" : "object",

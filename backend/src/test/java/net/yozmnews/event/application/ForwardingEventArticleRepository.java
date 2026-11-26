@@ -56,6 +56,11 @@ class ForwardingEventArticleRepository implements EventArticleRepository {
 	}
 
 	@Override
+	public long countRejudgeTargets(long criteriaId) {
+		return this.delegate.countRejudgeTargets(criteriaId);
+	}
+
+	@Override
 	public List<EventArticle> lockByArticles(Collection<ArticleId> articleIds) {
 		return this.delegate.lockByArticles(articleIds);
 	}

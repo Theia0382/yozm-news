@@ -1,7 +1,7 @@
 package net.yozmnews.tag.domain.backfill;
 
 /**
- * 채움 묶음 하나가 버전 하나에서 센 건수 — 진행 기록에 더한다 · docs/specs/tag.md §4
+ * 채움의 쪽 하나가 버전 하나에서 센 건수 — 진행 기록에 더한다 · docs/specs/tag.md §4
  *
  * @param processed 처리한 평가 수 — 건너뛴 평가 포함
  * @param tagsAdded 더한 태그 행 수

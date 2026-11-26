@@ -9,6 +9,8 @@ import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TaggingJudgement;
 import net.yozmnews.evaluation.TaggingQuery;
 import net.yozmnews.platform.AppClock;
+import net.yozmnews.platform.RoundBatch;
+import net.yozmnews.platform.RoundRunner;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TagSetThresholds;
@@ -30,11 +32,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 평가 회차 하나 — docs/specs/tag.md §4 · tag-R18 · tag-R19 · tag-R20.
  * <p>
- * 대기를 점유해 커밋한 뒤, 기사마다 차례로 {@code evaluation} 의 태그 판정을 트랜잭션 밖에서 부른다 — 기사 내용 · 피드 맥락은 관문이
- * 기사 ID 로 읽는다. 결과는 기사마다 새 트랜잭션에서 점유 토큰이 맞을 때만 반영한다. 평가기 사용 불가 · 태그 판정의 예외(결과가 질문
- * 묶음과 어긋남 · 평가기의 예상 못한 예외)면 그 기사부터 남은 점유를 풀고 회차를 멈춘다.
+ * 회차는 {@link RoundRunner} 로 뭉치를 되풀이한다. 뭉치 하나는 대기를 점유해 커밋한 뒤, 기사마다 차례로 {@code evaluation} 의 태그
+ * 판정을 트랜잭션 밖에서 부른다 — 기사 내용 · 피드 맥락은 관문이 기사 ID 로 읽는다. 결과는 기사마다 새 트랜잭션에서 점유 토큰이 맞을
+ * 때만 반영한다. 평가기 사용 불가 · 태그 판정의 예외(결과가 태그 질문과 어긋남 · 평가기의 예상 못한 예외)면 그 기사부터 남은 점유를 풀고
+ * 회차를 멈춘다. 일시 실패가 난 뭉치 뒤에는 회차를 끝낸다.
  * <p>
- * 결과를 반영하는 트랜잭션은 먼저 표를 잠가 회차가 읽은 버전이 아직 활성인지 본다. 은퇴했으면 그 기사의 점유만 풀고(판정됐으면 그 버전의
+ * 결과를 반영하는 트랜잭션은 먼저 표를 잠가 뭉치가 읽은 버전이 아직 활성인지 본다. 은퇴했으면 그 기사의 점유만 풀고(판정됐으면 그 버전의
  * 평가는 저장한다) 남은 점유를 풀어 회차를 멈춘다(tag-R19). 대기 행은 기사에 지금 활성 버전의 평가가 있게 된 트랜잭션에서만
  * 지운다(tag-R87).
  */
@@ -42,6 +45,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class EvaluationRound {
 
 	private static final Logger logger = LoggerFactory.getLogger(EvaluationRound.class);
+
+	/** 회차 이름 — 회차 기록 · 처리 현황의 키 */
+	static final String NAME = "tag-evaluation";
 
 	private final PendingEvaluations pending;
 
@@ -61,9 +67,11 @@ public class EvaluationRound {
 
 	private final AppClock clock;
 
+	private final RoundRunner runner;
+
 	EvaluationRound(PendingEvaluations pending, TagSetDirectory directory, ThresholdRepository thresholds,
 			ArticleTagging tagging, EvaluationResultRepository results, EvaluationQueueRepository queue,
-			TagSetRepository tagSets, TransactionTemplate transaction, AppClock clock) {
+			TagSetRepository tagSets, TransactionTemplate transaction, AppClock clock, RoundRunner runner) {
 		this.pending = pending;
 		this.directory = directory;
 		this.thresholds = thresholds;
@@ -73,15 +81,26 @@ public class EvaluationRound {
 		this.tagSets = tagSets;
 		this.transaction = transaction;
 		this.clock = clock;
+		this.runner = runner;
 	}
 
-	/** 회차 하나를 돈다 */
+	/** 회차 하나를 돈다 — 뭉치를 회차 규칙까지 되풀이한다(docs/specs/platform.md 반복 회차) */
 	public void run() {
+		this.runner.run(NAME, this::batch);
+	}
+
+	/**
+	 * 뭉치 하나 — 활성 태그 체계 · 임계값(저장 기준)은 뭉치마다 읽는다. 저장 바닥의 읽기 지연(tag-R32)은 평가가 저장 기준을 읽은 시각부터 평가
+	 * 시각까지가 뭉치 하나의 점유 기간({@link EvaluationSchedule#LEASE}) 안이라는 것에 기댄다 — 회차 첫머리에 한 번 읽으면 회차가 길어질 때 이
+	 * 전제가 깨진다. 일시 실패가 난 뭉치 뒤에는 회차를 끝내게 한다
+	 */
+	RoundBatch batch() {
 		List<PendingEvaluation> claimed = this.pending.claimDue(this.clock.instant(),
 				this.clock.expiredBy(EvaluationSchedule.LEASE));
 		if (claimed.isEmpty()) {
-			return;
+			return RoundBatch.finished(0, EvaluationSchedule.BATCH_SIZE);
 		}
+		boolean deferred = false;
 		TagSetView tagSet = this.directory.activeTagSet();
 		TagSetThresholds thresholds = this.thresholds.current(tagSet.id());
 		TagQuestions questions = tagSet.questions();
@@ -90,7 +109,7 @@ public class EvaluationRound {
 			if (this.results.exists(claim.articleId(), tagSet.id())) {
 				if (!writeIfCurrent(claimed, i, tagSet.id(),
 						() -> this.queue.deleteIfLeased(claim.articleId(), token(claim)))) {
-					return;
+					return RoundBatch.stopped(claimed.size());
 				}
 				continue;
 			}
@@ -101,7 +120,7 @@ public class EvaluationRound {
 			catch (RuntimeException ex) {
 				release(claimed.subList(i, claimed.size()));
 				logger.error("태그 판정이 실패해 회차를 멈췄다 — 기사 {}", claim.articleId().value(), ex);
-				return;
+				return RoundBatch.stopped(claimed.size());
 			}
 			switch (judgement) {
 				case TaggingJudgement.ArticleMissing missing -> {
@@ -121,12 +140,15 @@ public class EvaluationRound {
 							this.results.insert(record);
 						}
 					})) {
-						return;
+						return RoundBatch.stopped(claimed.size());
 					}
 				}
 				case TaggingJudgement.Failed failure -> {
 					@Nullable PendingEvaluation failed = switch (failure.kind()) {
-						case TRANSIENT -> claim.afterTransient(failure.message(), this.clock.instant());
+						case TRANSIENT -> {
+							deferred = true;
+							yield claim.afterTransient(failure.message(), this.clock.instant());
+						}
 						case ARTICLE_REJECTED -> claim.afterRejected(failure.message());
 						case EVALUATOR_UNAVAILABLE -> {
 							release(claimed.subList(i, claimed.size()));
@@ -136,15 +158,17 @@ public class EvaluationRound {
 						}
 					};
 					if (failed == null) {
-						return;
+						return RoundBatch.stopped(claimed.size());
 					}
 					if (!writeIfCurrent(claimed, i, tagSet.id(),
 							() -> this.queue.replaceIfLeased(token(claim), failed))) {
-						return;
+						return RoundBatch.stopped(claimed.size());
 					}
 				}
 			}
 		}
+		return deferred ? RoundBatch.backedOff(claimed.size())
+				: RoundBatch.finished(claimed.size(), EvaluationSchedule.BATCH_SIZE);
 	}
 
 	/** {@link #writeIfCurrent(List, int, TagSetId, Runnable, Runnable)} — 은퇴했을 때 점유를 푸는 것 말고는 쓰지 않는다 */
@@ -154,9 +178,9 @@ public class EvaluationRound {
 	}
 
 	/**
-	 * 회차가 읽은 버전이 아직 활성일 때만 쓴다 — 새 트랜잭션에서 표를 활성 전환과 충돌하는 모드로 잠근 뒤 본다. 은퇴했으면 이 기사의 점유를
+	 * 뭉치가 읽은 버전이 아직 활성일 때만 쓴다 — 새 트랜잭션에서 표를 활성 전환과 충돌하는 모드로 잠근 뒤 본다. 은퇴했으면 이 기사의 점유를
 	 * 풀고(풀었을 때만 {@code whenReleased}), 트랜잭션 뒤에 남은 점유를 풀고 회차를 멈춘다.
-	 * @param claimed 회차가 점유한 기사 — 그 가운데 {@code index} 가 이 기사다
+	 * @param claimed 뭉치가 점유한 기사 — 그 가운데 {@code index} 가 이 기사다
 	 * @param whenActive 활성일 때의 쓰기
 	 * @param whenReleased 은퇴했고 이 기사의 점유를 풀었을 때의 쓰기
 	 * @return 활성이었으면 true — false 면 회차를 멈췄다

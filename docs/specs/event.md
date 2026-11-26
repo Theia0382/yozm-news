@@ -6,7 +6,7 @@
 
 `event` 는 한 번 일어난 일을 다룬 기사를 사용자와 무관하게 공유 사건으로 묶는다. 비용은 운영자가 내고, 생성형 LLM 을 쓰지 않는다([ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0102](../adr/0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md)).
 
-- **사건 묶기 대기** — 새 기사를 대기에 넣고, 작업 역할의 반복 작업이 회차마다 대기 행 여럿을 점유해 처리한다(event-R5 · R6 · R7, [ADR-0074](../adr/0074-article-features-built-by-event-intake-queue-job-and-skipped-without-an-embedder.md))
+- **사건 묶기 대기** — 새 기사를 대기에 넣고, 작업 역할의 반복 작업이 회차마다 대기 행을 뭉치로 거듭 점유해 처리한다(event-R5 · R6 · R7, [ADR-0074](../adr/0074-article-features-built-by-event-intake-queue-job-and-skipped-without-an-embedder.md))
 - **기사 표현** — 기사의 제목과 요약문 앞부분으로 표현 텍스트를 만들고, 그 임베딩과 핵심 말을 임베딩 모델 버전과 함께 저장한다. 임베딩은 `evaluation` 의 공개 API `TextEmbedding` 으로 얻고, 핵심 말은 Lucene Nori 로 뽑는다. 사건 배정의 입력이다(event-R1 ~ R4, [ADR-0075](../adr/0075-article-vectors-in-a-dimensionless-vector-column-one-row-per-model-version.md) · [ADR-0076](../adr/0076-key-terms-from-nori-without-decompounding-proper-common-and-foreign-nouns.md))
 - **사건 배정** — 표현을 쓴 기사를 배정 대기에 넣는다. 같은 반복 작업이 기사 하나씩 시간 창 안의 열린 사건에서 후보를 골라 산식으로 판정하고, 애매한 구간은 `evaluation` 의 사건 소속 판정에 묻는다. 그 결과로 기사를 사건에 붙이거나 새 사건을 연다(event-R10 ~ R12 · R16, [ADR-0077](../adr/0077-event-assignment-queue-judged-one-article-at-a-time-with-evaluation-failure-kinds.md) · [ADR-0078](../adr/0078-articles-ending-in-a-judgement-failure-open-a-new-event-marked-as-failed.md) · [ADR-0079](../adr/0079-event-centroids-in-a-dimensionless-halfvec-column-with-a-model-version-per-event.md) · [ADR-0080](../adr/0080-event-centroids-and-key-terms-accumulated-with-article-counts-and-updated-incrementally.md))
 - **기준과 재판정** — 사건 기준 · 저장 기준은 설정이다. 배정은 저장 기준 이상인 후보의 점수 · 확률과 판정에 쓴 기준을 남긴다. 기준이 바뀌면 그 저장값으로 열린 사건의 배정을 다시 판정하고, 닫힌 사건의 배정은 기준만 새것으로 적는다(event-R17 · R18, [ADR-0081](../adr/0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md) · [ADR-0085](../adr/0085-rejudgement-knows-opened-events-from-an-assignment-flag-and-reads-merged-candidates-as-survivors.md) · [ADR-0087](../adr/0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md))
@@ -41,8 +41,8 @@
 | 사건 중심 | 사건의 구성 기사 벡터의 평균(`events.centroid`). 반 정밀도로 저장하고, 같은 모델 버전끼리만 비교한다(event-R31 · R33) |
 | 거부 수 | 임베더가 그 기사의 입력을 거부한 횟수(`event_intake_queue.rejections`). 상한에 이르면 대기에서 뺀다(event-R28) |
 | 사건 묶기 대기 | 처리할 기사의 목록(`event_intake_queue`, 기사마다 한 행). 넣은 시각과 점유를 갖는다(event-R5) |
-| 회차 | 반복 작업이 한 번 돌 때 하는 일 하나. 표현 회차(event-R6) · 배정 회차(event-R16) · 재판정 회차(event-R18) · 병합 회차(event-R13)를 차례로 돈다 |
-| 점유 | 회차가 대기 행을 가져갔다는 표시(토큰과 만료 시각). 만료되면 다른 회차가 다시 가져간다(event-R26 · R39) |
+| 회차 | 반복 작업이 한 번 돌 때 하는 일 하나. 뭉치를 시간 예산까지 되풀이한다([platform Spec §2](platform.md#2-용어)). 표현 회차(event-R6) · 배정 회차(event-R16) · 재판정 회차(event-R18) · 병합 회차(event-R13)를 차례로 돈다 |
+| 점유 | 뭉치가 대기 행을 가져갔다는 표시(토큰과 만료 시각). 만료되면 다른 뭉치가 다시 가져간다(event-R26 · R39) |
 | 배정 | 기사 하나가 속한 사건(`event_articles` 한 행). 기사마다 하나이고, 남기는 값은 event-R35 다 |
 | 연 사건 표지 | 그 기사가 판정으로 이 배정의 사건을 열었다는 배정의 표지(event-R52) |
 | 배정 대기 | 표현을 쓴 뒤 배정할 기사의 목록(`event_assignment_queue`, 기사마다 한 행). 시도 수 · 판정 가능 시각 · 점유를 갖는다(event-R38) |
@@ -71,7 +71,7 @@
 
 ## 3. 공개 인터페이스
 
-이 모듈은 `article` 의 이벤트를 받고, 사건 변화 알림(`EventsChanged`)과 사건 삭제 알림(`EventsRemoved`)을 발행한다. 공개 조회 둘(`EventDirectory` · 운영자 화면의 `EventReview`)과 공개 운영 API 하나(`EventIntakeAdministration`)를 낸다. `EventDirectory` 는 `digest` · `report` · `admin` · `storyline` · `user` · `feedback` · `reader` 가 쓰고, `EventReview` 와 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)).
+이 모듈은 `article` 의 이벤트를 받고, 사건 변화 알림(`EventsChanged`)과 사건 삭제 알림(`EventsRemoved`)을 발행한다. 공개 조회 셋(`EventDirectory` · 운영자 화면의 `EventReview` · 처리 현황 `EventProcessing`)과 공개 운영 API 하나(`EventIntakeAdministration`)를 낸다. `EventDirectory` 는 `digest` · `report` · `admin` · `storyline` · `user` · `feedback` · `reader` 가 쓰고, `EventReview` · `EventProcessing` 과 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)).
 
 ### EventsChanged
 
@@ -135,6 +135,21 @@ public sealed interface IntakeFillResult {
 - 계약
   - 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통)
   - 기사 고르기는 `article` 의 공개 조회 하나이고, 표 전체를 읽는 드문 운영 연산이다
+
+### EventProcessing
+
+사건 쪽 회차 넷의 처리 현황이다(event-R90). 구현은 `application` 의 `EventProcessingService` 다.
+
+```java
+public interface EventProcessing {
+    List<RoundQueue> rounds();               // event-features · event-assignment · event-rejudgement · event-merge 순
+}
+```
+
+- 계약
+  - 값 타입 `RoundQueue` 는 `platform` 의 공개 타입이다([platform Spec §3](platform.md#roundrunner--roundactivity--roundbatch--batchend--roundend--roundsummary--roundqueue))
+  - 읽기 전용 트랜잭션에서 센다. 기준 이력에 쓰지 않는다
+  - 역할 애너테이션이 없다(두 역할 공통)
 
 ### EventDirectory
 
@@ -353,7 +368,8 @@ public record ArticleKeyTerms(String modelVersion, List<String> terms, Instant c
 협력은 과정마다 아래와 같다. 그림이 있는 과정의 호출 순서는 그림에 있다.
 
 - **새 기사 넣기** — `EventIntakeListener` 가 `ArticleStored` 를 받아 `IntakeQueueRepository` 로 사건 묶기 대기에 넣는다(event-R5)
-- **표현 회차** — 작업 역할의 `IntakeArticlesJob` 이 1분마다 `EventIntakeRound` 를 돌린다. 회차는 대기를 점유하고 `MatchText` · `KeyTermExtractor` 로 표현 텍스트와 핵심 말을 만들어 `TextEmbedding` 에 넘긴 뒤, 기사마다 표현을 쓰고 배정 대기에 넣는다(event-R1 ~ R4 · R6, 그림 "표현 회차")
+- **회차 넷의 되풀이** — 네 회차의 `run()` 은 `platform` 의 `RoundRunner` 에 회차 이름과 뭉치 하나(`batch`)를 넘긴다. 실행기가 뭉치를 시간 예산까지 되풀이하고 회차 기록을 남긴다([platform-R130](platform.md#반복-회차) ~ R132). 기준 이력을 등록하는 세 회차(배정 · 재판정 · 병합)는 `run()` 마다 `CriteriaOnce` 를 만들어 첫 뭉치가 등록한 ID 를 다음 뭉치가 쓴다(event-R48)
+- **표현 회차** — 작업 역할의 `IntakeArticlesJob` 이 1분마다 `EventIntakeRound` 를 돌린다. 뭉치는 대기를 점유하고 `MatchText` · `KeyTermExtractor` 로 표현 텍스트와 핵심 말을 만들어 `TextEmbedding` 에 넘긴 뒤, 기사마다 표현을 쓰고 배정 대기에 넣는다(event-R1 ~ R4 · R6, 그림 "표현 회차")
 - **배정 회차** — 같은 반복 작업이 표현 회차 다음에 `AssignmentRound` 를 돌린다. 회차는 배정 대기를 점유하고 기사마다 `CandidateScoring` · `AssignmentRule` 로 판정하며, 띠면 `EventMembership` 에 물은 뒤 사건을 잠가 배정을 쓴다(event-R10 ~ R12 · R16, 그림 "배정 회차")
 - **재판정 회차** — 배정 회차 다음에 `RejudgementRound` 가 기준이 다른 배정을 저장 후보로 다시 판정하고 `Reassignment` 로 적용한다. 옛 사건은 `EventShrinkWriter` 로 쓴다(event-R18, 그림 "재판정 회차")
 - **병합 회차** — 재판정 회차 다음에 `MergeRound` 가 바뀐 열린 사건마다 후보 사건을 판정해 합치거나 미룬다. 남는 사건과 합친 값은 `MergeRule` · `LockedEvent` 가 정한다(event-R13, 그림 "병합 회차")
@@ -494,7 +510,7 @@ sequenceDiagram
     J->>R: run, 배정 회차 다음 (event-R49)
     R->>C: 트랜잭션 — register, 지금 기준 (event-R48)
     R->>B: 트랜잭션 — keepClosed, 닫힌 사건의 배정은 기준만 (event-R49)
-    loop 회차 상한까지, 대상이 없으면 끝 (event-R49)
+    loop 뭉치 상한까지, 대상이 없으면 끝 (event-R49)
         rect rgba(128, 128, 128, 0.12)
         Note over R,W: 트랜잭션 하나 (event-R49)
         R->>B: lockRejudgeTargets — 배정 하나와 저장 후보 (event-R50)
@@ -546,7 +562,7 @@ sequenceDiagram
     J->>R: run, 재판정 회차 다음 (event-R57)
     R->>C: 트랜잭션 — register, 지금 기준 (event-R48)
     R->>V: mergeDue — 바뀐 열린 사건 (event-R57)
-    loop 사건 S 마다, 이 회차에 합친 사건은 건너뛴다 (event-R57)
+    loop 사건 S 마다, 이 뭉치에 합친 사건은 건너뛴다 (event-R57)
         R->>V: candidates — 후보 사건 (event-R58)
         R->>R: 점수 (event-R58)
         R->>G: find — 쌍마다 남긴 확률 (event-R59)
@@ -672,7 +688,7 @@ sequenceDiagram
   - 실패 처리: 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다(Spring Modulith `@ApplicationModuleListener`). 처리가 실패한 발행은 `platform` 의 이벤트 재처리 작업이 다시 처리한다
   - 임베더 · Nori 를 쓰지 않아 화면 역할에서 돌아도 된다
 - 반복 작업 — `IntakeArticlesJob`(`adapter/in/job`, 작업 역할)
-  - 계기와 주기: JobRunr 반복 작업 `event-intake` 이 1분마다 표현 · 배정 · 재판정 · 병합 회차를 차례로 돌린다(event-R6 · R16 · R18 · R13)
+  - 계기와 주기: JobRunr 반복 작업 `event-intake` 이 1분마다 표현 · 배정 · 재판정 · 병합 회차를 차례로 돌린다(event-R6 · R16 · R18 · R13). 가져올 대기가 남았으면 회차마다 뭉치를 시간 예산(5분)까지 되풀이하므로 실행 하나가 20분 남짓 걸릴 수 있다(platform-R131)
   - 겹침 방지: 네 회차가 한 작업이라 서로 겹치지 않는다. 이전 실행이 대기 · 처리 중이면 그 실행은 건너뛴다(event-R26)
   - 실패 처리: 재시도하지 않는다. 회차마다의 실패는 event-R27 · R45 · R49 · R61 이다
   - 임베더를 받지 않는다(event-R7)
@@ -680,17 +696,19 @@ sequenceDiagram
   - 계기와 주기: JobRunr 반복 작업 `event-cleanup` 이 하루 1회 `CleanupRound` 로 사건 정비를 한다(event-R13)
   - 멱등성: 다시 돌려도 결과가 같다(event-R71)
   - 실패 처리: 재시도하지 않고 다음 날 다시 돈다. 단계마다의 실패는 event-R71 이다
-- 공개 API 의 구현 — `EventIntakeAdministrationService` · `EventDirectoryService` · `EventReviewService`(`application`, 두 역할). 다른 모듈이 부르고, 운영 API 와 `EventReview` 는 `admin` 이 운영자 요청으로 부른다
+- 공개 API 의 구현 — `EventIntakeAdministrationService` · `EventDirectoryService` · `EventReviewService` · `EventProcessingService`(`application`, 두 역할). 다른 모듈이 부르고, 운영 API 와 `EventReview` 는 `admin` 이 운영자 요청으로 부른다
 - 기동 시 동작 — `AssignmentConfiguration` 이 설정을 검증된 기준으로 바꾼다. 어기면 기동하지 않는다(event-R47 · R68)
 - 컨트롤러는 없다
 
 ### `application`
 
 - `EventIntakeListener` — 리스너(들어오는 쪽). 넣는 시각은 `platform` 의 앱 시계(`InstantSource`, platform-R26)에서 얻는다. 빈 이름이 단순 클래스 이름이라 `tag` · `evaluation` 의 리스너와 이름을 달리한다
-- `EventIntakeRound` — 표현 회차 하나(event-R6). 임베딩은 생성자로 받은 `evaluation` 의 `TextEmbedding` 으로 얻는다. 시각과 임대 만료 상한은 앱 시계(`AppClock`, platform-R28)에서 얻는다. 트랜잭션은 `TransactionTemplate` 으로 여는 짧은 트랜잭션이고, 그 경계는 그림 "표현 회차"다. 다른 회차도 같다. 결과와 실패의 종류는 `default` 없는 `switch` 식으로 가른다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통)
-- `AssignmentRound` — 배정 회차 하나(event-R16). `TextEmbedding` 은 지금 모델 버전을 정하는 데만 쓴다. 시계는 앱 시계(`AppClock`)이고 기사마다 다시 읽는다. 트랜잭션 경계는 그림 "배정 회차"다. 판정과 실패의 종류는 `default` 없는 `switch` 식으로 가른다. 트랜잭션 · 역할 애너테이션이 없다
-- `RejudgementRound` — 재판정 회차 하나(event-R18). 트랜잭션 경계는 그림 "재판정 회차"다. 트랜잭션 · 역할 애너테이션이 없다
-- `MergeRound` — 병합 회차 하나(event-R13). 임베더를 받지 않고, 모델 버전은 사건의 것을 쓴다. 시각은 앱 시계(`InstantSource`, platform-R26)에서 얻는다. 트랜잭션 경계는 그림 "병합 회차"이고, 확인 표시와 미룸 쓰기는 트랜잭션 없이 한 문장씩이다. 판정과 실패의 종류는 `default` 없는 `switch` 식으로 가른다. 트랜잭션 · 역할 애너테이션이 없다
+- `EventIntakeRound` — 표현 회차 하나(event-R6). 회차 이름 `event-features`. `run()` 은 `RoundRunner` 로 `batch()`(뭉치 하나 — 임베더 실패로 멈추면 `STOPPED`)를 되풀이한다. 임베딩은 생성자로 받은 `evaluation` 의 `TextEmbedding` 으로 얻는다. 시각과 임대 만료 상한은 앱 시계(`AppClock`, platform-R28)에서 얻는다. 트랜잭션은 `TransactionTemplate` 으로 여는 짧은 트랜잭션이고, 그 경계는 그림 "표현 회차"다. 다른 회차도 같다. 결과와 실패의 종류는 `default` 없는 `switch` 식으로 가른다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통)
+- `AssignmentRound` — 배정 회차 하나(event-R16). 회차 이름 `event-assignment`. 판정 일시 실패로 미룬 기사(`Step.Deferred`)가 있으면 뭉치 결과가 `BACKED_OFF` 다. `TextEmbedding` 은 지금 모델 버전을 정하는 데만 쓴다. 시계는 앱 시계(`AppClock`)이고 기사마다 다시 읽는다. 트랜잭션 경계는 그림 "배정 회차"다. 판정과 실패의 종류는 `default` 없는 `switch` 식으로 가른다. 트랜잭션 · 역할 애너테이션이 없다
+- `RejudgementRound` — 재판정 회차 하나(event-R18). 회차 이름 `event-rejudgement`. 닫힌 사건 일괄 · 하나씩 다시 판정 가운데 하나라도 상한까지 했으면 뭉치 결과가 `FULL` 이다. 트랜잭션 경계는 그림 "재판정 회차"다. 트랜잭션 · 역할 애너테이션이 없다
+- `MergeRound` — 병합 회차 하나(event-R13). 회차 이름 `event-merge`. 판정 일시 실패로 미룬 사건(`Resolution.Retry` → `Step.Deferred`)이 있으면 뭉치 결과가 `BACKED_OFF` 다. 임베더를 받지 않고, 모델 버전은 사건의 것을 쓴다. 시각은 앱 시계(`InstantSource`, platform-R26)에서 얻는다. 트랜잭션 경계는 그림 "병합 회차"이고, 확인 표시와 미룸 쓰기는 트랜잭션 없이 한 문장씩이다. 판정과 실패의 종류는 `default` 없는 `switch` 식으로 가른다. 트랜잭션 · 역할 애너테이션이 없다
+- `CriteriaOnce` — 회차 하나에서 기준 이력을 한 번만 등록하게 담는 칸. 회차가 `run()` 마다 만들어 뭉치에 넘긴다(event-R48)
+- `EventProcessingService` — 공개 조회 `EventProcessing` 의 구현(event-R90)
 - `CleanupRound` — 사건 정비 하나(event-R71). 트랜잭션 경계는 그림 "사건 정비"다. 장기 검색 인덱스의 경고 로그는 `JdbcLongTermIndexes` 가 남긴다. 트랜잭션 · 역할 애너테이션이 없다
 - `EventShrinkWriter` — 기사를 뺀 사건 쓰기의 정본(event-R8 · R54). 뺀 기사의 배정을 지우거나 옮긴 뒤 같은 트랜잭션에서 부른다. 쓰는 값은 event-R8 의 5 다
 - `EventAssignmentProperties` · `AssignmentConfiguration` · `AssignmentSettings` — 설정 `yozmnews.event-assignment`(§7)과 그것을 검증된 기준으로 바꾸는 결선(event-R47 · R68). 기본값의 정본은 레코드 컴포넌트의 `@DefaultValue` 다. 공개 타입 `AssignmentCriteria` 는 패키지 내부 레코드 `AssignmentSettings` 에 감싼 빈으로 운반하고, 닫기 기준은 `EventClosing` 빈이다. 두 빈 모두 기동 때 검증된다
@@ -711,7 +729,7 @@ sequenceDiagram
 
 #### `domain/intake`
 
-- `IntakeSchedule` — 대기 상수(점유 기간 · 회차의 점유 상한 · 거부 상한)와 거부 상한 판정의 정본(event-R26 · R28)
+- `IntakeSchedule` — 대기 상수(점유 기간 · 뭉치의 점유 상한 · 거부 상한)와 거부 상한 판정의 정본(event-R26 · R28)
 - `PendingArticle` — 대기 행 하나와 그 점유 전이(event-R26)
 - 저장 단위: aggregate 가 없다. 대기 행의 전이는 `PendingArticle` 이 계산하고, 저장소 `IntakeQueueRepository` 가 점유 토큰을 조건으로 쓴다. 평가 대기와 같은 모양이다([ADR-0059](../adr/0059-evaluation-job-limits-concurrency-and-retries-with-db-leases-on-queue-rows.md))
 - 그 밖의 값: `IntakeLease`
@@ -727,7 +745,7 @@ sequenceDiagram
 - `CentroidUpdate` — 중심 누적 갱신의 정본(event-R33 · R36 · R64)
 - `AssignmentSchedule` — 배정 대기 · 재판정 · 병합 회차와 사건 정비의 상수의 정본(event-R39 · R43 · R49 · R57 · R68 · R70). 점유 기간 `LEASE` 는 `evaluation` 의 `EvaluatorTiming.LONGEST_JUDGEMENT` × `BATCH_SIZE` + 여유 4분이다
 - `PendingAssignment` — 배정 대기 행 하나와 그 전이. 전이는 점유 · 일시 실패 · 상한에 이름이다(event-R39 · R43)
-- 저장 단위: aggregate 가 없다. 배정 대기 행의 전이는 `PendingAssignment` 가 계산하고, 저장소 `AssignmentQueueRepository` 가 점유 토큰을 조건으로 쓴다(사건 묶기 대기와 같은 모양). 기준 이력 저장소 `CriteriaRepository` 는 쓰기만 하고(event-R48), 병합 판정 기록 저장소 `MergeJudgementRepository` 는 쌍마다 한 번 쓰고 바꾸지 않는다(event-R59)
+- 저장 단위: aggregate 가 없다. 배정 대기 행의 전이는 `PendingAssignment` 가 계산하고, 저장소 `AssignmentQueueRepository` 가 점유 토큰을 조건으로 쓴다(사건 묶기 대기와 같은 모양). 기준 이력 저장소 `CriteriaRepository` 는 등록과 등록 없는 찾기만 하고(event-R48 · R90), 병합 판정 기록 저장소 `MergeJudgementRepository` 는 쌍마다 한 번 쓰고 바꾸지 않는다(event-R59)
 - 그 밖의 값: `Decision` · `DecisionPhase` · `EventSnapshot` · `ScoredCandidate`
 
 #### `domain/event`
@@ -742,6 +760,10 @@ sequenceDiagram
 - 사건 조회 저장소 `EventQueryRepository` — 공개 조회의 읽기 전용 질의. 배정 쓰기용 `EventRepository` 와 나눈다
 - 그 밖의 값: `PublishedSpan`. 사건 상태 `EventStatus` · 배정을 정한 것 `DecidedBy` 는 공개 타입이다(§3)
 
+#### `domain/backlog`
+
+- `Backlog` — 회차 하나가 처리할 남은 항목 수와 미룬 수. 대기 · 사건 저장소가 한 문장으로 세어 낸다(event-R90)
+
 #### `domain/tally`
 
 - `EventTallies` — 기간 집계의 정본(event-R15). 집합 키는 타입 매개변수이고, 평균은 `BigDecimal`(`MathContext.DECIMAL64`)로 센다
@@ -752,12 +774,12 @@ sequenceDiagram
 
 #### 저장소 구현
 
-- `JdbcIntakeQueueRepository` · `JdbcAssignmentQueueRepository` — 두 대기의 저장소. 넣기는 이미 있으면 그대로이고, 잠금은 다른 트랜잭션이 잡은 행을 건너뛴다. 점유한 회차의 반영은 점유 토큰을 조건으로 한 갱신 · 삭제다(event-R26 · R39)
+- `JdbcIntakeQueueRepository` · `JdbcAssignmentQueueRepository` — 두 대기의 저장소. 넣기는 이미 있으면 그대로이고, 잠금은 다른 트랜잭션이 잡은 행을 건너뛴다. 점유한 뭉치의 반영은 점유 토큰을 조건으로 한 갱신 · 삭제다(event-R26 · R39). 남은 수 · 미룬 수를 한 문장으로 센다(event-R90)
 - `JdbcMatchFeaturesRepository` — 표현 저장소. 벡터는 `platform` 의 `VectorText` 로 pgvector 텍스트 표현을 주고받는다. 지우기는 다른 트랜잭션이 잡은 행을 건너뛰어 지운 기사 따르기와 엇갈려 기다리지 않는다(event-R70)
-- `JdbcCriteriaRepository` — 기준 이력 저장소(event-R48)
+- `JdbcCriteriaRepository` — 기준 이력 저장소(event-R48). 등록은 같은 값의 행을 먼저 찾는 질의를 등록 없는 찾기와 함께 쓴다
 - `JdbcMergeJudgementRepository` — 병합 판정 기록 저장소. 쌍은 (작은 ID, 큰 ID) 한 행이다(event-R59)
 - `JdbcEventRepository` — 사건 저장소. 사건을 바꾸는 쓰기는 열린 트랜잭션 안에서만 돌고 사건 변화 알림을 낸다(event-R23 · R25). 중심은 `halfvec` 으로 쓰고 읽는다. 사건 값 쓰기는 고치기와 병합의 남는 사건이 함께 쓰는 한 문장이다. 사건 핵심 말 상위 수는 `CandidateScoring.EVENT_KEY_TERMS` 를 넘겨, 후보와 병합 대상이 같은 질의 조각을 쓴다(event-R31)
-- `JdbcEventArticleRepository` — 배정 저장소. 저장 후보의 사건은 남는 사건으로 읽는다(event-R50). 판정 원본 ID 는 넣기에서만 쓴다(event-R81)
+- `JdbcEventArticleRepository` — 배정 저장소. 저장 후보의 사건은 남는 사건으로 읽는다(event-R50). 판정 원본 ID 는 넣기에서만 쓴다(event-R81). 재판정 대상의 조건 하나를 잠금 질의와 건수 질의가 함께 쓴다(event-R90)
 - `JdbcLongTermIndexes` — 장기 검색 인덱스의 이름 · 식 · 조건의 정본(event-R69). 이름은 `events_closed_centroid_` 에 모델 버전 SHA-256 앞 16 hex 를 붙인 것이다. 자동 커밋 연결에서 한 문장씩 만든다
 - `CentroidOrder` — "중심에 가까운 순" 정렬의 정본 질의 조각(event-R11 · R14). 서술 기사는 표현이 있는 기사만, 대표 기사는 표현이 없는 기사까지 이 순서로 고른다
 - `JdbcEventQueryRepository` — 사건 조회 저장소. 합쳐진 사건의 가리킴을 한 번 따른다(event-R80). 기사 하나의 배정은 기준 이력 · 저장 후보와 함께 한 질의로 읽는다
@@ -815,12 +837,12 @@ sequenceDiagram
   - 이미 대기에 있으면 그대로이고 세지 않는다
   - 일수가 범위 밖이면 아무것도 하지 않는다
   - 넣은 기사는 표현 회차와 배정 회차가 처리한다. 표현이 이미 있으면 그대로 두고 배정 대기로 넘긴다(event-R4 · R29)
-- **event-R26** — 작업 역할의 반복 작업이 1분마다 표현 회차를 돈다. 재시도하지 않고, 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다.
-  - 회차는 점유가 없거나 만료된 대기 행을 넣은 시각 · 기사 ID 순으로 64건(측정 전, `IntakeSchedule.BATCH_SIZE`)까지 잠가 점유를 쓰고 커밋한다. 다른 트랜잭션이 잡은 행은 건너뛴다
+- **event-R26** — 작업 역할의 반복 작업이 1분마다 표현 회차를 돈다. 재시도하지 않고, 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다. 회차는 뭉치를 시간 예산까지 되풀이한다([platform-R130](platform.md#반복-회차) · R131 — [ADR-0347](../adr/0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md)).
+  - 뭉치는 점유가 없거나 만료된 대기 행을 넣은 시각 · 기사 ID 순으로 64건(측정 전, `IntakeSchedule.BATCH_SIZE`)까지 잠가 점유를 쓰고 커밋한다. 다른 트랜잭션이 잡은 행은 건너뛴다
   - 점유는 토큰과 만료 시각이고, 만료 시각은 지금 + 10분(측정 전, `IntakeSchedule.LEASE`)이다
   - 점유가 만료되었다는 것은 만료 시각 ≤ `AppClock.expiredBy(10분)` 이라는 뜻이다. 점유한 뒤 시계가 넘긴 시간을 뺀 경과가 임대 이상이다(platform-R28)
   - 기사의 제목 · 요약문은 트랜잭션 밖에서 한 번에 읽는다. 그새 지워진 기사는 토큰이 맞으면 대기 행을 지우고 정보 로그를 남긴다. 남은 기사가 없으면 임베더를 부르지 않는다
-  - 회차 도중 프로세스가 죽으면 점유가 만료된 뒤 다른 회차가 가져간다
+  - 회차 도중 프로세스가 죽으면 그 뭉치의 점유가 만료된 뒤 다른 회차가 가져간다
 - **event-R27** — 회차는 임베더를 트랜잭션 밖에서 한 번 부르고, 결과에 따라 처리한다([ADR-0092](../adr/0092-embedder-failures-in-three-kinds-with-rejected-articles-isolated-and-dropped-after-a-limit.md)).
   - 성공이면 기사마다 쓴다(event-R29). 수 · 차원은 관문이 확인했다(event-R3)
   - 일시 실패 · 임베더 사용 불가면 남은 점유를 토큰이 맞을 때 풀고 회차를 끝낸 뒤 경고 로그를 남긴다. 거부 수는 그대로이고, 다음 회차가 다시 점유한다
@@ -884,13 +906,13 @@ sequenceDiagram
   - 표현이 없는 기사를 빼면 그 기여가 중심 · 핵심 말에 남는다. 그런 기사가 섞여 여러 기사를 한 번에 빼면 결과는 뺀 순서(기사 ID 순)를 따른다
 - **event-R37** — **(미설계)** 모델을 바꾼 뒤 열린 사건의 중심을 새 모델로 다시 계산하는 일. 지금은 새 모델의 기사가 새 사건을 연다
 - **event-R38** — 표현을 쓴 기사를 배정 대기에 넣는다(event-R29). 기사마다 한 행이고 이미 있으면 그대로다. 판정 가능 시각은 넣은 시각이다. 반복 작업이 표현 회차 다음에 배정 회차를 돈다
-- **event-R39** — 배정 회차는 판정 가능 시각이 지났고 점유가 없거나 만료된 행을 판정 가능 시각 · 기사 ID 순으로 32건(측정 전, `AssignmentSchedule.BATCH_SIZE`)까지 잠가 점유를 쓰고 커밋한다.
+- **event-R39** — 배정 뭉치는 판정 가능 시각이 지났고 점유가 없거나 만료된 행을 판정 가능 시각 · 기사 ID 순으로 32건(측정 전, `AssignmentSchedule.BATCH_SIZE`)까지 잠가 점유를 쓰고 커밋한다.
   - 점유가 만료되었다는 것은 점유한 뒤의 경과가 임대 이상이라는 뜻이다(platform-R28)
   - 점유의 만료 시각은 지금 + 20분(측정 전, `AssignmentSchedule.LEASE`)이다. 기사마다 판정 한 번을 가장 길게 기다려도 안에 든다([evaluation-R53](evaluation.md#평가기-시간))
   - 다른 트랜잭션이 잡은 행은 건너뛴다
   - 점유한 행이 있으면 지금 기준을 기준 이력에 등록한다(event-R48)
 - **event-R40** — 배정 회차는 기사를 점유 순서대로 하나씩 판정하고, 기사마다 짧은 트랜잭션에서 쓴다.
-  - 같은 회차의 뒤 기사가 앞 기사가 연 사건을 후보로 본다
+  - 같은 뭉치의 뒤 기사가 앞 기사가 연 사건을 후보로 본다. 다음 뭉치는 앞 뭉치가 연 사건을 후보로 본다
   - 시각은 기사마다 다시 읽는다
   - 쓰기는 토큰이 맞아 배정 대기 행을 지웠을 때만 한다
   - 기사 조회와 사건 소속 판정은 트랜잭션 밖이다
@@ -899,11 +921,12 @@ sequenceDiagram
   - 배정이 이미 있으면 대기 행만 지운다
   - 지금 모델 버전의 표현이 없으면(모델이 바뀜) 한 트랜잭션에서 대기 행을 지우고 사건 묶기 대기에 넣는다. 표현을 새 모델로 다시 만든다
 - **event-R42** — 붙일 사건이 사라졌거나 열려 있지 않거나 모델 버전이 다르면, 또는 같은 기사의 배정이 이미 있으면 쓰기를 모두 되돌린다. 이어서 새 트랜잭션에서 대기 행을 처분해 점유 만료까지 묶이지 않게 한다.
-  - 붙일 사건 때문이면 점유를 풀고 정보 로그를 남긴다. 다음 회차가 다시 판정하고, 시도 수 · 판정 가능 시각은 그대로다
+  - 붙일 사건 때문이면 점유를 풀고 정보 로그를 남긴다. 다음 뭉치가 다시 판정하고, 시도 수 · 판정 가능 시각은 그대로다
   - 배정이 이미 있으면 대기 행을 지운다
 - **event-R43** — 사건 소속 판정의 결과에 따라 아래처럼 처리한다.
   - 판정이면 event-R11 로 정한다
   - 일시 실패면 시도 수를 하나 늘리고 판정 가능 시각을 지금 + 1분 × 2^(시도 수 − 1)로 미룬 뒤 점유를 풀고 정보 로그를 남긴다. 간격은 1시간에서 멈추고, 정본은 `EvaluatorTiming.retryDelay` 다([evaluation-R53](evaluation.md#평가기-시간))
+  - 일시 실패로 미룬 기사가 하나라도 있으면 그 뭉치 뒤에 회차를 끝낸다(platform-R131)
   - 일시 실패로 시도 수가 5(측정 전, `AssignmentSchedule.MAX_ATTEMPTS`)에 이르면 판정 실패로 끝내고(event-R44) 경고 로그를 남긴다
   - 기사 거부면 바로 판정 실패로 끝내고(event-R44) 경고 로그를 남긴다
   - 평가기 사용 불가면 그 기사부터 남은 점유를 풀고 회차를 멈춘 뒤 경고 로그를 남긴다. 기사는 대기에 남는다
@@ -919,11 +942,12 @@ sequenceDiagram
 - **event-R17** — 사건 기준 · 저장 기준의 값과 기준 이력을 덮는다. 하위 규칙: event-R47 · R48
 - **event-R18** — 재판정 회차를 덮는다. 하위 규칙: event-R49 ~ R55
 - **event-R47** — 사건 기준과 저장 기준은 설정이다(§7). 창은 0 보다 큰 초 단위이고, 0 ≤ 저장 기준 ≤ 아래 기준 ≤ 위 기준 ≤ 1, 0 < 확률 기준 ≤ 1 이어야 한다. 어기면 기동하지 않는다(`AssignmentCriteria`)
-- **event-R48** — 회차는 지금 기준을 기준 이력에 등록하고, 그 ID 를 배정에 남긴다. 다섯 값이 같은 행이 있으면 그 행이고, 창은 초로 적는다. 같은 값을 동시에 등록해도 한 행 · 같은 ID 다
+- **event-R48** — 회차는 지금 기준을 기준 이력에 한 번 등록하고(배정 회차는 점유한 기사가 처음 있을 때), 그 ID 를 배정에 남긴다. 다섯 값이 같은 행이 있으면 그 행이고, 창은 초로 적는다. 같은 값을 동시에 등록해도 한 행 · 같은 ID 다
 - **event-R49** — 반복 작업이 배정 회차 다음에 재판정 회차를 돈다. 지금 기준과 다른 기준 ID 의 배정이 대상이다.
-  - 닫힌 사건의 배정은 재판정하지 않는다. 회차는 먼저 닫힌 사건의 배정 가운데 대상인 것을 기사 ID 순으로 5,000건(측정 전, `AssignmentSchedule.CLOSED_KEEP_BATCH`)까지 한 트랜잭션에서 잠가 기준 ID 만 바꾼다. 바꾼 배정이 있으면 그 수를 정보 로그로 남긴다
-  - 이어서 나머지 대상을 기간 제한 없이 기사 ID 순으로 하나씩 잠가, 하나마다 짧은 트랜잭션에서 다시 판정한다. 회차마다 200건(측정 전, `AssignmentSchedule.REJUDGE_BATCH`)까지이고, 다시 판정한 배정이 있으면 그 수를 정보 로그로 남긴다
+  - 닫힌 사건의 배정은 재판정하지 않는다. 뭉치는 먼저 닫힌 사건의 배정 가운데 대상인 것을 기사 ID 순으로 5,000건(측정 전, `AssignmentSchedule.CLOSED_KEEP_BATCH`)까지 한 트랜잭션에서 잠가 기준 ID 만 바꾼다. 바꾼 배정이 있으면 그 수를 정보 로그로 남긴다
+  - 이어서 나머지 대상을 기간 제한 없이 기사 ID 순으로 하나씩 잠가, 하나마다 짧은 트랜잭션에서 다시 판정한다. 뭉치마다 200건(측정 전, `AssignmentSchedule.REJUDGE_BATCH`)까지이고, 다시 판정한 배정이 있으면 그 수를 정보 로그로 남긴다
   - 두 잠금 모두 다른 트랜잭션이 잡은 행은 건너뛴다
+  - 닫힌 사건 일괄 · 하나씩 다시 판정 가운데 하나라도 상한까지 했으면 회차는 다음 뭉치를 가져온다(platform-R130)
   - 기준 등록 뒤 예상 못한 예외가 나면 회차를 멈추고 오류 로그를 남긴다
 - **event-R50** — 재판정은 사건 소속 판정 · 임베더를 부르지 않는다. 재료는 그 기사의 저장 후보뿐이고, event-R11 의 1 · 2 · 4 를 지금 기준으로 한다.
   - 사라진 사건의 후보는 빼고, 합쳐진 사건은 남는 사건으로 읽는다
@@ -953,12 +977,12 @@ sequenceDiagram
 
 - **event-R13** — 열린 사건끼리 합치는 사건 병합과, 사건을 닫고 그 뒤를 정비하는 사건 정비를 덮는다. 하위 규칙: event-R56 ~ R71
 - **event-R56** — 닫기 · 병합은 한 방향이다. 닫힌 사건을 다시 열거나 합친 사건을 나누지 않는다. 기준(사건 기준 · 닫는 기간 · 최대 기간)이 바뀌면 그 뒤의 닫기 · 병합에만 쓴다. 몇 주에 걸친 사건들은 스토리라인이 잇는다([storyline Spec](storyline.md))
-- **event-R57** — 반복 작업이 재판정 회차 다음에 병합 회차를 돈다. 회차는 지금 기준을 기준 이력에 등록하고(event-R48), 바뀐 열린 사건을 16개(측정 전, `AssignmentSchedule.MERGE_BATCH`)까지 본다.
+- **event-R57** — 반복 작업이 재판정 회차 다음에 병합 회차를 돈다. 회차는 지금 기준을 기준 이력에 등록하고(event-R48), 뭉치마다 바뀐 열린 사건을 16개(측정 전, `AssignmentSchedule.MERGE_BATCH`)까지 본다.
   - 바뀐 사건은 확인한 고친 횟수가 지금보다 작거나, 다른 기준으로 확인한 사건이다
   - 사건의 고친 횟수(`revision`)는 열 때 1 이고, 사건 값을 쓸 때마다(붙이기 · 빼기 · 옮기기 · 합치기) 하나 는다
   - 미룬 사건은 다시 볼 시각이 지금 이전(같으면 포함)인 것만 본다(event-R62)
   - 미루지 않은 사건을 사건 ID 순으로 먼저, 미룬 사건을 그 뒤에 다시 볼 시각 · 사건 ID 순으로 본다
-  - 이 회차에서 앞서 합친 두 사건은 다시 보지 않는다
+  - 이 뭉치에서 앞서 합친 두 사건은 다시 보지 않는다 — 남는 사건은 다음 뭉치가 새로 읽어 본다
   - 합친 사건이 있으면 그 수를 정보 로그로 남긴다
 - **event-R58** — 병합 점수는 바뀐 사건 S 를 기사 자리에 둔 배정의 산식이다(event-R31, `CandidateScoring`).
   - 후보는 S 와 모델 버전이 같은 다른 열린 사건 가운데 첫 ~ 마지막 기사 시각 범위가 [S 의 첫 기사 시각 − 창, S 의 마지막 기사 시각 + 창] 과 겹치는 사건이다
@@ -982,13 +1006,13 @@ sequenceDiagram
   - 기사 거부면 확률 없이 판정 뒤 규칙으로 정한다(event-R59). 경고 로그를 남긴다
   - 평가기 사용 불가면 회차를 멈추고 경고 로그를 남긴다. 미루지 않는다
   - 예상 못한 예외면 회차를 멈추고 오류 로그를 남긴다. 미루지 않는다
-- **event-R62** — 확인을 끝내지 못한 사건은 미룬다. 판정의 일시 실패 · 판정할 기사 없음 · 합치지 못함이 그렇다.
+- **event-R62** — 확인을 끝내지 못한 사건은 미룬다. 판정의 일시 실패 · 판정할 기사 없음 · 합치지 못함이 그렇다. 판정의 일시 실패로 미룬 사건이 하나라도 있으면 그 뭉치 뒤에 회차를 끝낸다(platform-R131).
   - 미루면 이어서 미룬 횟수를 하나 올리고, 다시 볼 시각을 지금 + 간격으로 쓴다. 간격은 미룬 횟수를 시도 수 자리에 넣은 event-R43 의 재시도 간격이다(`EvaluatorTiming.retryDelay`)
   - 미룸은 열린 사건에만 쓰고, 확인은 표시하지 않는다
   - 미룬 횟수에는 상한이 없다. 사건이 열려 있는 동안 다시 보고, 횟수가 쌓여도 대상에서 빼지 않는다
   - 미룸은 병합 회차의 결과로만 지운다. 확인을 표시할 때와 합칠 때(두 사건 모두)다
   - 기사가 붙거나 빠져 사건이 바뀌어도 미룸은 그대로이고, 그동안에도 그 사건은 다른 사건의 후보다
-  - 그래서 확인을 끝내지 못하는 사건이 회차 크기 이상이어도 그 뒤의 사건을 확인한다
+  - 그래서 확인을 끝내지 못하는 사건이 뭉치 크기 이상이어도 그 뒤의 사건을 확인한다
 - **event-R63** — 합치기는 한 트랜잭션에서 두 사건의 배정 행을 기사 ID 순으로, 두 사건을 사건 ID 순으로 잠근다(event-R46).
   - 두 사건이 모두 있고, 열려 있고, 모델 버전이 같고, 잠근 배정 수가 각 사건의 기사 수와 같을 때만 합친다. 아니면 되돌리고 표시하지 않은 채 S 를 미루며(event-R62) 정보 로그를 남긴다
   - 남는 사건은 기사 수가 많은 쪽, 같으면 ID 가 작은 쪽이다(`MergeRule.survivor`)
@@ -998,7 +1022,7 @@ sequenceDiagram
   - 기사 수는 합이다
   - 첫 기사 시각 · 연 시각은 이른 쪽, 마지막 기사 시각 · 마지막으로 붙은 시각은 늦은 쪽이다
   - 핵심 말은 말마다 그 말을 가진 기사 수를 더한다
-  - 남는 사건은 고친 횟수가 늘고 미룸이 지워져 다음 회차가 다시 본다. 그래서 여러 사건이 차례로 한 사건에 모일 수 있다
+  - 남는 사건은 고친 횟수가 늘고 미룸이 지워져 다음 뭉치가 다시 본다. 그래서 여러 사건이 차례로 한 사건에 모일 수 있다
 - **event-R65** — 합쳐진 사건은 지우지 않는다. 상태 `MERGED` 로 남아 남는 사건을 가리킨다(`merged_into`).
   - 열림이 끝난 시각은 합친 시각이다
   - 기사 수 · 중심 · 시각은 합칠 때의 값이고, 핵심 말은 없다
@@ -1107,6 +1131,20 @@ sequenceDiagram
   - 핵심 말은 임베딩 모델과 무관해(event-R2) 모델 버전을 가리지 않는다
   - 한 번에 묻는 서로 다른 말은 100개(`EventDirectory.MAX_TERMS`)까지다
 - **event-R89** — 채우기 대상(`lastArticleSince`)은 마지막 기사 시각이 `since` 이후(같으면 포함)인 합쳐지지 않은 사건이다
+
+### 처리 현황
+
+- **event-R90** — 처리 현황(`EventProcessing`)은 회차 넷의 남은 수 · 미룬 수와 회차 기록의 최근 합(`platform` 의 `RoundActivity`)을 표현 · 배정 · 재판정 · 병합 순으로 낸다([ADR-0348](../adr/0348-each-round-leaves-a-round-record-in-platform-and-the-operator-screen-shows-backlog-and-recent-throughput-per-round.md)).
+
+  | 회차 | 남은 수 | 미룬 수 |
+  |---|---|---|
+  | `event-features` | 사건 묶기 대기의 행 수(점유 중 포함) | 0 — 미루는 칸이 없다 |
+  | `event-assignment` | 배정 대기의 행 수 | 판정 가능 시각이 지금 뒤인 행 |
+  | `event-rejudgement` | 지금 기준이 아닌 배정 수 — 재판정 잠금과 같은 조건이다. 닫힌 사건의 배정도 든다(기준만 새것으로 적을 대상) | 0 |
+  | `event-merge` | 병합 회차가 고를 조건(열린 사건 · 지난 확인 뒤 고쳐졌거나 다른 기준으로 확인)에서 다시 볼 시각만 뺀 수 | 그 가운데 다시 볼 시각이 지금 뒤인 사건 |
+
+  - 대기마다 남은 수와 미룬 수는 한 문장으로 센다
+  - 지금 기준의 ID 는 기준 이력에서 찾기만 하고 등록하지 않는다. 아직 없으면 모든 배정 · 열린 사건이 대상이다
 
 ### 폐지한 규칙
 
@@ -1253,3 +1291,5 @@ sequenceDiagram
 | [0259](../adr/0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) | 평가기 요청 마감 · 판정 한 번의 가장 긴 시간 · 일시 실패 뒤 간격은 `evaluation` 의 공개 타입 하나가 정본이고, 판정을 부르는 대기의 점유 기간은 판정 한 번의 가장 긴 시간에서 계산한다 |
 | [0266](../adr/0266-feedback-is-recorded-under-the-original-event-id-and-feedback-resolves-merged-events-through-event-when-reading-with-the-last-pressed-value-winning.md) | 다른 모듈이 기록한 사건 ID 는 그 모듈이 읽을 때 `event` 의 풀기 조회로 합쳐진 사건을 푼다 |
 | [0267](../adr/0267-removed-events-are-announced-by-event-and-feedback-deletes-their-feedback-with-recording-and-removal-ordered-by-a-fence.md) | 사건을 지우면 지운 사건 ID 를 `EventsRemoved` 로 알리고, 사건을 가리키는 모듈이 받아 자기 행을 지운다 |
+| [0347](../adr/0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md) | 반복 회차는 뭉치를 마친 뒤 가져올 대기가 남았으면 시간 예산 안에서 같은 크기의 뭉치를 다시 가져온다 |
+| [0348](../adr/0348-each-round-leaves-a-round-record-in-platform-and-the-operator-screen-shows-backlog-and-recent-throughput-per-round.md) | 회차마다 회차 기록을 남기고, 운영자 화면 처리 현황이 회차마다 밀린 수와 최근 1시간 처리량을 보인다 |

@@ -1,5 +1,6 @@
 package net.yozmnews.tag.application;
 
+import java.time.InstantSource;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -12,6 +13,7 @@ import net.yozmnews.tag.MultiTagKind;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.ThresholdChangeView;
 import net.yozmnews.tag.domain.overview.OverviewTally;
+import net.yozmnews.tag.domain.queue.EvaluationBacklog;
 import net.yozmnews.tag.domain.queue.EvaluationQueueRepository;
 import net.yozmnews.tag.domain.result.EvaluationResultRepository;
 import net.yozmnews.tag.domain.tagset.TagSetRepository;
@@ -24,7 +26,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 공개 운영 API {@link EvaluationAdministration} 의 구현 — docs/specs/tag.md §4. 역할 애너테이션이 없다(두 역할 공통).
  * <p>
- * 대기 건수는 트랜잭션을 열지 않는다. 평가 현황은 읽기 전용 {@code REPEATABLE READ} 트랜잭션 하나에서 센다 — 체계 · 기준 · 이력 · 끝난 채움 ·
+ * 대기 건수는 트랜잭션을 열지 않는다 — 한 문장이다. 평가 현황은 읽기 전용 {@code REPEATABLE READ} 트랜잭션 하나에서 센다 — 체계 · 기준 · 이력 · 끝난 채움 ·
  * 평가 행이 한 스냅숏이고, 결과 저장소가 평가 행을 커서로 나눠 받는다.
  */
 @Service
@@ -46,9 +48,11 @@ class EvaluationAdministrationService implements EvaluationAdministration {
 
 	private final TransactionTemplate snapshot;
 
+	private final InstantSource clock;
+
 	EvaluationAdministrationService(EvaluationQueueRepository queue, TagSetRepository tagSets, TagSetViews views,
 			ThresholdRepository thresholds, EvaluationResultRepository results, StoreFloorsReader floors,
-			JudgedSamples samples, PlatformTransactionManager transactions) {
+			JudgedSamples samples, PlatformTransactionManager transactions, InstantSource clock) {
 		this.queue = queue;
 		this.tagSets = tagSets;
 		this.views = views;
@@ -59,11 +63,13 @@ class EvaluationAdministrationService implements EvaluationAdministration {
 		this.snapshot = new TransactionTemplate(transactions);
 		this.snapshot.setReadOnly(true);
 		this.snapshot.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+		this.clock = clock;
 	}
 
 	@Override
 	public EvaluationQueueCounts queueCounts() {
-		return this.queue.counts();
+		EvaluationBacklog counts = this.queue.counts(this.clock.instant());
+		return new EvaluationQueueCounts(counts.waiting(), counts.rejected(), counts.retrying());
 	}
 
 	@Override

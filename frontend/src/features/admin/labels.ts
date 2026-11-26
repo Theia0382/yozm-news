@@ -33,6 +33,7 @@ type RelationReading = Schemas["RelationJudgementResponse"]["reading"];
 type TagKind = Schemas["TagRef"]["kind"];
 type LineageChange = Schemas["TagLineageView"]["change"];
 type VersionCreator = Schemas["TagSetVersionItem"]["createdBy"];
+type RoundEnd = Schemas["ProcessingLastRunResponse"]["endedBy"];
 
 export const refusalLabels = {
   PROFILE_UNAVAILABLE:
@@ -255,3 +256,23 @@ export const relationReadingLabels = {
   OTHER_EVALUATOR: "다른 평가기",
   UNREADABLE: "읽을 수 없음",
 } as const satisfies Record<RelationReading, string>;
+
+/** 처리 현황의 회차 이름 — 운영자 화면은 스토리라인을 "흐름"으로 부른다. 여기 없는 이름은 이름 그대로 보인다 */
+export const roundLabels: Readonly<Record<string, string>> = {
+  "event-features": "기사 표현",
+  "event-assignment": "사건 배정",
+  "event-rejudgement": "사건 재판정",
+  "event-merge": "사건 병합",
+  "storyline-linking": "흐름 잇기",
+  "storyline-relation": "흐름 관계",
+  "tag-evaluation": "태그 평가",
+};
+
+/** 회차가 끝난 까닭 */
+export const roundEndLabels = {
+  DRAINED: "가져올 대기 없음",
+  BUDGET: "시간을 다 씀",
+  BACKED_OFF: "일시 실패로 쉼",
+  STOPPED: "멈춤",
+  FAILED: "오류",
+} as const satisfies Record<RoundEnd, string>;

@@ -26,6 +26,8 @@ import net.yozmnews.event.domain.intake.IntakeQueueRepository;
 import net.yozmnews.event.domain.intake.IntakeSchedule;
 import net.yozmnews.event.domain.intake.PendingArticle;
 import net.yozmnews.platform.AppClock;
+import net.yozmnews.platform.RoundBatch;
+import net.yozmnews.platform.RoundRunner;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +37,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 사건 묶기 회차 하나 — docs/specs/event.md §4 · event-R6 · event-R8.
  * <p>
- * 대기를 점유해 커밋한 뒤, 트랜잭션 밖에서 기사를 읽고 표현 텍스트 · 핵심 말을 만들어 임베더를 한 번 부른다. 결과는 기사마다 짧은 트랜잭션에서
+ * 회차는 {@link RoundRunner} 로 뭉치를 되풀이한다. 뭉치 하나는 대기를 점유해 커밋한 뒤, 트랜잭션 밖에서 기사를 읽고 표현 텍스트 · 핵심 말을
+ * 만들어 임베더를 한 번 부른다. 결과는 기사마다 짧은 트랜잭션에서
  * 점유 토큰이 맞아 대기 행을 지웠을 때만 쓰고, 같은 트랜잭션에서 그 기사를 배정 대기에 넣는다(표현 행이 이미 있어도 넣는다). 일시 실패 ·
  * 임베더 사용 불가 · 예외 · 결과 어긋남이면 남은 점유를 풀고 회차를 끝낸다. 입력 거부면 기사 하나씩 다시 불러 거부된 기사의 거부 수를 올리고,
  * 상한이면 대기에서 뺀다. 임베더의 예외를 밖으로 던지지 않는다 — 점유 · 기사 조회 · 표현 텍스트 · 핵심 말 · 쓰기 · 점유 풀기의 예외는
@@ -45,6 +48,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class EventIntakeRound {
 
 	private static final Logger logger = LoggerFactory.getLogger(EventIntakeRound.class);
+
+	/** 회차 이름 — 회차 기록 · 처리 현황의 키 */
+	static final String NAME = "event-features";
 
 	/** 일시 실패로 멈출 때의 경고 — 이름 · 모델 버전 · 남은 점유 수 · 문구 */
 	private static final String TRANSIENT_STOP = "임베더가 일시 실패해 회차를 멈췄다 — {} {}, 기사 {}건: {}";
@@ -68,9 +74,11 @@ public class EventIntakeRound {
 
 	private final AppClock clock;
 
+	private final RoundRunner runner;
+
 	EventIntakeRound(IntakeQueueRepository queue, MatchFeaturesRepository features,
 			AssignmentQueueRepository assignmentQueue, ArticleDirectory articles, KeyTermExtractor keyTerms,
-			TextEmbedding embedding, TransactionTemplate transaction, AppClock clock) {
+			TextEmbedding embedding, TransactionTemplate transaction, AppClock clock, RoundRunner runner) {
 		this.queue = queue;
 		this.features = features;
 		this.assignmentQueue = assignmentQueue;
@@ -79,14 +87,20 @@ public class EventIntakeRound {
 		this.embedding = embedding;
 		this.transaction = transaction;
 		this.clock = clock;
+		this.runner = runner;
 	}
 
-	/** 회차 하나를 돈다 — 임베딩은 생성자로 받은 {@link TextEmbedding} 으로 얻는다 */
+	/** 회차 하나를 돈다 — 뭉치를 회차 규칙까지 되풀이한다(docs/specs/platform.md 반복 회차) */
 	public void run() {
+		this.runner.run(NAME, this::batch);
+	}
+
+	/** 뭉치 하나 — 임베딩은 생성자로 받은 {@link TextEmbedding} 으로 얻는다. 임베더 실패로 멈추면 회차도 끝낸다 */
+	RoundBatch batch() {
 		Instant now = this.clock.instant();
 		List<PendingArticle> claimed = claim(now);
 		if (claimed.isEmpty()) {
-			return;
+			return RoundBatch.finished(0, IntakeSchedule.BATCH_SIZE);
 		}
 		Map<ArticleId, ArticleContent> contents = this.articles
 			.findAll(claimed.stream().map(PendingArticle::articleId).toList());
@@ -103,7 +117,7 @@ public class EventIntakeRound {
 			texts.add(MatchText.compose(content.title(), content.summary()));
 		}
 		if (present.isEmpty()) {
-			return;
+			return RoundBatch.finished(claimed.size(), IntakeSchedule.BATCH_SIZE);
 		}
 		List<List<String>> terms = texts.stream().map(this.keyTerms::extract).toList();
 		EmbedderInfo info = this.embedding.info();
@@ -113,34 +127,38 @@ public class EventIntakeRound {
 		}
 		catch (RuntimeException ex) {
 			stopOnError(present, info, ex.getClass().getName(), ex);
-			return;
+			return RoundBatch.stopped(claimed.size());
 		}
-		switch (result) {
+		boolean stopped = switch (result) {
 			case Embeddings embeddings -> {
 				for (int i = 0; i < present.size(); i++) {
 					write(present.get(i), info, embeddings.vectors().get(i), terms.get(i), now);
 				}
+				yield false;
 			}
 			case EmbeddingFailure failure -> {
 				@Nullable String stop = stopPhrase(failure);
 				if (stop != null) {
 					stopOnFailure(present, info, stop, failure);
+					yield true;
 				}
-				else if (present.size() == 1) {
+				if (present.size() == 1) {
 					reject(present.getFirst(), failure);
+					yield false;
 				}
-				else {
-					isolate(info, present, texts, terms, now);
-				}
+				yield isolate(info, present, texts, terms, now);
 			}
-		}
+		};
+		return stopped ? RoundBatch.stopped(claimed.size())
+				: RoundBatch.finished(claimed.size(), IntakeSchedule.BATCH_SIZE);
 	}
 
 	/**
-	 * 묶음이 입력 거부일 때 기사 하나씩 다시 불러 거부된 기사를 가린다 — 성공은 쓰고 입력 거부는 거부 수를 센다. 그 밖의 실패 · 예외 · 결과
+	 * 뭉치의 임베딩이 입력 거부일 때 기사 하나씩 다시 불러 거부된 기사를 가린다 — 성공은 쓰고 입력 거부는 거부 수를 센다. 그 밖의 실패 · 예외 · 결과
 	 * 어긋남이면 그 기사부터 남은 점유를 풀고 회차를 끝낸다(event-R6).
+	 * @return 회차를 멈췄는가
 	 */
-	private void isolate(EmbedderInfo info, List<PendingArticle> present, List<String> texts, List<List<String>> terms,
+	private boolean isolate(EmbedderInfo info, List<PendingArticle> present, List<String> texts, List<List<String>> terms,
 			Instant now) {
 		for (int i = 0; i < present.size(); i++) {
 			PendingArticle claim = present.get(i);
@@ -151,7 +169,7 @@ public class EventIntakeRound {
 			}
 			catch (RuntimeException ex) {
 				stopOnError(remaining, info, ex.getClass().getName(), ex);
-				return;
+				return true;
 			}
 			switch (result) {
 				case Embeddings embeddings -> {
@@ -161,12 +179,13 @@ public class EventIntakeRound {
 					@Nullable String stop = stopPhrase(failure);
 					if (stop != null) {
 						stopOnFailure(remaining, info, stop, failure);
-						return;
+						return true;
 					}
 					reject(claim, failure);
 				}
 			}
 		}
+		return false;
 	}
 
 	/** 토큰이 맞아 대기 행을 지웠을 때만 표현을 쓰고 배정 대기에 넣는다 — 표현 행이 이미 있어도 넣는다(event-R6 · R16) */

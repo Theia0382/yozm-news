@@ -15,7 +15,7 @@ import org.jspecify.annotations.Nullable;
  * @param enqueuedAt 대기에 넣은 시각
  * @param attempts 지금까지의 일시 실패 수
  * @param availableAt 이 시각부터 판정할 수 있다 — 재시도 간격이 정한다
- * @param lease 회차의 점유 — 없으면 null
+ * @param lease 뭉치의 점유 — 없으면 null
  */
 public record PendingAssignment(ArticleId articleId, Instant enqueuedAt, int attempts, Instant availableAt,
 		@Nullable IntakeLease lease) {

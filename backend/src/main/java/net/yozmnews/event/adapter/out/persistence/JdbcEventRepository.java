@@ -20,6 +20,7 @@ import net.yozmnews.event.EventsChanged;
 import net.yozmnews.event.EventsRemoved;
 import net.yozmnews.event.domain.assignment.CandidateScoring;
 import net.yozmnews.event.domain.assignment.EventSnapshot;
+import net.yozmnews.event.domain.backlog.Backlog;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.event.LockedEvent;
 import net.yozmnews.event.domain.event.MergeSubject;
@@ -57,6 +58,12 @@ class JdbcEventRepository implements EventRepository {
 	private static final String TOP_TERMS = """
 			array(select k.term from event_key_terms k where k.event_id = e.id
 			      order by k.article_count desc, k.term collate "C" limit :terms) as key_terms
+			""";
+
+	/** 병합 회차가 볼 바뀐 열린 사건 — 지난 확인 뒤 고쳐졌거나 다른 기준으로 확인했다. 고르기와 건수가 함께 쓴다 */
+	private static final String MERGE_PENDING = """
+			e.status = 'OPEN'
+			  and (e.merge_checked_revision < e.revision or e.merge_checked_criteria_id is distinct from :criteria)
 			""";
 
 	private final JdbcClient jdbc;
@@ -177,8 +184,7 @@ class JdbcEventRepository implements EventRepository {
 		return this.jdbc.sql("select e.id, e.model_version, e.centroid::text as centroid, e.article_count, "
 				+ "e.first_article_at, e.last_article_at, e.revision, e.merge_deferrals, " + TOP_TERMS + """
 				from events e
-				where e.status = 'OPEN'
-				  and (e.merge_checked_revision < e.revision or e.merge_checked_criteria_id is distinct from :criteria)
+				where\s""" + MERGE_PENDING + """
 				  and (e.merge_retry_at is null or e.merge_retry_at <= :now)
 				order by e.merge_retry_at nulls first, e.id
 				limit :limit
@@ -192,6 +198,18 @@ class JdbcEventRepository implements EventRepository {
 					strings(rs.getArray("key_terms")), instant(rs, "first_article_at"), instant(rs, "last_article_at"),
 					rs.getLong("revision"), rs.getInt("merge_deferrals")))
 			.list();
+	}
+
+	@Override
+	public Backlog mergeBacklog(long criteriaId, Instant now) {
+		return this.jdbc.sql("""
+				select count(*) as waiting, count(*) filter (where e.merge_retry_at > :now) as deferred
+				from events e
+				where\s""" + MERGE_PENDING)
+			.param("criteria", criteriaId)
+			.param("now", timestamp(now))
+			.query((rs, row) -> new Backlog(rs.getLong("waiting"), rs.getLong("deferred")))
+			.single();
 	}
 
 	@Override

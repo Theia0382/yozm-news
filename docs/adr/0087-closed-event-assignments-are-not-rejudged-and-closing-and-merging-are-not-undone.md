@@ -1,6 +1,6 @@
 # ADR-0087: 닫힌 사건의 배정은 재판정하지 않고, 닫기 · 병합은 기준이 바뀌어도 되돌리지 않는다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 닫힌 사건 배정의 한꺼번에 적기 상한([ADR-0347](0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md))
 - 날짜: 2026-11-07
 - 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 닫힌 사건 안의 재판정과 기준이 바뀐 뒤의 닫기 · 병합을 정하고 구현(`8eba5ca` · `bb34862` · `0551eb3`)
 - 관련: [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(결정 절 "재판정은 자동이다"의 "기간 제한 없이 다시 판정한다"와 검토한 대안 "재판정 대상을 열린 사건이나 최근 기간으로 한정한다" 행을 닫힌 사건을 빼도록 부분 대체한다 — 좁힘. 결과 절 "닫힌 사건 안의 배정을 재판정할지는 사건 닫기를 만드는 작업이 정한다"를 정한다, 후속 기록), [ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md) · [ADR-0086](0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md)(병합 · 닫기)
@@ -14,6 +14,7 @@
 
 ## 결정
 
+> 부분 대체(셋째 문장의 괄호) — [ADR-0347](0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md). 지금 상태: [event Spec §5](../specs/event.md#5-규칙과-불변식) event-R18
 - **닫힌 사건의 배정은 재판정하지 않는다.** 기준이 바뀌면 닫힌 사건의 배정은 기준만 새것으로 적는다. 재판정 회차가 하나씩 다시 판정하기 전에 한꺼번에(회차마다 상한까지) 적어, 하나씩 다시 판정할 열린 사건의 배정 앞을 막지 않는다. 하나씩 다시 판정할 때도 지금 사건을 잠가, 열려 있지 않으면 기준만 새것으로 적는다.
 - **닫기 · 병합은 한 방향이다.** 기준이 바뀌면 그 뒤의 닫기 · 병합에만 쓴다. 닫힌 사건을 다시 열거나 합친 사건을 다시 나누지 않고, 합치기 전 소속을 남기지 않는다.
 - 이 둘은 횡단 규약 "판정 시점"의 예외다.
@@ -22,6 +23,7 @@
 
 - 닫힌 사건 · 합친 사건이 확정이라, 닫힌 사건 기사의 표현을 지울 수 있다.
 - 기준을 바꿔도 지난 사건의 소속은 그대로다 — 지난 사건의 보도량(큰 사건 · 리포트)은 그 사건이 닫힐 때의 기준으로 남는다. 닫는 기간을 늘려도 이미 닫힌 사건은 그대로다.
+> 부분 대체("회차마다 상한까지") — [ADR-0347](0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md). 지금 상태: [event Spec §5](../specs/event.md#5-규칙과-불변식) event-R18
 - 기준을 바꿀 때마다 닫힌 사건의 모든 배정에 쓰기가 하나씩 생긴다 — 회차마다 상한까지 한꺼번에 적는다(처리량은 측정 전).
 - 합친 사건 안의 기사는 기사 단위로 재판정된다([ADR-0085](0085-rejudgement-knows-opened-events-from-an-assignment-flag-and-reads-merged-candidates-as-survivors.md)).
 

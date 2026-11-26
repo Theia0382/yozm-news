@@ -246,6 +246,7 @@ describe("AdminLayout", () => {
     for (const [name, href] of [
       ["수집 현황", "/admin/collection"],
       ["평가 현황", "/admin/evaluation"],
+      ["처리 현황", "/admin/processing"],
       ["평가 결과", "/admin/evaluations"],
       ["표본 검수", "/admin/samples"],
       ["태그 체계", "/admin/tag-sets"],

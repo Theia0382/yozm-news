@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.tag.EvaluationQueueCounts;
+import net.yozmnews.tag.domain.queue.EvaluationBacklog;
 import net.yozmnews.tag.domain.queue.EvaluationLease;
 import net.yozmnews.tag.domain.queue.PendingEvaluation;
 import net.yozmnews.tag.domain.queue.QueueFailure;
@@ -148,19 +148,19 @@ class JdbcEvaluationQueueRepositoryTests {
 	}
 
 	@Test
-	void deletesTheGivenArticlesAndCountsWaitingRetryingAndFailedRows() {
+	void deletesTheGivenArticlesAndCountsWaitingRetryingDeferredAndFailedRows() {
 		row(11, T, 0, null, null, null);
 		row(12, T, 2, TOKEN, T.plusSeconds(60), null);                  // 일시 실패 뒤 점유 중 — 대기 · 일시 실패를 겪은 대기
 		row(13, T, 1, null, null, "ARTICLE_REJECTED");                  // 일시 실패 뒤 기사 거부 — 실패만 센다
-		row(14, T.plusSeconds(3600), 9, null, null, null);              // 일시 실패로 미뤘다
+		row(14, T.plusSeconds(3600), 9, null, null, null);              // 일시 실패로 미뤘다 — 지금(T)은 평가 가능 시각 전
 		row(15, T, 0, null, null, "ARTICLE_REJECTED");
 
-		assertThat(this.repository.counts()).isEqualTo(new EvaluationQueueCounts(3, 2, 2));
+		assertThat(this.repository.counts(T)).isEqualTo(new EvaluationBacklog(3, 2, 2, 1));
 
 		this.repository.delete(List.of(new ArticleId(11), new ArticleId(14), new ArticleId(15), new ArticleId(99)));
 		this.repository.delete(List.of());
 
-		assertThat(this.repository.counts()).isEqualTo(new EvaluationQueueCounts(1, 1, 1));
+		assertThat(this.repository.counts(T)).isEqualTo(new EvaluationBacklog(1, 1, 1, 0));
 	}
 
 	@Test

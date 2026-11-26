@@ -11,7 +11,7 @@ import org.jspecify.annotations.Nullable;
  *
  * @param notifications 다시 알림 수 — 처리 중에 다시 들어온 것을 가른다
  * @param failures 판정 실패 수
- * @param lease 회차의 점유 — 없으면 null
+ * @param lease 뭉치의 점유 — 없으면 null
  */
 public record PendingStoryline(long storylineId, int notifications, int failures, @Nullable LinkingLease lease) {
 

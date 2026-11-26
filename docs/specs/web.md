@@ -43,6 +43,7 @@
 | 큰 화제 판정 · 큰 화제 기준 | 운영자 화면 | 큰 판정 · 큰 판정 기준 |
 | 구독 주제 · 관심 반영 | 다이제스트 항목의 배지 | 선정 이유 `SUBSCRIBED` · `INTEREST` |
 | 갈래(사건 표시) | 공용 타임라인의 사건 줄 | 포함의 하위 스토리라인에서 센 사건 |
+| 처리 현황 | 운영자 화면 `/admin/processing` | 반복 작업의 회차(`*Round`)마다의 대기 현황(`RoundQueue`)과 회차 기록. 회차 이름은 "흐름 잇기"처럼 화면 말로 바꿔 보인다(web-R30) |
 | 띠 | 운영자 화면의 사건 흐름 소속 근거 | 스토리라인 잇기의 아래 기준 이상 위 기준 미만 |
 
 ## 3. 공개 인터페이스
@@ -76,6 +77,7 @@
 | `/admin` | 소스 | `admin` |
 | `/admin/collection` | 수집 현황 | `admin` |
 | `/admin/evaluation` | 평가 현황 | `admin` |
+| `/admin/processing` | 처리 현황 | `admin` |
 | `/admin/evaluations` | 평가 목록 | `admin` |
 | `/admin/evaluations/:id` | 평가 상세 | `admin` |
 | `/admin/samples` | 평가 검수 | `admin` |
@@ -270,6 +272,11 @@
 - **web-R23** — 소스 · 피드의 숨김과 삭제는 두 기능의 차이([source Spec](source.md#숨김과-삭제))를 확인 대화상자로 밝힌다
 - **web-R24** — 큰 화제 기준 미리보기([admin-R7](admin.md#5-규칙과-불변식))는 지금 기준과 제안 기준의 두 목록을 스토리라인 ID 로 견줘 들어오고 빠지는 스토리라인을 가린다
 - **web-R25** — 가입 정책 토글 옆에 지금 봇 차단 상태를 알린다([account-R25](account.md#가입-정책))
+- **web-R30** — 처리 현황([admin-R69](admin.md#처리-현황))은 회차 하나를 표의 한 행으로, 받은 순서대로 보인다([ADR-0348](../adr/0348-each-round-leaves-a-round-record-in-platform-and-the-operator-screen-shows-backlog-and-recent-throughput-per-round.md)).
+  - 칸: 회차 · 대기 · 미룸 · 최근 1시간 처리 · 최근 1시간 회차 · 마지막 회차(끝난 시각 · 끝난 까닭). 미룸 머리 칸에 "가져올 시각이 아직 오지 않은 대기(일시 실패 · 정착 시간)" 설명을 단다
+  - 회차 이름: 기사 표현 · 사건 배정 · 사건 재판정 · 사건 병합 · 흐름 잇기 · 흐름 관계 · 태그 평가. 모르는 이름은 이름 그대로 보인다
+  - 끝난 까닭: 가져올 대기 없음 · 시간을 다 씀 · 일시 실패로 쉼 · 멈춤 · 오류. 회차 기록이 없으면 "기록 없음"
+  - 화면을 연 동안 30초마다 다시 읽는다. 표 아래에 "대기가 밀리면 회차가 쉬지 않고 처리합니다. 같은 일의 Jev 비용은 같고 시간당 지출이 커집니다." 를 단다
 
 ## 6. 데이터
 
@@ -315,3 +322,4 @@
 | [0338](../adr/0338-a-change-report-writes-only-kind-sections-without-an-overview.md) | 변화 리포트는 개요 없이 종류 섹션만 쓴다 |
 | [0339](../adr/0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md) | 변화 리포트는 구독 주제 보도량을 다루지 않는다 |
 | [0341](../adr/0341-a-monthly-report-does-not-compare-flow-coverage-with-the-previous-monthly-and-shows-the-flow-state-kept-at-generation.md) | 월간 리포트는 흐름 보도량을 견주지 않고 생성 때의 흐름 상태를 보인다 |
+| [0348](../adr/0348-each-round-leaves-a-round-record-in-platform-and-the-operator-screen-shows-backlog-and-recent-throughput-per-round.md) | 운영자 화면 처리 현황이 회차마다 밀린 수와 최근 1시간 처리량을 보인다 |
