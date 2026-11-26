@@ -14,6 +14,7 @@ import { EventDetailPage } from "@/features/admin/EventDetailPage";
 import { EventJudgementsPage } from "@/features/admin/EventJudgementsPage";
 import { EventPublicationsPage } from "@/features/admin/EventPublicationsPage";
 import { EventsPage } from "@/features/admin/EventsPage";
+import { ProcessingPage } from "@/features/admin/ProcessingPage";
 import { SamplePage } from "@/features/admin/SamplePage";
 import { StorylineDetailPage } from "@/features/admin/StorylineDetailPage";
 import { StorylinesPage } from "@/features/admin/StorylinesPage";
@@ -188,6 +189,18 @@ describe("routes", () => {
     expect(typeof lazy).toBe("function");
     const loaded = await (lazy as () => Promise<{ Component?: unknown }>)();
     expect(loaded.Component).toBe(EvaluationPage);
+  });
+
+  it("운영자 화면 아래 처리 현황 경로가 처리 현황 화면을 내려받는다", async () => {
+    const admin = routes[0]?.children?.find((route) => route.path === "admin");
+    const processing = admin?.children?.find(
+      (route) => route.path === "processing",
+    );
+    const lazy = processing?.lazy;
+
+    expect(typeof lazy).toBe("function");
+    const loaded = await (lazy as () => Promise<{ Component?: unknown }>)();
+    expect(loaded.Component).toBe(ProcessingPage);
   });
 
   it.each([
