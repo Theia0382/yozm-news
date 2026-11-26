@@ -268,11 +268,11 @@ val llmProviderEnvironmentDecoys = mapOf(
 )
 
 // 로컬 임베딩은 ONNX Runtime 텔레메트리를 끄는 이 환경 변수가 없으면 모델을 열지 않는다(정본은 OnnxArticleEmbedder). 네이티브를 올리는 JNA · ONNX Runtime 의 제한 메서드 경고를 끈다 — ADR-0091
-// 시험 JVM 은 Spring 시험 컨텍스트를 캐시에 쌓아 두므로 Gradle 의 기본 힙으로는 모자란다 — 상한을 정한다
+// 테스트 JVM 의 힙 상한과 메모리 부족 시 종료 — 메모리가 모자라면 JVM 이 끝나 시험이 실패로 끝난다. 지금 상한과 기준은 docs/development/infrastructure.md "테스트 JVM", 근거는 ADR-0349 · ADR-0350
 tasks.withType<Test> {
 	environment("ORT_DISABLE_TELEMETRY", "1")
 	environment(llmProviderEnvironmentDecoys)
-	jvmArgs("--enable-native-access=ALL-UNNAMED")
+	jvmArgs("--enable-native-access=ALL-UNNAMED", "-XX:+ExitOnOutOfMemoryError")
 	maxHeapSize = "2g"
 	// 실패한 시험의 단언(기대 · 실제 값)과 위치를 실행 로그에 남긴다 — CI 작업 로그만으로 실패를 읽는다
 	testLogging {
