@@ -1,5 +1,6 @@
 package net.yozmnews.storyline.domain.linking;
 
+import net.yozmnews.platform.ProbabilityRange;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -23,8 +24,8 @@ public record Asked(@Nullable Double probability, @Nullable Long judgementId) {
 		if ((probability == null) != (judgementId == null)) {
 			throw new IllegalArgumentException("확률과 판정 원본 ID 는 함께 있거나 함께 없다: " + probability + " · " + judgementId);
 		}
-		if (probability != null && !(Double.isFinite(probability) && probability >= 0 && probability <= 1)) {
-			throw new IllegalArgumentException("확률은 0 ~ 1 의 유한값이다: " + probability);
+		if (probability != null) {
+			ProbabilityRange.require(probability, "Asked.probability");
 		}
 		if (judgementId != null && judgementId < 1) {
 			throw new IllegalArgumentException("판정 원본 ID 는 1 이상이다: " + judgementId);

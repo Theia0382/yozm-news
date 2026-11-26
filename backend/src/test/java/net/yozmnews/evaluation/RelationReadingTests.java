@@ -57,16 +57,29 @@ class RelationReadingTests {
 	}
 
 	@Test
+	void acceptsTheEndsOfTheProbabilityRange() {
+		Map<RelationAnswer, Double> ends = new EnumMap<>(ANSWERS);
+		ends.put(RelationAnswer.NONE, 0.0);
+		ends.put(RelationAnswer.SECOND_PART_OF_FIRST, 1.0);
+		RelationReading.Read read = new RelationReading.Read(ends, 0.0, 1.0);
+
+		assertThat(read.probabilities()).containsEntry(RelationAnswer.NONE, 0.0)
+			.containsEntry(RelationAnswer.SECOND_PART_OF_FIRST, 1.0);
+		assertThat(read.firstOneMatter()).isEqualTo(0.0);
+		assertThat(read.secondOneMatter()).isEqualTo(1.0);
+	}
+
+	@Test
 	void rejectsAProbabilityOutsideZeroToOne() {
 		Map<RelationAnswer, Double> above = new EnumMap<>(ANSWERS);
 		above.put(RelationAnswer.NONE, 1.2);
 
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationReading.Read(above, 0.8, 0.6))
-			.withMessage("확률은 0 ~ 1 의 유한값이다: 1.2");
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — RelationReading.Read.probabilities: 1.2");
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationReading.Read(ANSWERS, Double.NaN, 0.6))
-			.withMessage("확률은 0 ~ 1 의 유한값이다: NaN");
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — RelationReading.Read.firstOneMatter: NaN");
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationReading.Read(ANSWERS, 0.8, -0.1))
-			.withMessage("확률은 0 ~ 1 의 유한값이다: -0.1");
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — RelationReading.Read.secondOneMatter: -0.1");
 	}
 
 	@Test

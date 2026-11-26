@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.platform.ProbabilityRange;
 
 /**
  * 판정 원본에 남은 물은 후보 하나 · docs/specs/evaluation.md §3 · evaluation-R38.
@@ -26,9 +27,7 @@ public record JudgedEvent(long eventId, List<ArticleId> describedArticles, doubl
 		if (describedArticles.isEmpty()) {
 			throw new IllegalArgumentException("서술 기사가 없다");
 		}
-		if (!Double.isFinite(probability) || probability < 0 || probability > 1) {
-			throw new IllegalArgumentException("확률은 0 ~ 1 의 유한값이다: " + probability);
-		}
+		ProbabilityRange.require(probability, "JudgedEvent.probability");
 	}
 
 }

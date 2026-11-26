@@ -75,7 +75,10 @@ class StorylineMembershipQueryTests {
 			.isThrownBy(() -> new StorylineMembershipJudgement.Judged(new StorylineMembershipJudgementId(1), Map.of(0L, 0.5)))
 			.withMessage("후보 ID 는 1 이상이다: 0");
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new StorylineMembershipJudgement.Judged(new StorylineMembershipJudgementId(1), Map.of(305L, 1.5)));
+			.isThrownBy(() -> new StorylineMembershipJudgement.Judged(new StorylineMembershipJudgementId(1), Map.of(305L, 1.5)))
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — StorylineMembershipJudgement.Judged.probabilities: 1.5");
+		assertThat(new StorylineMembershipJudgement.Judged(new StorylineMembershipJudgementId(1), Map.of(305L, 0.0, 306L, 1.0))
+			.probabilities()).containsEntry(305L, 0.0).containsEntry(306L, 1.0);
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new StorylineMembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, " "));
 		assertThatIllegalArgumentException().isThrownBy(() -> new StorylineMembershipJudgementId(0));

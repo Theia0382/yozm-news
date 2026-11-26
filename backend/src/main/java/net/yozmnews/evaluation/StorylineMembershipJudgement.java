@@ -23,7 +23,8 @@ public sealed interface StorylineMembershipJudgement {
 		 * 있거나 원본이 있는데 확률이 없을 때
 		 */
 		public Judged {
-			probabilities = MembershipChecks.judged(judgement, probabilities, "후보");
+			probabilities = MembershipChecks.judged(judgement, probabilities, "후보",
+					"StorylineMembershipJudgement.Judged.probabilities");
 		}
 
 	}

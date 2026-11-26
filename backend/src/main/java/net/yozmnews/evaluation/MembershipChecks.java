@@ -9,6 +9,7 @@ import java.util.function.Function;
 import java.util.function.ToLongFunction;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.platform.ProbabilityRange;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -75,10 +76,12 @@ final class MembershipChecks {
 
 	/**
 	 * 판정한 결과 — 판정 원본은 확률이 있을 때만 있고, 후보 ID 는 1 이상, 확률은 0 ~ 1 의 유한값이다.
+	 * @param name 확률 맵의 이름 — 확률 범위 실패 문구에 싣는다
 	 * @return 복사한 확률
 	 * @throws IllegalArgumentException 어길 때
 	 */
-	static Map<Long, Double> judged(@Nullable Object judgement, Map<Long, Double> probabilities, String noun) {
+	static Map<Long, Double> judged(@Nullable Object judgement, Map<Long, Double> probabilities, String noun,
+			String name) {
 		Objects.requireNonNull(probabilities, "probabilities");
 		if ((judgement == null) != probabilities.isEmpty()) {
 			throw new IllegalArgumentException("판정 원본은 확률이 있을 때만 있다: 원본 " + judgement + ", 확률 " + probabilities);
@@ -89,9 +92,7 @@ final class MembershipChecks {
 			if (candidateId < 1) {
 				throw new IllegalArgumentException(noun + " ID 는 1 이상이다: " + candidateId);
 			}
-			if (!Double.isFinite(probability) || probability < 0 || probability > 1) {
-				throw new IllegalArgumentException("확률은 0 ~ 1 의 유한값이다: " + probability);
-			}
+			ProbabilityRange.require(probability, name);
 		});
 		return Map.copyOf(probabilities);
 	}

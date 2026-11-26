@@ -36,6 +36,21 @@ class EvaluationTests {
 	}
 
 	@Test
+	void namesTheMapOfTheRefusedProbability() {
+		assertThatIllegalArgumentException().isThrownBy(() -> evaluation(Map.of("politics.assembly", 1.5)))
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — Evaluation.topics: 1.5");
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new Evaluation(Map.of(), Map.of("domestic", 1.5), Map.of(), Map.of(), "jev", "v1", 0, "{}"))
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — Evaluation.regions: 1.5");
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new Evaluation(Map.of(), Map.of(), Map.of("straight", 1.5), Map.of(), "jev", "v1", 0, "{}"))
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — Evaluation.formats: 1.5");
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new Evaluation(Map.of(), Map.of(), Map.of(), Map.of(3, 1.5), "jev", "v1", 0, "{}"))
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — Evaluation.importance: 1.5");
+	}
+
+	@Test
 	void refusesABlankKey() {
 		assertThatIllegalArgumentException().isThrownBy(() -> evaluation(Map.of(" ", 0.5)));
 	}

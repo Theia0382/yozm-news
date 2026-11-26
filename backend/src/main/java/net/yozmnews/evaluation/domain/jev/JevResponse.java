@@ -21,6 +21,7 @@ import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.Relation;
 import net.yozmnews.evaluation.domain.evaluator.RelationResult;
 import net.yozmnews.evaluation.domain.evaluator.RelationWording;
+import net.yozmnews.platform.ProbabilityRange;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -191,7 +192,7 @@ public final class JevResponse {
 			throw new Unreadable("확률이 없거나 숫자가 아니다 — " + where);
 		}
 		double value = node.doubleValue();
-		if (!Double.isFinite(value) || value < 0 || value > 1) {
+		if (!ProbabilityRange.contains(value)) {
 			throw new Unreadable("확률이 0 ~ 1 이 아니다 — " + where);
 		}
 		return value;

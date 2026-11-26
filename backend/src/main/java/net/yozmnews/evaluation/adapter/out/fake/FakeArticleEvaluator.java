@@ -41,6 +41,7 @@ import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.evaluator.StorylineText;
+import net.yozmnews.platform.ProbabilityRange;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -595,7 +596,7 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 			throw new Unreadable("확률이 없거나 숫자가 아니다 — " + where);
 		}
 		double probability = value.doubleValue();
-		if (!Double.isFinite(probability) || probability < 0 || probability > 1) {
+		if (!ProbabilityRange.contains(probability)) {
 			throw new Unreadable("확률이 0 ~ 1 이 아니다 — " + where);
 		}
 		return probability;

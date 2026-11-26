@@ -51,7 +51,11 @@ class MembershipInputTests {
 	@Test
 	void refusesProbabilitiesOutsideZeroToOneAndBlankNames() {
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new Membership(Map.of(12L, 1.2), "jev", "jev-1.14.0", 0, "{}"));
+			.isThrownBy(() -> new Membership(Map.of(12L, 1.2), "jev", "jev-1.14.0", 0, "{}"))
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — Membership.probabilities: 1.2");
+		assertThat(new Membership(Map.of(12L, 0.0, 15L, 1.0), "jev", "jev-1.14.0", 0, "{}").probabilities())
+			.containsEntry(12L, 0.0)
+			.containsEntry(15L, 1.0);
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new Membership(Map.of(12L, Double.NaN), "jev", "jev-1.14.0", 0, "{}"));
 		assertThatIllegalArgumentException()

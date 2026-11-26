@@ -1,5 +1,6 @@
 package net.yozmnews.evaluation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.util.List;
@@ -16,12 +17,22 @@ class JudgedEventTests {
 
 	@Test
 	void refusesANonPositiveEventIdNoDescriptionsOrAProbabilityOutsideZeroToOne() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new JudgedEvent(0, List.of(new ArticleId(3)), 0.83));
-		assertThatIllegalArgumentException().isThrownBy(() -> new JudgedEvent(12, List.of(), 0.83));
+		assertThatIllegalArgumentException().isThrownBy(() -> new JudgedEvent(0, List.of(new ArticleId(3)), 0.83))
+			.withMessage("사건 ID 는 1 이상이다: 0");
+		assertThatIllegalArgumentException().isThrownBy(() -> new JudgedEvent(12, List.of(), 0.83))
+			.withMessage("서술 기사가 없다");
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new JudgedEvent(12, List.of(new ArticleId(3)), 1.01));
+			.isThrownBy(() -> new JudgedEvent(12, List.of(new ArticleId(3)), 1.01))
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — JudgedEvent.probability: 1.01");
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new JudgedEvent(12, List.of(new ArticleId(3)), Double.NaN));
+			.isThrownBy(() -> new JudgedEvent(12, List.of(new ArticleId(3)), Double.NaN))
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — JudgedEvent.probability: NaN");
+	}
+
+	@Test
+	void acceptsTheEndsOfTheProbabilityRange() {
+		assertThat(new JudgedEvent(12, List.of(new ArticleId(3)), 0.0).probability()).isEqualTo(0.0);
+		assertThat(new JudgedEvent(12, List.of(new ArticleId(3)), 1.0).probability()).isEqualTo(1.0);
 	}
 
 }

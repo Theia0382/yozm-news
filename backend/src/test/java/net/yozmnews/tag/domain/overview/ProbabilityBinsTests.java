@@ -31,9 +31,12 @@ class ProbabilityBinsTests {
 
 	@Test
 	void aProbabilityOutsideZeroToOneIsACallerDefect() {
-		assertThatIllegalArgumentException().isThrownBy(() -> ProbabilityBins.index(-0.01));
-		assertThatIllegalArgumentException().isThrownBy(() -> ProbabilityBins.index(1.01));
-		assertThatIllegalArgumentException().isThrownBy(() -> ProbabilityBins.index(Double.NaN));
+		assertThatIllegalArgumentException().isThrownBy(() -> ProbabilityBins.index(-0.01))
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — probability: -0.01");
+		assertThatIllegalArgumentException().isThrownBy(() -> ProbabilityBins.index(1.01))
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — probability: 1.01");
+		assertThatIllegalArgumentException().isThrownBy(() -> ProbabilityBins.index(Double.NaN))
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — probability: NaN");
 	}
 
 	@Test

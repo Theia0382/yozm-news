@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import net.yozmnews.evaluation.domain.evaluator.RelationWording;
+import net.yozmnews.platform.ProbabilityRange;
 
 /**
  * 관계 판정 원본의 원본 응답을 다시 읽은 결과 — docs/specs/evaluation.md §3 · evaluation-R50
@@ -27,17 +28,11 @@ public sealed interface RelationReading {
 			if (RelationWording.KNOWN.stream().noneMatch(wording -> wording.answers().equals(answers))) {
 				throw new IllegalArgumentException("한 문구 판의 답이 모두 있어야 한다: " + answers);
 			}
-			probabilities.values().forEach(Read::requireProbability);
-			requireProbability(firstOneMatter);
-			requireProbability(secondOneMatter);
+			probabilities.values().forEach(probability -> ProbabilityRange.require(
+					Objects.requireNonNull(probability, "probability"), "RelationReading.Read.probabilities"));
+			ProbabilityRange.require(firstOneMatter, "RelationReading.Read.firstOneMatter");
+			ProbabilityRange.require(secondOneMatter, "RelationReading.Read.secondOneMatter");
 			probabilities = Map.copyOf(probabilities);
-		}
-
-		private static void requireProbability(Double probability) {
-			Objects.requireNonNull(probability, "probability");
-			if (!Double.isFinite(probability) || probability < 0 || probability > 1) {
-				throw new IllegalArgumentException("확률은 0 ~ 1 의 유한값이다: " + probability);
-			}
 		}
 
 	}
