@@ -432,7 +432,7 @@
     },
     "/api/admin/big-storyline-criteria-previews" : {
       "post" : {
-        "operationId" : "preview_1",
+        "operationId" : "previewBigStorylineCriteria",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1486,7 +1486,7 @@
     },
     "/api/admin/feeds/{id}" : {
       "delete" : {
-        "operationId" : "delete_1",
+        "operationId" : "deleteFeed",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1543,7 +1543,7 @@
     },
     "/api/admin/feeds/{id}/disable" : {
       "post" : {
-        "operationId" : "disable_1",
+        "operationId" : "disableFeed",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1603,7 +1603,7 @@
     },
     "/api/admin/feeds/{id}/enable" : {
       "post" : {
-        "operationId" : "enable_1",
+        "operationId" : "enableFeed",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1670,7 +1670,7 @@
     },
     "/api/admin/feeds/{id}/hide" : {
       "post" : {
-        "operationId" : "hide_1",
+        "operationId" : "hideFeed",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1737,7 +1737,7 @@
     },
     "/api/admin/feeds/{id}/poll-interval" : {
       "put" : {
-        "operationId" : "changePollInterval_1",
+        "operationId" : "changeFeedPollInterval",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1817,7 +1817,7 @@
     },
     "/api/admin/feeds/{id}/unhide" : {
       "post" : {
-        "operationId" : "unhide_1",
+        "operationId" : "unhideFeed",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2185,7 +2185,7 @@
     },
     "/api/admin/presets/{key}/registration" : {
       "post" : {
-        "operationId" : "register_2",
+        "operationId" : "registerPreset",
         "parameters" : [ {
           "in" : "path",
           "name" : "key",
@@ -2241,7 +2241,7 @@
     },
     "/api/admin/profile-previews" : {
       "post" : {
-        "operationId" : "preview",
+        "operationId" : "previewProfile",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -2439,7 +2439,7 @@
         "tags" : [ "admin-source-controller" ]
       },
       "post" : {
-        "operationId" : "register_1",
+        "operationId" : "registerSource",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -2535,7 +2535,7 @@
     },
     "/api/admin/sources/{id}" : {
       "delete" : {
-        "operationId" : "delete",
+        "operationId" : "deleteSource",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2642,7 +2642,7 @@
     },
     "/api/admin/sources/{id}/disable" : {
       "post" : {
-        "operationId" : "disable",
+        "operationId" : "disableSource",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2702,7 +2702,7 @@
     },
     "/api/admin/sources/{id}/enable" : {
       "post" : {
-        "operationId" : "enable",
+        "operationId" : "enableSource",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2769,7 +2769,7 @@
     },
     "/api/admin/sources/{id}/hide" : {
       "post" : {
-        "operationId" : "hide",
+        "operationId" : "hideSource",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2829,7 +2829,7 @@
     },
     "/api/admin/sources/{id}/poll-interval" : {
       "put" : {
-        "operationId" : "changePollInterval",
+        "operationId" : "changeSourcePollInterval",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -3051,7 +3051,7 @@
     },
     "/api/admin/sources/{id}/unhide" : {
       "post" : {
-        "operationId" : "unhide",
+        "operationId" : "unhideSource",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -3382,7 +3382,7 @@
     },
     "/api/admin/tag-backfill-reviews" : {
       "post" : {
-        "operationId" : "review_1",
+        "operationId" : "reviewTagBackfill",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -3534,7 +3534,7 @@
     },
     "/api/admin/tag-set-reviews" : {
       "post" : {
-        "operationId" : "review",
+        "operationId" : "reviewTagSet",
         "requestBody" : {
           "content" : {
             "application/json" : {

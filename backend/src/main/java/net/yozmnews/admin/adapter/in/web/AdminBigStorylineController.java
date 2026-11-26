@@ -81,7 +81,7 @@ class AdminBigStorylineController {
 			description = "요청 본문의 형식이 틀렸거나, 날짜 · 시간대 · 기간 · 큰 판정 기준이 범위 밖이다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	BigStorylinePreviewResponse preview(@Valid @RequestBody BigStorylinePreviewRequest body) {
+	BigStorylinePreviewResponse previewBigStorylineCriteria(@Valid @RequestBody BigStorylinePreviewRequest body) {
 		BigStorylineCriteria proposed = BigStorylineCriteria.of(body.minIntensity())
 			.orElseThrow(BigStorylineCriteriaProblem::outOfRange);
 		EventPeriod period = AdminPeriods.events(body.from(), body.to(), body.zone());

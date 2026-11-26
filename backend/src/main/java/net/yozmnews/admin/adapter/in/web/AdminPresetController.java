@@ -39,7 +39,7 @@ class AdminPresetController {
 	@ApiResponse(responseCode = "404", description = "카탈로그에 없는 프리셋이다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	RegistrationResponse register(@PathVariable String key) {
+	RegistrationResponse registerPreset(@PathVariable String key) {
 		return RegistrationResponse.of(this.administration.registerPreset(key));
 	}
 

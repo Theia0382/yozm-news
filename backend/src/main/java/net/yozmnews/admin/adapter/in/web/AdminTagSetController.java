@@ -55,7 +55,7 @@ class AdminTagSetController {
 	@ApiResponse(responseCode = "400", description = "요청 본문의 형식이 틀렸거나 재평가 기간이 범위 밖이다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	TagSetReviewResponse review(@Valid @RequestBody TagSetRequest body) {
+	TagSetReviewResponse reviewTagSet(@Valid @RequestBody TagSetRequest body) {
 		return TagSetReviewResponse.of(this.administration.review(body.text(), body.days()));
 	}
 
