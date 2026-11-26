@@ -952,7 +952,7 @@ sequenceDiagram
 판단의 이유는 [ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0084](../adr/0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md) · [ADR-0086](../adr/0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md) · [ADR-0087](../adr/0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md) · [ADR-0088](../adr/0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md) · [ADR-0089](../adr/0089-long-term-hnsw-indexes-on-closed-events-created-per-model-version-at-runtime-by-the-worker-role.md) · [ADR-0119](../adr/0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md) · [ADR-0213](../adr/0213-event-merge-defers-events-whose-check-did-not-finish-until-a-retry-time-on-the-event-row-and-never-drops-them.md)에 있다.
 
 - **event-R13** — 열린 사건끼리 합치는 사건 병합과, 사건을 닫고 그 뒤를 정비하는 사건 정비를 덮는다. 하위 규칙: event-R56 ~ R71
-- **event-R56** — 닫기 · 병합은 한 방향이다. 닫힌 사건을 다시 열거나 합친 사건을 나누지 않는다. 기준(사건 기준 · 닫는 기간 · 최대 기간)이 바뀌면 그 뒤의 닫기 · 병합에만 쓴다. 몇 주에 걸친 사건들은 스토리라인이 잇는다([pipeline.md §9](../pipeline.md#9-스토리라인))
+- **event-R56** — 닫기 · 병합은 한 방향이다. 닫힌 사건을 다시 열거나 합친 사건을 나누지 않는다. 기준(사건 기준 · 닫는 기간 · 최대 기간)이 바뀌면 그 뒤의 닫기 · 병합에만 쓴다. 몇 주에 걸친 사건들은 스토리라인이 잇는다([storyline Spec](storyline.md))
 - **event-R57** — 반복 작업이 재판정 회차 다음에 병합 회차를 돈다. 회차는 지금 기준을 기준 이력에 등록하고(event-R48), 바뀐 열린 사건을 16개(측정 전, `AssignmentSchedule.MERGE_BATCH`)까지 본다.
   - 바뀐 사건은 확인한 고친 횟수가 지금보다 작거나, 다른 기준으로 확인한 사건이다
   - 사건의 고친 횟수(`revision`)는 열 때 1 이고, 사건 값을 쓸 때마다(붙이기 · 빼기 · 옮기기 · 합치기) 하나 는다

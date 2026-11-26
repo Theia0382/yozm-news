@@ -13,26 +13,58 @@
 - 한 인스턴스를 운영자가 허락한 몇 사람이 함께 쓴다. 운영자가 인스턴스를 인터넷에 열 수 있고 여러 사람의 데이터와 LLM 키가 한곳에 모이므로, 인증 · 데이터 격리 · 키 보관 · 악용 방지는 공개 서비스 수준으로 한다
 - 대규모 인프라를 쓰지 않는다. 같은 컨테이너 구성을 운영자의 호스트(집 서버 · VPS · 관리형 클라우드) 어디에든 올린다
 
+```mermaid
+flowchart TB
+    feeds[[언론사 RSS 피드]]
+    subgraph shared[공유 단계 · 사용자와 무관 · 운영자 비용]
+        collect[수집 · 정규화 · 중복 제거]
+        evaluate[Jev 공유 평가<br/>주제 · 지역 태그 · 형식 · 중요도]
+        cluster[사건 묶기<br/>한 번 일어난 일의 기사]
+        linking[스토리라인 잇기 · 큰 판정]
+    end
+    subgraph personal[사용자 단계 · 사용자마다]
+        selection[후보 선별 · 항목 묶기<br/>구독 · 제외 · 중요도 × 관심도 · 큰 슬롯]
+        generate[다이제스트 생성<br/>사용자 LLM 키]
+        summarize[사용자 스토리라인의 정리<br/>사용자 LLM 키]
+        report[변화 리포트 주간 · 월간<br/>사용자 LLM 키]
+    end
+    subgraph history[쌓이는 기록과 계산]
+        exposure[(노출 기록)]
+        signals[(관심 신호 이력<br/>좋아요 / 싫어요 · 주제 구독 · 흐름 추적)]
+        ustory[(사용자 스토리라인)]
+        interest[관심도]
+        interestHistory[관심사 히스토리]
+    end
+    ui[웹 UI]
+
+    feeds --> collect
+    collect --> evaluate
+    collect --> cluster
+    cluster --> linking
+    evaluate --> selection
+    cluster --> selection
+    linking --> selection
+    selection --> generate
+    generate --> exposure
+    generate --> ui
+    ui --> signals
+    signals --> ustory
+    linking --> ustory
+    exposure --> interest
+    signals --> interest
+    ustory --> interest
+    interest --> selection
+    interest --> interestHistory
+    generate -. 다이제스트가 끝나면 .-> summarize
+    ustory --> summarize
+    summarize --> report
+    interestHistory --> report
+    summarize --> ui
+    interestHistory --> ui
+    report --> ui
 ```
-[운영자 큐레이션 RSS 피드]
-        │  주기적 수집 · 정규화 · 중복 제거
-        ▼
-[기사 저장소] ──► [Jev 공유 평가] 주제·지역 태그 · 형식 · 중요도
-        │        └─► [사건 묶기] 한 번 일어난 일의 기사 묶기
-        │                 └─► [스토리라인] 사건을 스토리라인으로 잇기 · 큰 판정
-        │                       (사용자와 무관, 운영자 비용)
-        ▼
-[사용자별 후보 선별] 사건 단위 — 구독 주제 · 제외 조건 · 사건 중요도 × 관심도 · 큰 스토리라인 · 기간
-        │        └─► [항목 묶기] 고른 사건을 스토리라인 포함 나무로 묶고 주요 뉴스 · 헤드라인으로 가르기
-        │
-        ▼
-[사용자 LLM으로 종합 다이제스트 생성] 항목마다 제목 · 요약 (사용자 BYOK 키, 사용자 비용)
-        │        ├─► [사용자 스토리라인의 정리] 관심이 쌓인 사용자 스토리라인의 제목 · 요약 (사용자 BYOK 키, 사용자 비용)
-        │        └─► [변화 리포트] 주간 · 월간 (사용자 BYOK 키, 사용자 비용)
-        ▼
-[웹 UI] 주요 뉴스 · 헤드라인 항목(좋아요/싫어요) + 출처 기사(원문 링크)
-        사건 흐름(정리된 내 흐름) · 타임라인 · 관심사 히스토리 · 변화 리포트
-```
+
+화살표는 데이터가 흐르는 방향이다. 공유 단계는 사용자와 무관하게 기사 · 사건 단위로 돌고 비용은 운영자가 낸다. 사용자 단계는 사용자마다 돌고, 생성은 사용자가 등록한 LLM 키로 한다. 다이제스트가 보인 사건(노출 기록)과 화면에서 준 관심 신호가 관심도로 모여 다음 후보 선별에 들어간다. 쌓인 신호는 관심사 히스토리 · 사용자 스토리라인 · 변화 리포트가 된다. 원통은 저장하는 기록이고, 관심도와 관심사 히스토리는 조회할 때 계산한다.
 
 ## 2. 범위
 
@@ -160,7 +192,7 @@ flowchart LR
 | [`platform`](specs/platform.md) | 여러 모듈에 걸친 공통 장치를 맡는다. 역할과 그 기동 검사, 이벤트 발행 재처리, 화면용 API 규약과 오류 응답 형식, 앱 시계가 그 예다. 다른 모듈의 타입에 의존하지 않는다 |
 | [`event`](specs/event.md) | 한 번 일어난 일을 다룬 기사를 사용자와 무관하게 공유 사건으로 묶는다. 사건의 병합 · 정비와 기간 집계를 맡고, 바뀐 사건을 알린다. 사용자를 모른다 |
 | [`storyline`](specs/storyline.md) | 사건들을 모든 사용자가 공유하는 스토리라인으로 잇고, 스토리라인 사이 관계(포함 · 이어짐)와 큰 판정을 맡는다. 사용자를 모른다([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)) |
-| [`report`](specs/report.md) | 사용자마다 주간 · 월간 변화 리포트를 만들고 저장하고 조회로 낸다. 그 사용자와 관계된 재료만 모아 사용자의 LLM 키로 생성하고, 실패를 알린다. 입력은 [pipeline.md §10](pipeline.md#10-변화-리포트) |
+| [`report`](specs/report.md) | 사용자마다 주간 · 월간 변화 리포트를 만들고 저장하고 조회로 낸다. 그 사용자와 관계된 재료만 모아 사용자의 LLM 키로 생성하고, 실패를 알린다 |
 | [`reader`](specs/reader.md) | 독자 화면이 부르는 HTTP API 를 낸다. 각 모듈의 공개 조회를 엮어 응답 모양을 정하고, 데이터 · 판정을 갖지 않는다 |
 
 ```mermaid
@@ -234,7 +266,7 @@ flowchart LR
 | 상태 전이 · 작업 | 상태 전이는 aggregate 메서드로만(피드의 수집 상태 · 피드 상태는 `domain` 의 상태 객체 · 판정 함수가 계산하고 SQL 로 쓴다), 백그라운드 작업과 이벤트 리스너는 다시 실행해도 결과가 같다(이벤트는 최소 한 번 처리된다) | [ADR-0013](adr/0013-architecture-patterns.md) · [ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) · [ADR-0033](adr/0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md) · [ADR-0040](adr/0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md) |
 | 사용자 범위 | 화면 · API 의 사용자 데이터 조회는 세션의 `userId` 로만 범위를 정한다. 요청으로 받은 사용자 ID 는 신뢰하지 않는다 — 화면용 API 처리기는 사용자를 세션에서 채우는 인자 `UserId` 로만 받고, 운영자 경로 밖의 처리기는 공개 표시(`@PublicApi`)가 있거나 사용자 격리 시험에 등록된다 | [security.md](security.md) · [account Spec](specs/account.md#화면용-api-의-공개와-세션-사용자) · [ADR-0125](adr/0125-screen-api-handlers-need-a-session-unless-marked-public-and-take-the-user-only-as-a-session-filled-argument.md) |
 | 비밀 값 | BYOK 키의 평문은 `platform` 의 `SecretValue` 로 감싸 다루고 로그 · 오류 · 응답 · 직렬화에 남지 않는다. 저장한 키는 `llm` 이 저장한 키의 길에서 물을 때만 `credential` 의 공급 구현이 복호화하고, 평문은 `SecretValue` 로 `llm` 에만 건너가 호출이 끝날 때까지만 있다. 사용자 키와 프롬프트는 공급자에만 간다 — 공급자 주소는 코드 상수다 | [security.md](security.md) · [platform Spec](specs/platform.md#비밀-값) · [llm Spec](specs/llm.md#공급자-클라이언트) · [credential Spec](specs/credential.md#저장한-키와-상태) |
-| LLM 입출력 | RSS 내용은 신뢰할 수 없는 입력, LLM 출력은 스키마로 검증하는 데이터 | [pipeline.md](pipeline.md) · [security.md](security.md) |
+| LLM 입출력 | RSS 내용은 신뢰할 수 없는 입력, LLM 출력은 스키마로 검증하는 데이터 | [digest Spec](specs/digest.md#프롬프트-구성) · [platform Spec](specs/platform.md#llm-출력-읽기) · [security.md](security.md) |
 | 외부 의존성 | 표준 프로토콜 · 자체 인터페이스 뒤, 설정으로 교체 · 비활성, 로컬 대체물(profile `local` 에서만 등록하고 켜는 운영 설정은 없다). 평가기는 핵심 기능이라 교체만 하고 끄지 않는다 — 작업 역할은 평가기 없이 운영하지 않는다 | [ADR-0012](adr/0012-swappable-external-dependencies.md) · [ADR-0057](adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md) · [ADR-0061](adr/0061-worker-role-does-not-run-without-an-evaluator.md) |
 | 시각 | 앱의 지금은 `platform` 의 앱 시계(`AppClock` bean 하나)에서 읽는다 — 다른 곳에서 벽시계를 직접 읽지 않는다. 진행 중 작업의 멈춤(임대 · 기한)과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다. 측정용 시계(지난 데이터로 여러 날을 확인하는 일회용 인스턴스)는 profile `measurement` 와 DB 의 시계 행이 함께 있을 때만 뜨고, 그때는 수집하지 않는다 | [ADR-0250](adr/0250-the-apps-now-comes-from-one-appclock-bean-that-is-not-a-java-time-clock.md) · [ADR-0251](adr/0251-the-measurement-clock-starts-only-with-the-measurement-profile-and-a-clock-row-and-moves-forward-through-the-operator-api.md) · [ADR-0252](adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) · [ADR-0253](adr/0253-the-measurement-clock-does-not-collect-feeds.md) · [platform Spec](specs/platform.md#앱-시계) |
 | 판정 시점 | 바뀔 수 있는 임계값은 저장 시점이 아니라 조회 시점에 적용한다(피드 상태는 저장하되 매 실행 현재 기준으로 다시 판정한다). 사건 배정처럼 판정 결과가 누적 상태라 조회 시점에 판정할 수 없으면, 판정 재료(저장 기준 이상의 점수 · 확률)와 판정에 쓴 기준을 남기고 기준이 바뀌면 그 재료로 다시 판정한다. 예외로 사건의 닫기 · 병합과 스토리라인의 합치기(구성 사건이 같거나 같은 사안의 조각으로 판정됨)는 한 방향이다 — 기준이 바뀌면 그 뒤의 닫기 · 병합 · 합치기에만 쓰고, 닫힌 사건의 배정과 합친 스토리라인은 다시 판정하지 않는다 | [ADR-0010](adr/0010-tag-taxonomy.md) · [ADR-0040](adr/0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md) · [ADR-0081](adr/0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md) · [ADR-0087](adr/0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md) · [ADR-0234](adr/0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md) |

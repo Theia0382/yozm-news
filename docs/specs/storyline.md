@@ -10,6 +10,7 @@
 - **소속 맞추기** — 사건이 지워지면 그 소속을 지우고, 다른 사건에 합쳐지면 소속을 남는 사건으로 옮긴다(storyline-R6)
 - **잇기** — 사건 중심의 코사인과 무게를 준 핵심 말 겹침으로 점수를 매겨, 사건을 스토리라인에 더 붙이거나 다른 사건과 짝을 지어 새 스토리라인을 연다. 소속을 빼지 않고, 소속이 늘면 기다리는 이웃 사건을 다시 본다(storyline-R7 ~ R12, [ADR-0106](../adr/0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md) · [ADR-0121](../adr/0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md))
   - 점수가 애매한 띠 안 후보는 `evaluation` 의 스토리라인 소속 판정(Jev)에 같은 사안의 전개인지 물어 확률로 고른다. 물은 확률은 쌍마다 기록해 다시 쓴다(storyline-R36, [ADR-0194](../adr/0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md))
+  - 스토리라인 하나가 담는 범위 — 포럼 · 박람회 같은 행사는 스토리라인이다. 강연 · 발표 · 행사 자체를 다룬 보도는 각각 사건이고 그 행사의 스토리라인에 든다. 발표 사건은 그 내용의 스토리라인에도 들 수 있다([ADR-0101](../adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)). 잇기는 이 범위를 점수와 띠 안 판정으로 따르고, 행사를 따로 가려 다루는 갈래는 없다
 - **정돈** — 소속이 바뀐 스토리라인을 정돈한다. 합쳐진 스토리라인은 남는 스토리라인을 가리키고, 합치거나 지운 스토리라인은 이벤트로 알린다(storyline-R13 · R17 · R18 · R35, [ADR-0108](../adr/0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md) · [ADR-0188](../adr/0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md)). 정돈의 처분은 아래다
   - 구성 사건이 없으면 지운다
   - 구성 사건이 같은 스토리라인은 하나로 합친다
@@ -43,7 +44,8 @@
   - 기사 삭제는 `event` 가 사건을 줄이거나 지워 알리는 것으로 따른다(storyline-R44)
   - 관계 판정에 넘길 사건의 대표 기사 ID 는 `event` 에서 받아 `evaluation` 에 넘기기만 하고 저장하지 않는다(storyline-R118)
 - 기사를 세지 않는다. 큰 판정의 재료(기간 안 기사의 중요도 합, 기간에 기사가 있는 소스 수)는 `event` 의 사건 집합 집계와 기간 전체 집계로 받는다(storyline-R79 · R81)
-- 스토리라인의 주제 · 지역 태그, 같은 원인에서 나온 나란한 스토리라인을 묶는 상위 스토리라인을 여는 법은 아직 없다 — **(미설계)**. 관계 판정에도 나란한 스토리라인이라는 답이 없어, 나란한 두 스토리라인은 관계 없이 따로 남는다([미결 사항](../open-questions.md) 37)
+- 스토리라인에 주제 · 지역 태그를 주지 않는다. 스토리라인 구독은 주제별 관심도에 넣지 않고 사용자 스토리라인마다의 스토리라인 관심에 넣는다([미결 사항](../open-questions.md) 34)
+- 같은 원인에서 나온 나란한 스토리라인을 묶는 상위 스토리라인을 여는 법은 아직 없다 — **(미설계)**. 관계 판정에도 나란한 스토리라인이라는 답이 없어, 나란한 두 스토리라인은 관계 없이 따로 남는다([미결 사항](../open-questions.md) 37)
 - 운영자가 관계를 하나씩 넣거나 빼거나 종류를 바꾸는 길을 두지 않는다. 관계는 관계 판정만 맺고 바꾸며, 운영자는 관계 기준(§7)으로 조정한다(storyline-R143, [ADR-0137](../adr/0137-storyline-relations-are-not-edited-one-by-one-by-operators-and-are-tuned-through-relation-criteria.md))
 - 스토리라인에 들지 않은 사건은 큰 판정에 들지 않는다. 그 수만 낸다(storyline-R23)
 - 사건을 스토리라인에 잇는 데 주제 태그를 쓰지 않고, 주 소속을 두지 않는다([ADR-0121](../adr/0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)). Jev 는 잇기 점수가 애매한 띠 안 후보의 스토리라인 소속 판정(storyline-R36, [ADR-0194](../adr/0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md))과 스토리라인 사이 관계의 판정에 쓴다

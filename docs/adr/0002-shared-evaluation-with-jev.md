@@ -14,7 +14,7 @@
 > 부분 대체(둘째 문장) — [ADR-0010](0010-tag-taxonomy.md) · [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md). 지금 상태: [tag Spec §1](../specs/tag.md#1-책임과-범위) · [evaluation Spec §1](../specs/evaluation.md#1-책임과-범위)
 - Jev는 **사용자 정보 없이 기사마다 한 번만** 평가한다. 평가 항목은 카테고리 분류, 중요도, 다이제스트 적합성이다.
 - 카테고리 체계는 운영자가 관리하고 버전을 붙인다. 사용자는 카테고리를 구독한다.
-> 부분 대체 — [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md). 지금 상태: [`pipeline` §6](../pipeline.md#6-다이제스트-생성)
+> 부분 대체 — [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md). 지금 상태: [digest Spec "후보 선별"](../specs/digest.md#후보-선별)
 - 사용자별 관련성 판단과 개인화는 Jev가 아니라 사용자 LLM이 다이제스트 생성 단계에서 한다 ([ADR-0003](0003-byok-personalized-digest.md)).
 - `ArticleEvaluator` 인터페이스는 사용자 정보를 받지 않는다. 초기 구현체는 `JevArticleEvaluator`.
 - 확률 분포, confidence, 모델 버전, 카테고리 체계 버전, 원본 응답을 저장한다.

@@ -27,7 +27,6 @@
 | 문서 | 남은 내용의 행선지 |
 |---|---|
 | [architecture.md](architecture.md) | 모듈 포트 · 작업 → 그 모듈의 Spec(모듈을 만드는 이슈가 옮긴다). 외부 API · MCP → 1층 또는 그 기능을 가진 모듈의 Spec(그 기능을 설계하는 이슈가 고른다) |
-| [pipeline.md](pipeline.md) | 단계마다 그 단계를 가진 모듈의 Spec. 상단의 단계 흐름 그림은 이 문서를 `archives/` 로 보낼 때 `overview.md` 로 옮긴다 |
 | [data-model.md](data-model.md) | 모듈 테이블 → 그 모듈 Spec 의 데이터 절. 모듈 사이 관계(ER 개요) · 보존 정책 · 프레임워크 테이블은 이 문서에 남는다 — 전환이 끝나면 데이터 개요 문서로 남는다 |
 | [security.md](security.md) | 한 모듈이 구현하는 규칙 → 그 모듈의 Spec. 횡단 정책(인가 · 데이터 격리 · 개인정보 · 저작권 · 악용 방지)은 이 문서에 남는다 — 전환이 끝나면 횡단 보안 문서로 남는다 |
 
@@ -43,7 +42,6 @@
 | 설계 | [specs/](specs/README.md) | 모듈 · 화면 Spec (2층)의 목록 · 공통 구조 · 쓰는 규칙 |
 | | [adr/](adr/README.md) | 아키텍처 결정 기록 |
 | | [architecture.md](architecture.md) | 모듈 인터페이스 초안, 백그라운드 작업, 외부 API · MCP (전환 중) |
-| | [pipeline.md](pipeline.md) | 수집 → 평가 → 사건 묶기 → 다이제스트 생성 파이프라인, 관심 신호 · 스토리라인 · 변화 리포트 상세 (전환 중) |
 | | [data-model.md](data-model.md) | 데이터 모델과 보존 정책 (전환 중) |
 | | [security.md](security.md) | 인증과 인가, BYOK 키 보관, 저작권과 개인정보 (전환 중) |
 | 개발 | [CONTRIBUTING.md](../CONTRIBUTING.md) | 개발 환경과 검사 명령, 이슈 · 브랜치 · 커밋 · PR 규약 |
@@ -69,7 +67,7 @@
 | 횡단 규약 변경 (트랜잭션 경계 · 사용자 범위 · 비밀 값 · 오류 응답 형식 등) | `overview.md` §6 + 관련 ADR |
 | 도메인 용어 신설 · 이름 변경 | 모듈 Spec 의 용어 절, 횡단 용어면 `overview.md` §8 |
 | 화면 신설 · 화면 동작 · 화면 이름 변경 | 화면 Spec([specs/web.md](specs/web.md)) |
-| 파이프라인 · 데이터 모델 · 보안 설계 변경 | 한 모듈에 속하면 그 모듈 Spec, 아니면 `pipeline` · `data-model` · `security`(§1 전환 중인 문서의 행선지) |
+| 여러 모듈을 잇는 흐름 · 데이터 모델 · 보안 설계 변경 | 한 모듈에 속하면 그 모듈 Spec. 여러 모듈을 잇는 흐름이면 `overview.md` §1, 모듈 사이 데이터 관계 · 보존이면 `data-model`, 보안 횡단 정책이면 `security` |
 | 개발 인프라 변경 (개발 환경 · 검사 정의 · CI · 이미지) | `development/`. 문서 검사의 판정이 바뀌면 §4 의 링크 규칙 |
 | 운영 변경 (배포 구성 · 운영 설정 · 호스팅 · 백업) | `operations/` |
 | DB 스키마 변경 | Flyway 마이그레이션이 정본 + 그 모듈 Spec 의 데이터 절(주요 컬럼 · 의미 · 제약의 뜻) |

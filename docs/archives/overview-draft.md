@@ -73,4 +73,4 @@
 | 개인화 | Jev 관련성 판별 | 사용자 LLM이 공유 평가된 후보 중에서 수행 | [ADR-0003](../adr/0003-byok-personalized-digest.md) |
 | 요약 단위 | 기사별 요약 | 사용자별로 여러 기사를 종합한 다이제스트 | [ADR-0003](../adr/0003-byok-personalized-digest.md) |
 | LLM 비용 | 미정 | 사용자 BYOK | [ADR-0003](../adr/0003-byok-personalized-digest.md) |
-| 본문 추출 | 평가 전 단계로 수행 | v1은 RSS 요약문만 사용, 추출은 선택 단계 | [pipeline.md](../pipeline.md), [research](../research/2026-10-rss-survey.md) |
+| 본문 추출 | 평가 전 단계로 수행 | v1은 RSS 요약문만 사용, 추출은 선택 단계 | [pipeline.md](pipeline.md), [research](../research/2026-10-rss-survey.md) |

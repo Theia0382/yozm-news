@@ -42,7 +42,7 @@
 
 ## 결과
 
-> 부분 대체("지역 구독자") — [ADR-0181](0181-tag-preferences-take-only-topic-subscriptions-and-region-and-format-exclusions.md). 지금 상태: [`pipeline` 후보 선별](../pipeline.md#후보-선별)
+> 부분 대체("지역 구독자") — [ADR-0181](0181-tag-preferences-take-only-topic-subscriptions-and-region-and-format-exclusions.md). 지금 상태: [digest Spec "후보 선별"](../specs/digest.md#후보-선별)
 - 경계에 걸친 기사가 해당하는 모든 주제·지역 구독자의 후보에 들어간다.
 - 질문 수가 늘어난다. 주제 45개 + 지역 7개 + 형식 + 중요도로 질문 약 54개이고, 기사당 입력은 약 1,700토큰으로 추정한다. 하루 4,000건 기준 **월 약 $9**다. 사용자 수와는 여전히 무관하다.
 - 대분류를 먼저 묻고 해당 대분류의 중분류만 다시 묻는 2단계 방식이면 토큰이 약 20% 줄어든다. 하지만 요청이 두 번이 되고 구현이 복잡해진다. 비용 차이가 월 $2 안팎이라 단일 요청을 택했다.
