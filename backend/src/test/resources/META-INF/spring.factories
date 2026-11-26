@@ -1,0 +1,2 @@
+# 웹이 아닌 시험 컨텍스트를 GenericApplicationContext 로 만든다 — 지울 조건은 docs/development/infrastructure.md "테스트 JVM", 까닭은 ADR-0351
+org.springframework.boot.ApplicationContextFactory=net.yozmnews.NonWebTestContextFactory
