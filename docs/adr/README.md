@@ -345,6 +345,7 @@
 | [0341](0341-a-monthly-report-does-not-compare-flow-coverage-with-the-previous-monthly-and-shows-the-flow-state-kept-at-generation.md) | 월간 리포트는 흐름 보도량을 직전 월간과 견주지 않고, 생성 때의 흐름 상태를 스냅숏에 남겨 보인다 | 승인 |
 | [0342](0342-there-is-no-article-evaluated-event-and-modules-using-evaluations-read-them-by-query.md) | 평가 결과 이벤트 `ArticleEvaluated` 는 두지 않고, 평가를 쓰는 모듈은 조회로 읽는다 | 승인 |
 | [0343](0343-operator-secrets-like-byok-keys-never-reach-logs-error-messages-or-responses-and-the-convention-lives-in-overview.md) | 운영자 비밀도 BYOK 키처럼 로그 · 오류 문구 · 응답에 남기지 않고, 그 규약의 정본은 `overview` §6 이다 | 승인 |
+| [0344](0344-privacy-notice-items-are-owned-by-the-notice-screen-file-and-collected-items-cover-the-user-data-of-the-retention-table.md) | 개인정보 고지의 수집 · 외부 전송 항목은 고지 화면 파일이 정본이고, 수집 항목은 보존 정책 표의 사용자 데이터를 덮는다 | 승인 |
 
 ## 운영 규칙
 

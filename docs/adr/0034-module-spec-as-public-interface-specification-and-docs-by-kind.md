@@ -62,3 +62,4 @@
 ## 후속 기록
 
 - 2026-11-25: 결정의 규칙 식별자 — [ADR-0329](0329-a-large-rule-is-split-into-one-judgement-each-and-its-identifier-stays-as-a-group-head-covering-the-sub-rules.md) · [`specs/README` §3](../specs/README.md#3-쓰는-규칙) 규칙 2
+- 2026-11-26: 결정 "전환 중인 설계 초안은 루트에 둔 채 옮긴다" · "`security` 의 횡단 정책은 그 문서에 남는다" — [ADR-0344](0344-privacy-notice-items-are-owned-by-the-notice-screen-file-and-collected-items-cover-the-user-data-of-the-retention-table.md)(개인정보 고지 항목의 자리) · 지금 상태 [docs/README.md §1](../README.md#1-문서-위계) · [archives](../archives/README.md)

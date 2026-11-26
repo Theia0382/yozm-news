@@ -1026,7 +1026,7 @@ public interface ReportJobQueue {
 - **report-R131** — 직전 리포트 글은 [기간 종류, 첫날, 마지막 날, [[종류 키, 제목, 본문], …]]이다
   - 섹션이 없는 직전 리포트 글은 싣지 않는다. 인용을 모두 잃어 섹션이 전부 숨은 리포트다(report-R72 · R109). 재료는 그대로 두고 프롬프트가 고른다
   - 일부 섹션만 숨은 글은 보이는 글 그대로 싣는다
-- **report-R132** — 사용자 구획에 실리는 것은 외부 전송 고지([security.md "개인정보"](../security.md#개인정보))의 변화 리포트 항목과 같다. 한쪽을 바꾸면 다른 쪽을 함께 고친다
+- **report-R132** — 사용자 구획에 실리는 것은 외부 전송 고지의 변화 리포트 항목(고지 화면 파일 `frontend/src/features/privacy/privacyTexts.ts` 의 `REPORT_TRANSFER_ITEMS`, [security.md "개인정보"](../security.md#개인정보))과 같다. 한쪽을 바꾸면 다른 쪽을 함께 고친다
 - **report-R133** — 다시 묻는 프롬프트(`ReportPrompts.retry`)는 첫 지시에 "앞 출력을 고쳐 다시 써야 한다: {진단}" 과 다시 출력하라는 문장을 덧붙인다. 사용자 구획 · 스키마는 같다
   - 진단은 읽기의 진단(report-R59)이나 빠진 섹션 종류 · 남은 별칭(report-R60)의 앞 `ReportPromptRules.MAX_DIAGNOSIS`(200) 코드 포인트다
 - **report-R176** — 사용자 구획에는 기사 수 · 관심 값을 싣지 않는다. 아래 값은 값마다 정한 한국어 꼬리표로 싣고, 정본은 `ReportPrompts.meaning`(망라 분기)이다. 지시가 늘어놓는 꼬리표도 같은 함수에서 나온다
