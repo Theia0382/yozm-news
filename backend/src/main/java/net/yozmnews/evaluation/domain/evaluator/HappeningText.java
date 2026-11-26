@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 /**
  * 관계 판정에 싣는 서술 사건 하나 — 시각과 대표 기사의 제목 · 요약문 · docs/specs/evaluation.md §4 · evaluation-R48.
  * <p>
- * 제목의 길이 상한은 사건 소속 판정의 서술 제목과 같다({@link CandidateEvent#MAX_TITLE_CODE_POINTS} — 정본).
+ * 제목의 길이 상한은 소속 판정의 서술 제목과 같다({@link MembershipCandidate#MAX_TITLE_CODE_POINTS} — 정본).
  *
  * @param at 사건의 시각
  * @param title 대표 기사의 제목 — 상한 안으로 자른 값
@@ -30,8 +30,8 @@ public record HappeningText(Instant at, String title, @Nullable String summary) 
 		if (title.isBlank()) {
 			throw new IllegalArgumentException("서술 제목이 공백뿐이다");
 		}
-		if (title.codePointCount(0, title.length()) > CandidateEvent.MAX_TITLE_CODE_POINTS) {
-			throw new IllegalArgumentException("서술 제목은 " + CandidateEvent.MAX_TITLE_CODE_POINTS + " 코드 포인트까지다");
+		if (title.codePointCount(0, title.length()) > MembershipCandidate.MAX_TITLE_CODE_POINTS) {
+			throw new IllegalArgumentException("서술 제목은 " + MembershipCandidate.MAX_TITLE_CODE_POINTS + " 코드 포인트까지다");
 		}
 		if (summary != null) {
 			if (summary.isBlank()) {
@@ -50,7 +50,7 @@ public record HappeningText(Instant at, String title, @Nullable String summary) 
 	 * @return 자른 제목이 공백뿐이면 빈 값
 	 */
 	public static Optional<HappeningText> limited(Instant at, String title, @Nullable String summary) {
-		String cutTitle = CodePoints.prefix(Objects.requireNonNull(title, "title"), CandidateEvent.MAX_TITLE_CODE_POINTS)
+		String cutTitle = CodePoints.prefix(Objects.requireNonNull(title, "title"), MembershipCandidate.MAX_TITLE_CODE_POINTS)
 			.stripTrailing();
 		if (cutTitle.isBlank()) {
 			return Optional.empty();

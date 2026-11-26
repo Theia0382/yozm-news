@@ -4,11 +4,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.domain.evaluator.MembershipCandidate;
 import net.yozmnews.platform.ProbabilityRange;
 import org.jspecify.annotations.Nullable;
 
@@ -26,28 +26,17 @@ final class MembershipChecks {
 	}
 
 	/**
-	 * 요청 하나 — 후보가 1 ~ {@link MembershipQuery#MAX_CANDIDATES} 개, 후보 ID 가 겹치지 않고, 판정할 기사가 어느 후보의 서술 기사도
-	 * 아니다.
+	 * 요청 하나 — 후보가 1 ~ {@link MembershipQuery#MAX_CANDIDATES} 개, 후보 ID 가 겹치지 않고(정본
+	 * {@link MembershipCandidate#requireCandidates}), 판정할 기사가 어느 후보의 서술 기사도 아니다.
 	 * @throws IllegalArgumentException 어길 때
 	 */
 	static <T> void query(ArticleId articleId, List<T> candidates, ToLongFunction<T> id,
 			Function<T, List<ArticleId>> articles) {
 		Objects.requireNonNull(articleId, "articleId");
-		if (candidates.isEmpty()) {
-			throw new IllegalArgumentException("후보가 없다");
-		}
-		if (candidates.size() > MembershipQuery.MAX_CANDIDATES) {
-			throw new IllegalArgumentException(
-					"후보는 " + MembershipQuery.MAX_CANDIDATES + "개까지다: " + candidates.size());
-		}
-		Set<Long> ids = new HashSet<>();
+		MembershipCandidate.requireCandidates(candidates, id);
 		for (T candidate : candidates) {
-			long candidateId = id.applyAsLong(candidate);
-			if (!ids.add(candidateId)) {
-				throw new IllegalArgumentException("후보 ID 가 겹친다: " + candidateId);
-			}
 			if (articles.apply(candidate).contains(articleId)) {
-				throw new IllegalArgumentException("판정할 기사가 후보 " + candidateId + " 의 서술 기사다");
+				throw new IllegalArgumentException("판정할 기사가 후보 " + id.applyAsLong(candidate) + " 의 서술 기사다");
 			}
 		}
 	}

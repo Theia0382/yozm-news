@@ -5,7 +5,7 @@ import java.util.Objects;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
 
 /**
- * 예상한 이유로 평가 · 사건 소속 판정 · 관계 판정을 하지 못했다 — docs/specs/evaluation.md §4.
+ * 예상한 이유로 평가 · 소속 판정 · 관계 판정을 하지 못했다 — docs/specs/evaluation.md §4.
  *
  * @param kind 실패 갈래
  * @param message 운영자용 문구 — 비밀 값을 담지 않는다

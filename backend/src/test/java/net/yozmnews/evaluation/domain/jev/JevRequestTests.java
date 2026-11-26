@@ -5,15 +5,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
-import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import net.yozmnews.evaluation.domain.evaluator.MembershipCandidate;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import org.junit.jupiter.api.Test;
 
 /**
- * Jev 요청 본문 — 질문 이름 · 질문 문장 · 선택지 · 수준 순서, state 형식. 사건 소속 판정의 질문 · state.
+ * Jev 요청 본문 — 질문 이름 · 질문 문장 · 선택지 · 수준 순서, state 형식. 소속 판정(사건 소속 · 스토리라인 소속)의 질문 · state.
  * <p>
  * 지키는 규칙: evaluation-R37 · evaluation-R40
  */
@@ -73,10 +73,10 @@ class JevRequestTests {
 	}
 
 	@Test
-	void asksOneYesNoQuestionPerCandidateEventInTheGivenOrder() {
+	void asksOneYesNoQuestionPerCandidateInTheGivenOrder() {
 		MembershipInput input = new MembershipInput("서울 시장 선거 결과", "개표가 끝났다",
-				List.of(new CandidateEvent(15, List.of("부산 항만 파업", "부산항 물류 차질")),
-						new CandidateEvent(12, List.of("서울 시장 선거 개표"))),
+				List.of(new MembershipCandidate(15, List.of("부산 항만 파업", "부산항 물류 차질")),
+						new MembershipCandidate(12, List.of("서울 시장 선거 개표"))),
 				new MembershipWording("w-test", "같은 사건인가"));
 
 		assertThat(JevRequest.membershipBody("jev-latest", input)).isEqualTo("{\"model\":\"jev-latest\","
@@ -88,7 +88,7 @@ class JevRequestTests {
 	@Test
 	void leavesOutTheSummaryLineOfTheJudgedArticleWithoutASummary() {
 		MembershipInput input = new MembershipInput("서울 시장 선거 결과", null,
-				List.of(new CandidateEvent(12, List.of("서울 시장 선거 개표"))), new MembershipWording("w-test", "같은 사건인가"));
+				List.of(new MembershipCandidate(12, List.of("서울 시장 선거 개표"))), new MembershipWording("w-test", "같은 사건인가"));
 
 		assertThat(JevRequest.membershipBody("jev-latest", input)).isEqualTo("{\"model\":\"jev-latest\","
 				+ "\"state\":\"제목: 서울 시장 선거 결과\",\"questions\":{"
@@ -98,7 +98,7 @@ class JevRequestTests {
 	@Test
 	void asksTheSameMatterWordingInTheSameShape() {
 		MembershipInput input = new MembershipInput("서울 시장 선거 결과", null,
-				List.of(new CandidateEvent(305, List.of("서울 시장 선거 개표", "서울 시장 당선 확정"))),
+				List.of(new MembershipCandidate(305, List.of("서울 시장 선거 개표", "서울 시장 당선 확정"))),
 				MembershipWording.SAME_MATTER);
 
 		assertThat(JevRequest.membershipBody("jev-latest", input)).isEqualTo("{\"model\":\"jev-latest\","
@@ -110,7 +110,7 @@ class JevRequestTests {
 	@Test
 	void probesTheMembershipWithTheSameQuestionsAndAnEmptyState() {
 		MembershipInput input = new MembershipInput("서울 시장 선거 결과", "개표가 끝났다",
-				List.of(new CandidateEvent(12, List.of("서울 시장 선거 개표"))), new MembershipWording("w-test", "같은 사건인가"));
+				List.of(new MembershipCandidate(12, List.of("서울 시장 선거 개표"))), new MembershipWording("w-test", "같은 사건인가"));
 
 		assertThat(JevRequest.membershipProbeBody("jev-1.14.0", input)).isEqualTo("{\"model\":\"jev-1.14.0\","
 				+ "\"state\":\"\",\"questions\":{"

@@ -34,13 +34,13 @@ import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.ImportanceScale;
 import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TopicCategory;
-import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
 import net.yozmnews.evaluation.domain.evaluator.Membership;
+import net.yozmnews.evaluation.domain.evaluator.MembershipCandidate;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
@@ -54,7 +54,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 
 /**
  * Jev 평가기 — WireMock 을 Jev 자리에 두고 요청 형태 · 응답 변환 · 오류 갈래 · 마감 · 본문 상한 · 문맥 초과 확인 요청 · 키 노출을 본다.
- * 사건 소속 판정도 같은 전송 · 갈래를 지나는지 본다.
+ * 소속 판정도 같은 전송 · 갈래를 지나는지 본다.
  * 응답 본문은 실측 응답 · 공식 문서의 모양이다. 기본 주소에 경로가 있는 경우(OpenRouter 의 호환 경로처럼)를 쓴다.
  * <p>
  * 지키는 규칙: evaluation-R37 · evaluation-R38 · evaluation-R40 · evaluation-R41 · ADR-0058 ·
@@ -105,8 +105,8 @@ class JevArticleEvaluatorTests {
 	private static final String CONTEXT_EXCEEDED = "{\"detail\":{\"error_type\":\"max_tokens_exceeded\"}}";
 
 	private static final MembershipInput MEMBERSHIP = new MembershipInput("서울 시장 선거 결과", "개표가 끝났다",
-			List.of(new CandidateEvent(12, List.of("서울 시장 선거 개표")),
-					new CandidateEvent(15, List.of("부산 항만 파업", "부산항 물류 차질"))),
+			List.of(new MembershipCandidate(12, List.of("서울 시장 선거 개표")),
+					new MembershipCandidate(15, List.of("부산 항만 파업", "부산항 물류 차질"))),
 			new MembershipWording("w-test", "같은 사건인가"));
 
 	private static final String MEMBERSHIP_QUESTIONS = "\"questions\":{"
@@ -334,7 +334,7 @@ class JevArticleEvaluatorTests {
 	}
 
 	@Test
-	void judgesEveryCandidateEventInOneRequest() {
+	void judgesEveryCandidateInOneRequest() {
 		server.stubFor(post(PATH).willReturn(json(200, MEMBERSHIP_ANSWER).withHeader("x-typesafe-request-id", "req_ok")));
 
 		assertThat(evaluator().judgeMembership(MEMBERSHIP))

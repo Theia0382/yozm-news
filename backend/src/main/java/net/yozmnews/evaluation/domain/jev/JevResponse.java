@@ -11,11 +11,11 @@ import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TopicCategory;
-import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.Membership;
+import net.yozmnews.evaluation.domain.evaluator.MembershipCandidate;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.Relation;
@@ -30,7 +30,7 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Jev 의 200 응답을 포트 결과로 옮긴다 — docs/specs/evaluation.md §4.
  * <p>
- * 답은 {@link JevRequest} 의 질문 이름으로 읽는다 — 평가는 넘긴 질문 묶음, 사건 소속 판정은 물은 후보 사건의 질문, 관계 판정은 관계와
+ * 답은 {@link JevRequest} 의 질문 이름으로 읽는다 — 평가는 넘긴 질문 묶음, 소속 판정은 물은 후보의 질문, 관계 판정은 관계와
  * 스토리라인마다 한 사안인가의 질문이다. 중요도는 수준
  * 위치({@code "0"} 부터)를 질문 묶음의 수준 순서로 되찾는다. 묻지 않은 여분의 답은 읽지 않는다 — 원본 응답째 저장된다. 응답의 모양은 기사와
  * 무관하므로 읽을 수 없으면 평가기 사용 불가다.
@@ -66,9 +66,9 @@ public final class JevResponse {
 		try {
 			Envelope envelope = envelope(body);
 			Map<Long, Double> probabilities = new LinkedHashMap<>();
-			for (CandidateEvent candidate : input.candidates()) {
-				probabilities.put(candidate.eventId(),
-						yes(envelope.answers(), JevRequest.EVENT_PREFIX + candidate.eventId()));
+			for (MembershipCandidate candidate : input.candidates()) {
+				probabilities.put(candidate.candidateId(),
+						yes(envelope.answers(), JevRequest.EVENT_PREFIX + candidate.candidateId()));
 			}
 			return new Membership(probabilities, EVALUATOR, envelope.model(), envelope.inputTokens(), body);
 		}

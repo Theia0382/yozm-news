@@ -10,7 +10,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
- * 사건 소속 판정의 포트 입력 · 결과 — 제목 · 요약 · 후보, 확률 · 이름 · 토큰의 값 규칙.
+ * 소속 판정의 포트 입력 · 결과 — 제목 · 요약 · 후보, 확률 · 이름 · 토큰의 값 규칙.
  * <p>
  * 지키는 규칙: evaluation-R37
  */
@@ -18,9 +18,9 @@ class MembershipInputTests {
 
 	private static final MembershipWording WORDING = new MembershipWording("w-test", "같은 사건인가");
 
-	private static final CandidateEvent TWELVE = new CandidateEvent(12, List.of("서울 시장 선거 개표"));
+	private static final MembershipCandidate TWELVE = new MembershipCandidate(12, List.of("서울 시장 선거 개표"));
 
-	private static final CandidateEvent FIFTEEN = new CandidateEvent(15, List.of("부산 항만 파업"));
+	private static final MembershipCandidate FIFTEEN = new MembershipCandidate(15, List.of("부산 항만 파업"));
 
 	@Test
 	void keepsTheCandidatesInTheGivenOrder() {
@@ -31,21 +31,25 @@ class MembershipInputTests {
 	}
 
 	@Test
-	void refusesABlankTitleABlankSummaryNoCandidatesOrARepeatedEvent() {
+	void refusesABlankTitleABlankSummaryNoCandidatesOrARepeatedCandidate() {
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new MembershipInput(" ", null, List.of(TWELVE), WORDING));
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new MembershipInput("제목", " ", List.of(TWELVE), WORDING));
-		assertThatIllegalArgumentException().isThrownBy(() -> new MembershipInput("제목", null, List.of(), WORDING));
-		assertThatIllegalArgumentException().isThrownBy(() -> new MembershipInput("제목", null,
-				List.of(TWELVE, new CandidateEvent(12, List.of("다른 제목"))), WORDING));
+		assertThatIllegalArgumentException().isThrownBy(() -> new MembershipInput("제목", null, List.of(), WORDING))
+			.withMessage("후보가 없다");
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new MembershipInput("제목", null,
+					List.of(TWELVE, new MembershipCandidate(12, List.of("다른 제목"))), WORDING))
+			.withMessage("후보 ID 가 겹친다: 12");
 	}
 
 	@Test
 	void acceptsTenCandidatesAndRefusesEleven() {
 		assertThat(new MembershipInput("제목", null, candidates(10), WORDING).candidates()).hasSize(10);
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new MembershipInput("제목", null, candidates(11), WORDING));
+			.isThrownBy(() -> new MembershipInput("제목", null, candidates(11), WORDING))
+			.withMessage("후보는 10개까지다: 11");
 	}
 
 	@Test
@@ -65,10 +69,10 @@ class MembershipInputTests {
 		assertThat(new Membership(Map.of(), "jev", "jev-1.14.0", 0, "{}").probabilities()).isEmpty();
 	}
 
-	private static List<CandidateEvent> candidates(int count) {
-		List<CandidateEvent> candidates = new ArrayList<>();
+	private static List<MembershipCandidate> candidates(int count) {
+		List<MembershipCandidate> candidates = new ArrayList<>();
 		for (int i = 0; i < count; i++) {
-			candidates.add(new CandidateEvent(12 + i, List.of("제목 " + i)));
+			candidates.add(new MembershipCandidate(12 + i, List.of("제목 " + i)));
 		}
 		return candidates;
 	}

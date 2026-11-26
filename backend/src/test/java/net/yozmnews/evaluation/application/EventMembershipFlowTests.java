@@ -24,18 +24,18 @@ import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.evaluation.MembershipQuery;
 import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
-import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.Membership;
+import net.yozmnews.evaluation.domain.evaluator.MembershipCandidate;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
+import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
 import net.yozmnews.evaluation.domain.evaluator.RelationRereadResult;
-import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RelationResult;
-import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
+import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.membership.EventJudgementRepository;
 import net.yozmnews.evaluation.domain.membership.MembershipRecord;
@@ -113,8 +113,8 @@ class EventMembershipFlowTests {
 		assertThat(judgement).isEqualTo(new MembershipJudgement.Judged(new EventJudgementId(judgementId()),
 				Map.of(12L, 0.83, 15L, 0.07)));
 		assertThat(stub.inputs).containsExactly(new MembershipInput("서울 시장 선거 결과", "개표가 끝났다",
-				List.of(new CandidateEvent(12, List.of("서울 시장 선거 개표", "서울 시장 당선 확정")),
-						new CandidateEvent(15, List.of("부산 항만 파업"))),
+				List.of(new MembershipCandidate(12, List.of("서울 시장 선거 개표", "서울 시장 당선 확정")),
+						new MembershipCandidate(15, List.of("부산 항만 파업"))),
 				MembershipWording.CURRENT));
 		Map<String, Object> row = this.jdbc.sql("""
 				select article_id, evaluator, model_version, wording_version, candidates::text as candidates,
@@ -183,7 +183,7 @@ class EventMembershipFlowTests {
 			.isEqualTo(new MembershipJudgement.Judged(new EventJudgementId(judgementId()), Map.of(12L, 0.83)));
 		assertThat(stub.inputs).singleElement()
 			.extracting(MembershipInput::candidates)
-			.isEqualTo(List.of(new CandidateEvent(12, List.of("서울 시장 선거 개표"))));
+			.isEqualTo(List.of(new MembershipCandidate(12, List.of("서울 시장 선거 개표"))));
 		assertThat(this.jdbc.sql("select candidates::text from article_event_judgements").query(String.class).single())
 			.isEqualTo("[{\"eventId\": 12, \"articleIds\": [" + counting + "], \"probability\": 0.83}]");
 	}

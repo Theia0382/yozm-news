@@ -125,7 +125,7 @@ class RelationWordingTests {
 		assertThat(cut.title()).isEqualTo("가".repeat(199) + "😀");
 		assertThat(cut.summary()).isEqualTo("다".repeat(159) + "😀");
 		assertThat(HappeningText.MAX_SUMMARY_CODE_POINTS).isEqualTo(160);
-		assertThat(CandidateEvent.MAX_TITLE_CODE_POINTS).isEqualTo(200);
+		assertThat(MembershipCandidate.MAX_TITLE_CODE_POINTS).isEqualTo(200);
 	}
 
 	@Test

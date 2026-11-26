@@ -24,8 +24,8 @@ public record Membership(Map<Long, Double> probabilities, String evaluator, Stri
 	 */
 	public Membership {
 		Objects.requireNonNull(probabilities, "probabilities");
-		probabilities.forEach((eventId, probability) -> {
-			Objects.requireNonNull(eventId, "eventId");
+		probabilities.forEach((candidateId, probability) -> {
+			Objects.requireNonNull(candidateId, "candidateId");
 			Objects.requireNonNull(probability, "probability");
 			ProbabilityRange.require(probability, "Membership.probabilities");
 		});

@@ -1,9 +1,7 @@
 package net.yozmnews.evaluation.domain.evaluator;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 import net.yozmnews.evaluation.MembershipQuery;
 import org.jspecify.annotations.Nullable;
@@ -16,12 +14,12 @@ import org.jspecify.annotations.Nullable;
  * @param candidates 물을 후보 — 넘긴 순서 그대로 묻는다
  * @param wording 질문 문구
  */
-public record MembershipInput(String title, @Nullable String summary, List<CandidateEvent> candidates,
+public record MembershipInput(String title, @Nullable String summary, List<MembershipCandidate> candidates,
 		MembershipWording wording) {
 
 	/**
 	 * @throws IllegalArgumentException 제목이 공백뿐이거나, 요약이 공백뿐이거나, 후보가 없거나
-	 * {@value MembershipQuery#MAX_CANDIDATES}개를 넘거나, 사건 ID 가 겹칠 때
+	 * {@value MembershipQuery#MAX_CANDIDATES}개를 넘거나, 후보 ID 가 겹칠 때
 	 */
 	public MembershipInput {
 		Objects.requireNonNull(title, "title");
@@ -32,19 +30,7 @@ public record MembershipInput(String title, @Nullable String summary, List<Candi
 			throw new IllegalArgumentException("요약이 공백뿐이다 — 없으면 null 이다");
 		}
 		candidates = List.copyOf(candidates);
-		if (candidates.isEmpty()) {
-			throw new IllegalArgumentException("물을 후보 사건이 없다");
-		}
-		if (candidates.size() > MembershipQuery.MAX_CANDIDATES) {
-			throw new IllegalArgumentException(
-					"후보 사건은 " + MembershipQuery.MAX_CANDIDATES + "개까지다: " + candidates.size());
-		}
-		Set<Long> eventIds = new HashSet<>();
-		for (CandidateEvent candidate : candidates) {
-			if (!eventIds.add(candidate.eventId())) {
-				throw new IllegalArgumentException("후보 사건 ID 가 겹친다: " + candidate.eventId());
-			}
-		}
+		MembershipCandidate.requireCandidates(candidates, MembershipCandidate::candidateId);
 		Objects.requireNonNull(wording, "wording");
 	}
 

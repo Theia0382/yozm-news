@@ -11,9 +11,9 @@ import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TopicCategory;
-import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import net.yozmnews.evaluation.domain.evaluator.MembershipCandidate;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
 import net.yozmnews.evaluation.domain.evaluator.RelationWording;
@@ -42,7 +42,7 @@ public final class JevRequest {
 	/** 중요도 질문 이름 */
 	public static final String IMPORTANCE = "importance";
 
-	/** 사건 소속 질문 이름의 접두 */
+	/** 소속 판정(사건 소속 · 스토리라인 소속) 질문 이름의 접두 */
 	public static final String EVENT_PREFIX = "event.";
 
 	/** 관계 질문 이름 */
@@ -75,12 +75,12 @@ public final class JevRequest {
 		return write(model, "", questions);
 	}
 
-	/** 사건 소속 판정 요청 — state 는 제목 줄 · 요약 줄, 질문은 후보 사건마다 Yes/No 하나(넘긴 순서) */
+	/** 소속 판정(사건 소속 · 스토리라인 소속) 요청 — state 는 제목 줄 · 요약 줄, 질문은 후보마다 Yes/No 하나(넘긴 순서) */
 	public static String membershipBody(String model, MembershipInput input) {
 		return write(model, String.join("\n", articleLines(input.title(), input.summary())), membershipQuestions(input));
 	}
 
-	/** 사건 소속 판정의 문맥 초과 확인 요청 — 같은 질문, 빈 state */
+	/** 소속 판정의 문맥 초과 확인 요청 — 같은 질문, 빈 state */
 	public static String membershipProbeBody(String model, MembershipInput input) {
 		return write(model, "", membershipQuestions(input));
 	}
@@ -139,8 +139,8 @@ public final class JevRequest {
 
 	private static Map<String, Object> membershipQuestions(MembershipInput input) {
 		Map<String, Object> questions = new LinkedHashMap<>();
-		for (CandidateEvent candidate : input.candidates()) {
-			questions.put(EVENT_PREFIX + candidate.eventId(), yesNo(input.wording().question(candidate.titles())));
+		for (MembershipCandidate candidate : input.candidates()) {
+			questions.put(EVENT_PREFIX + candidate.candidateId(), yesNo(input.wording().question(candidate.titles())));
 		}
 		return questions;
 	}
