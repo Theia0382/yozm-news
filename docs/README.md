@@ -57,7 +57,7 @@
 
 | 트리거 (변경 유형) | 갱신 대상 |
 |---|---|
-| 모듈 신설 · 폐지 · 의존 방향 변경 | `overview.md` §5 모듈 지도 |
+| 모듈 신설 · 폐지 · 의존(방향 · 공개 API) 변경 | `overview.md` §5 모듈 지도 |
 | 모듈 신설 | 그 모듈의 Spec(`specs/{모듈}.md`) 신설 + [specs/README.md](specs/README.md) §1 목록. Spec 은 구현보다 먼저 만든다([CONTRIBUTING.md §2](../CONTRIBUTING.md#2-이슈)) |
 | 모듈 공개 인터페이스 · 이벤트 · 포트 변경 | 해당 모듈 Spec + 의존하는 모듈 Spec |
 | 모듈의 작업 · 규칙 · 불변식 변경 | 해당 모듈 Spec + 의존하는 모듈 Spec |

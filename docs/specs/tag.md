@@ -98,7 +98,7 @@
 - 주제별 보도량 조회 `TopicCoverage`
 - 집계 기간 `EvaluationPeriod`
 
-내는 이벤트는 활성 전환 `TagSetActivated` 하나다. 평가 결과를 알리는 `ArticleEvaluated` 도 이 모듈이 낸다. **(미설계)** 그 발행 시점과 내용은 정하지 않았다([overview.md §5](../overview.md#5-모듈-지도)).
+내는 이벤트는 활성 전환 `TagSetActivated` 하나다. 평가 결과를 알리는 이벤트는 두지 않는다 — 평가를 쓰는 모듈은 공개 조회로 읽는다([ADR-0342](../adr/0342-there-is-no-article-evaluated-event-and-modules-using-evaluations-read-them-by-query.md)).
 
 받는 이벤트는 `article` 의 `ArticleStored` · `ArticlesRemoved` 이고, 재평가 대상은 `article` 의 공개 조회 `ArticleDirectory.firstSeenSince` 로 읽는다([article Spec §3](article.md#3-공개-인터페이스)). 태그 판정은 `evaluation` 의 공개 API `ArticleTagging` 으로 한다([evaluation Spec §3](evaluation.md#3-공개-인터페이스)). 태그 질문(`TagQuestions`)과 그 값 타입(`TopicCategory` · `AskedTag` · `FormatChoice` · `FormatOption` · `ImportanceScale` · `ImportanceLevel`)은 `evaluation` 의 공개 타입이고, 이 모듈의 `TagSetView` 가 그것으로 체계 내용을 담는다. 태그 기준 · 저장 기준의 이력과 버전의 행위자 종류는 `platform` 의 `ChangeActor` 다.
 
