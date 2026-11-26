@@ -1,6 +1,7 @@
 package net.yozmnews.platform.adapter.in.web;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,9 +26,11 @@ import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.PublicApis;
 import net.yozmnews.platform.RequestLimited;
 import net.yozmnews.platform.WebRole;
+import org.springdoc.core.customizers.GlobalOpenApiCustomizer;
 import org.springdoc.core.customizers.OpenApiBuilderCustomizer;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springdoc.core.customizers.OperationCustomizer;
+import org.springdoc.core.utils.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,8 +42,8 @@ import org.springframework.web.util.pattern.PathPattern;
 import org.springframework.web.util.pattern.PathPatternParser;
 
 /**
- * 화면용 API 명세의 고정 값과 속성 규칙, 운영자 경로 · 세션 경로 연산의 거부 응답, 스키마 이름 겹침 검사 — docs/specs/platform.md §4 ·
- * platform-R6
+ * 화면용 API 명세의 고정 값과 속성 규칙, 운영자 경로 · 세션 경로 연산의 거부 응답, 스키마 이름 · 연산 ID 겹침 검사 —
+ * docs/specs/platform.md §4 · platform-R6
  */
 @WebRole
 @Configuration(proxyBeanMethods = false)
@@ -87,6 +90,36 @@ class OpenApiConfiguration {
 	@Bean
 	OpenApiCustomizer schemaNameCollisions() {
 		return openApi -> SchemaNameCheck.finish(openApi.getComponents());
+	}
+
+	/**
+	 * 명세의 연산 ID 가 겹치지 않음을 확인한다 — platform-R129. springdoc 이 같은 bean 이름으로 등록하는 연산 ID 접미사 장치(겹친 연산 ID
+	 * 에 {@code _1} 을 붙인다) 대신 선다.
+	 * @throws IllegalStateException 두 연산이 같은 연산 ID 를 받았을 때
+	 */
+	@Bean(Constants.GLOBAL_OPEN_API_CUSTOMIZER)
+	GlobalOpenApiCustomizer uniqueOperationIds() {
+		return openApi -> {
+			if (openApi.getPaths() == null) {
+				return;
+			}
+			Map<String, List<String>> operations = new LinkedHashMap<>();
+			openApi.getPaths()
+				.forEach((path, item) -> item.readOperationsMap().forEach((method, operation) -> {
+					if (operation.getOperationId() != null) {
+						operations.computeIfAbsent(operation.getOperationId(), id -> new ArrayList<>())
+							.add(method + " " + path);
+					}
+				}));
+			List<String> collisions = operations.entrySet()
+				.stream()
+				.filter(entry -> entry.getValue().size() > 1)
+				.map(entry -> "명세 연산 ID 가 겹친다 — " + entry.getKey() + ": " + String.join(" · ", entry.getValue()))
+				.toList();
+			if (!collisions.isEmpty()) {
+				throw new IllegalStateException(String.join("\n", collisions));
+			}
+		};
 	}
 
 	@Bean

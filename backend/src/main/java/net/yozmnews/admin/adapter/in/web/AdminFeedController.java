@@ -41,7 +41,7 @@ class AdminFeedController {
 	@ApiResponse(responseCode = "409", description = "다른 요청이 먼저 바꿨거나 측정용 시계라 실제 피드를 요청하지 않는다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	FeedEnableResponse enable(@PathVariable long id) {
+	FeedEnableResponse enableFeed(@PathVariable long id) {
 		return FeedEnableResponse.of(this.administration.enableFeed(AdminIds.feed(id)));
 	}
 
@@ -53,7 +53,7 @@ class AdminFeedController {
 	@ApiResponse(responseCode = "409", description = "다른 요청이 먼저 바꿨다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	void disable(@PathVariable long id) {
+	void disableFeed(@PathVariable long id) {
 		this.administration.disableFeed(AdminIds.feed(id));
 	}
 
@@ -68,7 +68,7 @@ class AdminFeedController {
 	@ApiResponse(responseCode = "409", description = "다른 요청이 먼저 바꿨다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	void changePollInterval(@PathVariable long id, @RequestBody PollIntervalRequest body) {
+	void changeFeedPollInterval(@PathVariable long id, @RequestBody PollIntervalRequest body) {
 		if (!this.administration.changeFeedPollInterval(AdminIds.feed(id), body.minutes())) {
 			throw PollIntervals.belowMinimum();
 		}
@@ -82,7 +82,7 @@ class AdminFeedController {
 	@ApiResponse(responseCode = "409", description = "다른 요청이 먼저 바꿨다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	FeedRemovalResponse hide(@PathVariable long id) {
+	FeedRemovalResponse hideFeed(@PathVariable long id) {
 		return FeedRemovalResponse.of(this.administration.hideFeed(AdminIds.feed(id)));
 	}
 
@@ -91,7 +91,7 @@ class AdminFeedController {
 	@ApiResponse(responseCode = "404", description = "없는 피드이거나 숨긴 소스의 피드다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	FeedRemovalResponse delete(@PathVariable long id) {
+	FeedRemovalResponse deleteFeed(@PathVariable long id) {
 		return FeedRemovalResponse.of(this.administration.deleteFeed(AdminIds.feed(id)));
 	}
 
@@ -103,7 +103,7 @@ class AdminFeedController {
 	@ApiResponse(responseCode = "409", description = "다른 요청이 먼저 바꿨다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	void unhide(@PathVariable long id) {
+	void unhideFeed(@PathVariable long id) {
 		this.administration.unhideFeed(AdminIds.feed(id));
 	}
 
