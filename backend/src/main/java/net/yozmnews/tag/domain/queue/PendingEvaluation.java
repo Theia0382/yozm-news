@@ -13,7 +13,7 @@ import org.jspecify.annotations.Nullable;
  *
  * @param eligibleAt 이 시각부터 평가할 수 있다 — 정착 시간 · 재시도 간격이 정한다
  * @param attempts 지금까지의 일시 실패 수
- * @param lease 회차의 점유 — 없으면 null
+ * @param lease 뭉치의 점유 — 없으면 null
  * @param failure 실패로 남은 까닭 — 대기 중이면 null. 실패로 남은 행은 점유가 없다
  * @param lastError 마지막 실패의 운영자용 문구 — 없으면 null
  */
@@ -35,7 +35,7 @@ public record PendingEvaluation(ArticleId articleId, Instant eligibleAt, int att
 	}
 
 	/**
-	 * 회차가 점유한다 — 점유 기간은 {@link EvaluationSchedule#LEASE}.
+	 * 뭉치가 점유한다 — 점유 기간은 {@link EvaluationSchedule#LEASE}.
 	 * @throws IllegalStateException 실패로 남은 행일 때
 	 */
 	public PendingEvaluation claim(UUID token, Instant now) {

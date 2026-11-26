@@ -14,7 +14,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 지금 평가할 대기의 점유 — docs/specs/tag.md §4 · tag-R19.
  * <p>
- * 한 트랜잭션에서 평가할 수 있는 대기 행을 잠그고 점유를 써 커밋한다. 다른 회차 · 인스턴스가 잡은 행은 건너뛴다.
+ * 한 트랜잭션에서 평가할 수 있는 대기 행을 잠그고 점유를 써 커밋한다. 다른 뭉치 · 인스턴스가 잡은 행은 건너뛴다.
  */
 @Service
 class PendingEvaluations {

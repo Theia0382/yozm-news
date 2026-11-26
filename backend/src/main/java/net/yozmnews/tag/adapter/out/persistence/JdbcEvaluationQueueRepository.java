@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.tag.EvaluationQueueCounts;
+import net.yozmnews.tag.domain.queue.EvaluationBacklog;
 import net.yozmnews.tag.domain.queue.EvaluationLease;
 import net.yozmnews.tag.domain.queue.EvaluationQueueRepository;
 import net.yozmnews.tag.domain.queue.EvaluationSchedule;
@@ -125,15 +125,17 @@ class JdbcEvaluationQueueRepository implements EvaluationQueueRepository {
 	}
 
 	@Override
-	public EvaluationQueueCounts counts() {
+	public EvaluationBacklog counts(Instant now) {
 		return this.jdbc.sql("""
 				select count(*) filter (where failure is null) as waiting,
 				    count(*) filter (where failure = 'ARTICLE_REJECTED') as rejected,
-				    count(*) filter (where failure is null and attempts > 0) as retrying
+				    count(*) filter (where failure is null and attempts > 0) as retrying,
+				    count(*) filter (where failure is null and eligible_at > :now) as deferred
 				from evaluation_queue
 				""")
-			.query((rs, row) -> new EvaluationQueueCounts(rs.getLong("waiting"), rs.getLong("rejected"),
-					rs.getLong("retrying")))
+			.param("now", timestamp(now))
+			.query((rs, row) -> new EvaluationBacklog(rs.getLong("waiting"), rs.getLong("rejected"),
+					rs.getLong("retrying"), rs.getLong("deferred")))
 			.single();
 	}
 

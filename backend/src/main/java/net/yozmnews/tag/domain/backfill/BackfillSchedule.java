@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * 빠진 태그 채움의 일정 — 시작 지연 · 점유 기간 · 묶음 크기의 정본 · docs/specs/tag.md §5.
+ * 빠진 태그 채움의 일정 — 시작 지연 · 점유 기간 · 뭉치 크기의 정본 · docs/specs/tag.md §5.
  * <p>
  * 값은 모두 측정 전 목표다.
  */
@@ -16,10 +16,10 @@ public final class BackfillSchedule {
 	 */
 	public static final Duration START_DELAY = Duration.ofMinutes(1);
 
-	/** 회차가 채움을 점유하는 기간 — 묶음마다 갱신한다. 만료되면 다른 회차가 커서부터 잇는다 */
+	/** 회차가 채움을 점유하는 기간 — 뭉치마다 갱신한다. 만료되면 다른 회차가 커서부터 잇는다 */
 	public static final Duration LEASE = Duration.ofMinutes(10);
 
-	/** 묶음 하나의 평가 수 — 묶음마다 트랜잭션 하나 */
+	/** 뭉치 하나의 평가 수 — 뭉치마다 트랜잭션 하나 */
 	public static final int BATCH = 500;
 
 	private BackfillSchedule() {
