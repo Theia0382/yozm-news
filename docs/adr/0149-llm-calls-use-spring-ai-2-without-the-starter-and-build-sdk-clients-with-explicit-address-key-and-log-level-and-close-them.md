@@ -44,5 +44,6 @@
 
 ## 후속 기록
 
+- 2026-11-14: 결과 절 "SDK 의 jar 만 약 108 MB 다" 의 실측 — Spring AI 를 더한 LLM 공급자 라이브러리가 앱 jar 에 약 123 MB 를 더한다. 더한 뒤의 이미지 크기는 재지 않았다(배포 문서의 측정 기록, d59a72f)
 - 2026-11-17: 결정 절 "SDK 의 자동 재시도를 쓸지와 마감은 호출마다 이 모듈이 정해 넘긴다" — 생성 호출의 다시 보내기와 호출 종류마다의 마감 — [ADR-0201](0201-the-gateway-resends-only-transient-generation-failures-and-sets-the-request-deadline-per-call-kind.md) · [llm Spec](../specs/llm.md#키-검증) llm-R7 · [생성 호출](../specs/llm.md#생성-호출) llm-R20
 - 2026-11-17: 결정 절 "SDK 의 로그 수준을 꺼짐으로 명시한다" — Spring AI 채팅 모델의 로그도 앱 설정이 끈다 — [llm Spec](../specs/llm.md#생성-호출) llm-R24

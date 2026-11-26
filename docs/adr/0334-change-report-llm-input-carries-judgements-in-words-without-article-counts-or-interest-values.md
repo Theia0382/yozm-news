@@ -3,7 +3,7 @@
 - 상태: 승인
 - 날짜: 2026-11-25
 - 근거: [이슈 #242](https://github.com/Theia0382/yozm-news/issues/242) — 측정 인스턴스에서 만든 리포트 16편의 본문이 "구독 주제 보도량은 사회 2,318건", "관심이 0.2 에서 0.96 으로" 같은 수와 `FELL` · `STEADY` · `NO_COMPARISON` · `QUIET` 같은 값 이름을 그대로 옮겼다. 구독 주제 보도량은 그 인스턴스가 모은 기사 전체를 주제마다 센 수(tag-R30)이고 사용자의 제외 소스 · 형식 · 지역을 보지 않는다. 구현 `d467815`
-- 관련: [ADR-0306](0306-a-change-report-compares-subscribed-topic-coverage-and-flow-coverage-each-only-with-its-own-previous-value.md)(부분 대체 — 결과의 "생성 지시가 두 수를 견주지 않게"), [ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md)(갈래 셋은 그대로), [ADR-0305](0305-a-change-report-describes-flows-by-the-user-storyline-summary-and-events-by-the-representative-article-title-and-cites-a-flow-by-its-head.md)(흐름 · 사건을 이름으로 부르는 것과 같은 방향)
+- 관련: [ADR-0306](0306-a-change-report-compares-subscribed-topic-coverage-and-flow-coverage-each-only-with-its-own-previous-value.md)(부분 대체 — 결과의 "생성 지시가 두 수를 견주지 않게"), [ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md)(섹션 종류 구성은 바꾸지 않는다), [ADR-0305](0305-a-change-report-describes-flows-by-the-user-storyline-summary-and-events-by-the-representative-article-title-and-cites-a-flow-by-its-head.md)(흐름 · 사건을 이름으로 부르는 것과 같은 방향)
 
 ## 맥락
 

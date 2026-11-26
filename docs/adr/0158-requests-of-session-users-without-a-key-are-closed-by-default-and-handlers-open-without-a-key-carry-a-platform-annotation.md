@@ -18,7 +18,7 @@
 - 비밀번호 강제 변경이 먼저다 — 강제 변경 중인 세션 사용자는 변경 전 허용 표시만으로 판정한다.
 - 키 유무는 요청마다 `credential` 에 묻고 세션에 저장하지 않는다. 표시가 있는 처리기 · 공개 처리기의 요청에는 묻지 않는다.
 
-규칙은 [user Spec](../specs/user.md#옮긴-규칙) user-R5, [platform Spec](../specs/platform.md#화면용-api-경로와-공개-처리기) platform-R21 에 있다.
+규칙은 [user Spec](../specs/user.md#폐지한-규칙) user-R5, [platform Spec](../specs/platform.md#화면용-api-경로와-공개-처리기) platform-R21 에 있다.
 
 ## 결과
 

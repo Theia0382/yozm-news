@@ -36,4 +36,4 @@
 
 ## 후속 기록
 
-- 2026-11-15: 결정 절 "보안 구성 전체를 `user` 모듈이 갖는다"의 범위(요청 방어) — [ADR-0169](0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [`user` "요청 방어"](../specs/user.md#옮긴-규칙) user-R40
+- 2026-11-15: 결정 절 "보안 구성 전체를 `user` 모듈이 갖는다"의 범위(요청 방어) — [ADR-0169](0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [`user` "요청 방어"](../specs/user.md#폐지한-규칙) user-R40

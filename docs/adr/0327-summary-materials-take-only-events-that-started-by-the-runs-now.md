@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-25
-- 근거: [이슈 #242](https://github.com/Theia0382/yozm-news/issues/242) — 실측 인스턴스의 덤프로 측정용 시계를 지난 날짜에서 출발시키면, 정리 재료(스토리라인의 타임라인)가 덤프 시점까지의 사건을 모두 실어 지난 날짜의 정리에 뒷날의 전개가 들어가는 것을 코드에서 확인했다. 그 정리가 변화 리포트의 스토리라인 갈래와 다이제스트 항목의 사용자 스토리라인 이름으로 간다. 구현 `fcaf14d`
+- 근거: [이슈 #242](https://github.com/Theia0382/yozm-news/issues/242) — 실측 인스턴스의 덤프로 측정용 시계를 지난 날짜에서 출발시키면, 정리 재료(스토리라인의 타임라인)가 덤프 시점까지의 사건을 모두 실어 지난 날짜의 정리에 뒷날의 전개가 들어가는 것을 코드에서 확인했다. 그 정리가 변화 리포트의 추적한 사용자 스토리라인 섹션 종류(`STORYLINES`)와 다이제스트 항목의 사용자 스토리라인 이름으로 간다. 구현 `fcaf14d`
 - 관련: [ADR-0288](0288-summaries-are-made-after-a-digest-ends-only-for-changed-flows-and-extended-with-new-events.md)(보충 — 정리의 재료 범위), [ADR-0253](0253-the-measurement-clock-does-not-collect-feeds.md)(보충 — 측정 오염을 막는 범위), [ADR-0251](0251-the-measurement-clock-starts-only-with-the-measurement-profile-and-a-clock-row-and-moves-forward-through-the-operator-api.md)(측정용 시계)
 
 ## 맥락
@@ -17,7 +17,7 @@
 - **정리 재료는 첫 기사 시각이 그 실행의 지금 이하인 사건만 싣는다.** 같은 시각이면 싣는다. 기준 시각은 그 실행이 처분에 쓰는 지금과 같은 값이다 — 재료 읽기가 시계를 따로 읽지 않는다.
 - **사건의 대표 기사와 스토리라인 구조는 자르지 않는다.** 사건은 한 번 일어난 일이라 시간 범위가 작다. 스토리라인의 소속 · 관계 · 사용자 스토리라인 묶음과 거기서 나오는 대표 사건 · 타임라인은 시각으로 자를 기준이 없다.
 
-규칙은 [user Spec](../specs/user.md#사용자-스토리라인의-정리) user-R70 에 있다.
+규칙은 [user Spec](../specs/user.md#사용자-스토리라인의-정리) user-R70 · R142 에 있다.
 
 ## 결과
 

@@ -50,5 +50,6 @@
 
 ## 후속 기록
 
+- 2026-11-11: 결과 절 "같은 트랜잭션 모양의 평가 현황(버전 하나)은 1.74 ~ 2.28초" 의 실측 — 입력 토큰을 평가 행에서 함께 읽던 구조의 값이고, 판정 원본의 입력 토큰을 `evaluation` 에서 따로 읽는 구조([ADR-0112](0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md))를 더한 시간은 재지 않았다(tag Spec 의 측정 기록, 22a519f)
 - 2026-11-18: 맥락 · 결과의 "관심사 히스토리가 보도량을 쓴다" — [ADR-0227](0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md), 지금 상태는 [tag Spec "TopicCoverage"](../specs/tag.md#topiccoverage--topiccoverageresult--topiccoverageview--categorycoverage--subtopiccoverage)
 - 2026-11-26: 맥락 · 결과의 "변화 리포트가 보도량을 쓴다" — [ADR-0339](0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md), 지금 상태는 [tag Spec "TopicCoverage"](../specs/tag.md#topiccoverage--topiccoverageresult--topiccoverageview--categorycoverage--subtopiccoverage)

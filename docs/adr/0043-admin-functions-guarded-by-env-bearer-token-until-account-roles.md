@@ -50,4 +50,4 @@
 
 ## 후속 기록
 
-- 2026-11-13: 결정 절 "계정 인증이 생기면"의 괄호(첫 운영자를 만드는 방법) — [ADR-0139](0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md) · [`user` user-R34](../specs/user.md#옮긴-규칙)
+- 2026-11-13: 결정 절 "계정 인증이 생기면"의 괄호(첫 운영자를 만드는 방법) — [ADR-0139](0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md) · [`user` user-R34](../specs/user.md#폐지한-규칙)

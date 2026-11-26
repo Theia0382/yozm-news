@@ -1,4 +1,4 @@
-// 관심 값의 색 칸 — 관심사 히스토리와 변화 리포트의 관심 표가 함께 쓴다(docs/specs/reader.md reader-R16).
+// 관심 값의 색 칸 — 관심사 히스토리와 변화 리포트의 관심 표가 함께 쓴다(docs/specs/web.md web-R28).
 
 /** 칸의 색 — 관심 쪽은 주 색, 싫어요 쪽은 경고 색, 신호 없음 · 0 은 바탕 */
 export function cellColor(level: number | null): string {

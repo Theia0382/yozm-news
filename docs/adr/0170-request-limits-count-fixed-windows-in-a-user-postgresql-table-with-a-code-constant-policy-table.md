@@ -38,4 +38,4 @@
 
 ## 후속 기록
 
-- 2026-11-17: 결정 절 "한도는 코드 상수 정책 표 하나(`RequestLimits`)다"의 동작에 좋아요 / 싫어요 기록(세션 사용자 축) — [ADR-0198](0198-feedback-recording-is-request-limited-per-session-user.md) · [`user` user-R38](../specs/user.md#옮긴-규칙)
+- 2026-11-17: 결정 절 "한도는 코드 상수 정책 표 하나(`RequestLimits`)다"의 동작에 좋아요 / 싫어요 기록(세션 사용자 축) — [ADR-0198](0198-feedback-recording-is-request-limited-per-session-user.md) · [`user` user-R38](../specs/user.md#폐지한-규칙)

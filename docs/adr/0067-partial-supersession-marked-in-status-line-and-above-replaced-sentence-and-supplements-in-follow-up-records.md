@@ -1,6 +1,6 @@
 # ADR-0067: ADR 의 부분 대체는 상태 줄과 대체된 문장 위 표시로 알리고, 결정을 바꾸지 않는 보충은 후속 기록으로 남긴다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 후속 기록에 적는 것([ADR-0332](0332-reasons-and-measurements-belong-to-the-deciding-adr-are-dropped-without-one-and-unmeasured-values-are-marked.md))
 - 날짜: 2026-11-04
 - 근거: [이슈 #49](https://github.com/Theia0382/yozm-news/issues/49) — 기점 `d31e2a7` 의 ADR 66개에서 상태 줄 · `관련:` 줄 · 본문의 다른 ADR 인용 · 후속 기록을 서로 대조했고, 대체 표시를 표 · 목록 옆에 둔 견본을 CommonMark 렌더러(markdown-it-py, 표 확장)로 렌더링해 확인
 - 관련: [ADR-0034](0034-module-spec-as-public-interface-specification-and-docs-by-kind.md)(문서를 종류 · 독자별 갈래로 나눈다 — 대체 표시가 가리키는 현재 상태 문서), [ADR-0037](0037-domain-may-use-non-replaceable-framework-types.md)(후속 기록은 다른 ADR 을 가리키는 자리)
@@ -19,6 +19,7 @@
 - **부분 대체와 보충은 질문 하나로 가른다 — 옛 문장을 지금 읽으면 지금 결정과 다른 것을 믿게 되는가.** 그렇다면 부분 대체다. 좁힘 · 넓힘 · 철회도 여기에 들고, 이름은 "부분 대체" 하나로 쓴다. 아니면 보충이다 — 미뤄 둔 사항을 다른 ADR 이 정했거나, 옛 범위 밖으로 더했거나, 문면이 구현과 어긋나는 것 등이고, 말미 후속 기록에 남긴다.
 - **대체 표시는 대체한 ADR 과 지금 상태의 자리만 적는다.** 자리는 그 지식을 소유한 현재 상태 문서의 절이다 — `overview` · 모듈 Spec 에 그치지 않고 개발 인프라 · 운영 · 전환 중 문서까지 문서 위계 전체에서 고르고, 규칙 식별자가 있으면 함께 적는다. 소유 문서가 없으면 자리를 뺀다. 새 결정의 내용은 옮겨 적지 않는다.
 - **상태 줄은 대체된 부분의 이름과 대체한 ADR 을, ADR 목록 표의 상태 열은 대체한 ADR 번호만 적는다.**
+> 부분 대체 — [ADR-0332](0332-reasons-and-measurements-belong-to-the-deciding-adr-are-dropped-without-one-and-unmeasured-values-are-marked.md). 지금 상태: [`adr/README` "후속 기록"](README.md#후속-기록)
 - **후속 기록은 날짜와 한 줄로, 옛 자리와 그 자리를 정하거나 보충한 ADR · 지금 상태 문서의 자리만 적는다.** 정해진 내용은 옮겨 적지 않는다.
 - **새 ADR 은 `관련:` 줄에 옛 ADR 과 그 범위를 적고, 같은 작업에서 옛 ADR 에 알린다.**
 - 이미 있는 ADR 에도 소급한다 — 상태 줄이 알린 부분 대체와, 새 ADR 이 선언했는데 옛 ADR 에 기록이 없는 것. 어느 쪽에도 선언되지 않은 부분 대체를 찾는 전체 감사는 하지 않는다.

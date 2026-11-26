@@ -72,7 +72,7 @@ function readId(value: string | undefined): number | null {
 
 /**
  * 변화 리포트 한 편 — 상태(만드는 중 · 비어 있음 · 실패 · 내용), 갈래 섹션마다 고정 제목 · 요지(모델이 쓴 제목) · 본문 · 그 갈래의 표 · 인용,
- * 숨긴 섹션 안내, 직전 리포트, 모델 · 토큰(docs/specs/reader.md reader-R16). 표는 리포트가 만들 때 남긴 값 그대로다
+ * 숨긴 섹션 안내, 직전 리포트, 모델 · 토큰(docs/specs/web.md web-R17). 표는 리포트가 만들 때 남긴 값 그대로다
  */
 export function ReportPage() {
   const id = readId(useParams().id);

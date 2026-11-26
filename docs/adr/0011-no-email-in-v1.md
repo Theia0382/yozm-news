@@ -41,4 +41,4 @@
 
 ## 후속 기록
 
-- 2026-11-13: 결정 절 "보안 알림 메일 … 화면 안 알림"의 비밀번호 알림을 남기는 때 — [ADR-0145](0145-password-notices-are-left-for-password-changes-and-recovery-resets-but-not-for-the-forced-first-sign-in-change.md) · [`user` user-R29](../specs/user.md#옮긴-규칙)
+- 2026-11-13: 결정 절 "보안 알림 메일 … 화면 안 알림"의 비밀번호 알림을 남기는 때 — [ADR-0145](0145-password-notices-are-left-for-password-changes-and-recovery-resets-but-not-for-the-forced-first-sign-in-change.md) · [`user` user-R29](../specs/user.md#폐지한-규칙)

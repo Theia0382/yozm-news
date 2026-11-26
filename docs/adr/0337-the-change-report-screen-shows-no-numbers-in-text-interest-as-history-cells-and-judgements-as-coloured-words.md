@@ -18,7 +18,7 @@
 - **관심 변화 칸은 색 낱말이다** — 새로 생긴 관심은 주 색, 사라진 관심은 경고 색, 변화 없음은 바탕색.
 - **화면용 API 는 수를 그대로 싣는다** — 화면이 글자로 그리지 않을 뿐이다.
 
-규칙은 [reader Spec](../specs/reader.md#변화-리포트) reader-R16 에 있다.
+규칙은 [web Spec](../specs/web.md#변화-리포트) web-R17 · web-R26 ~ R29 에 있다. 응답이 수를 그대로 싣는 것은 [reader Spec](../specs/reader.md#변화-리포트) reader-R16 이다.
 
 ## 결과
 

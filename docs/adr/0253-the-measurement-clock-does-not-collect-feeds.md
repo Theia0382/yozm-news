@@ -37,4 +37,4 @@
 
 ## 후속 기록
 
-- 2026-11-25: 맥락 절 "새 기사가 섞이면 측정이 오염된다"의 정리 재료 — [ADR-0327](0327-summary-materials-take-only-events-that-started-by-the-runs-now.md) · [user Spec](../specs/user.md#사용자-스토리라인의-정리) user-R70
+- 2026-11-25: 맥락 절 "새 기사가 섞이면 측정이 오염된다"의 정리 재료 — [ADR-0327](0327-summary-materials-take-only-events-that-started-by-the-runs-now.md) · [user Spec](../specs/user.md#사용자-스토리라인의-정리) user-R142

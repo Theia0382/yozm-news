@@ -42,4 +42,4 @@
 
 ## 후속 기록
 
-- 2026-11-15: 결과 절 "운영자 계정이 운영의 필수가 되면 … 이 판단을 다시 본다" — [ADR-0183](0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md) 결과 절 · [`user` user-R34](../specs/user.md#옮긴-규칙)
+- 2026-11-15: 결과 절 "운영자 계정이 운영의 필수가 되면 … 이 판단을 다시 본다" — [ADR-0183](0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md) 결과 절 · [`user` user-R34](../specs/user.md#폐지한-규칙)

@@ -55,3 +55,4 @@
 ## 후속 기록
 
 - 2026-11-15: 결정 절 "처음 값은 평가 세트로 정한 측정 전 목표다" — 처음 값을 평가 세트와 운영자의 날마다 미리보기 검수로 정했다([ADR-0174](0174-big-judgement-criterion-first-value-kept-by-operator-daily-preview-review-where-the-evaluation-set-cannot-separate-neighbours.md)), 지금 값은 [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정)
+- 2026-11-15: 결과 절 "큰 스토리라인 조회와 목록 조회가 기간 전체를 한 번 더 읽는다 — 그 시간은 재지 않았다" 의 실측 — 큰 판정 · 목록 조회의 시간을 두 주 기간까지 쟀다([이슈 #126](https://github.com/Theia0382/yozm-news/issues/126), 61148d3)

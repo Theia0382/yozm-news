@@ -17,7 +17,7 @@
 - **월간의 흐름 줄은 보도의 변화 없이 상태와 사건으로 쓴다** — 지시가 "흐름은 상태와 사건으로 그 기간의 전개를 쓴다"고 한다.
 - **스냅숏 흐름 줄에 생성 때 헤드의 상태를 남기고, 월간 흐름 표는 그 상태를 색 낱말로 보인다** — 화면은 기간 종류로 표의 열(판정 · 상태)을 고른다. 월간의 직전 리포트 줄은 "비교한"을 쓰지 않는다.
 
-규칙은 [report Spec](../specs/report.md#재료) report-R15 · R18 · R19 · R23 과 [reader Spec](../specs/reader.md#변화-리포트) reader-R16 에 있다.
+규칙은 [report Spec](../specs/report.md#재료) report-R15, [직전 리포트와 스냅숏](../specs/report.md#직전-리포트와-스냅숏) report-R18 · R19, [프롬프트](../specs/report.md#프롬프트) report-R23 과 [web Spec](../specs/web.md#변화-리포트) web-R17 · web-R27 에 있다. 월간에 직전 값을 잇지 않는 규칙은 report-R174 다.
 
 ## 결과
 

@@ -44,4 +44,4 @@
 
 ## 후속 기록
 
-- 2026-11-25: 결정 절 "사건은 대표 기사의 제목과 저장된 요약문으로 싣는다"의 재료 범위 — [ADR-0327](0327-summary-materials-take-only-events-that-started-by-the-runs-now.md) · [user Spec](../specs/user.md#사용자-스토리라인의-정리) user-R70
+- 2026-11-25: 결정 절 "사건은 대표 기사의 제목과 저장된 요약문으로 싣는다"의 재료 범위 — [ADR-0327](0327-summary-materials-take-only-events-that-started-by-the-runs-now.md) · [user Spec](../specs/user.md#사용자-스토리라인의-정리) user-R142

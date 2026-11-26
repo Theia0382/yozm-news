@@ -12,7 +12,12 @@
 ## M1. 수집
 
 - 수집 프로필과 주요 언론사 프리셋, 소스 · 피드 켜기 · 끄기, 운영자 프로필 작성과 활성화 미리보기 관문 (운영자 API, 최소 화면) ([ADR-0015](adr/0015-source-presets-and-collection-profiles.md))
-- 수집 스케줄링, 조건부 GET, 파싱, 정규화, L1·L2 중복 제거
+- 수집 과정
+  - 수집 스케줄링
+  - 조건부 GET
+  - 파싱
+  - 정규화
+  - L1·L2 중복 제거
 - 피드 상태 관리(`DEGRADED`, `STALE`)
 - 조사한 국내 피드 형식 이상 사례를 테스트 픽스처로 만든다. 직접 작성한 합성 데이터로 만든다.
 - **완료 기준**: 피드 10개 이상이 48시간 연속 수집되고, 중복률·날짜 추정 비율이 운영자 화면에 보인다.
@@ -22,48 +27,91 @@
 - 태그 체계 버전 관리, 질문·설명·중요도 기준 관리, 태그 기준 · 저장 기준, 태그 키 계보(이름 변경 · 분할 · 병합)
 - `ArticleEvaluator` + `JevArticleEvaluator`, Spring profile `local`의 `FakeArticleEvaluator`, 평가 대기열과 재시도
 - 주제별 보도량 집계 조회
-- 운영자 화면: 태그 분포, 기사당 태그 수, 확률 분포, 기사별 평가 결과, 요청당 토큰
+- 운영자 화면
+  - 태그 분포
+  - 기사당 태그 수
+  - 확률 분포
+  - 기사별 평가 결과
+  - 요청당 토큰
 - **완료 기준**: 1주일치 기사가 평가되고, 운영자가 표본 100건을 검수해 주제 · 지역의 태그 기준 초기값을 정한다.
 
 ## M3. 사건 묶기
 
 - PostgreSQL 이미지를 pgvector 이미지로 바꾸고 확장을 설치한다 ([ADR-0027](adr/0027-pgvector-for-vector-storage.md))
-- `ArticleEmbedder` 와 로컬 임베딩 구현 · 로컬 대체물, 고유명사 추출, 산식 판정과 애매한 구간의 Jev 사건 소속 판정, 사건 병합 · 닫기 ([ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md))
+- 사건 묶기 구현([ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md))
+  - `ArticleEmbedder` 와 로컬 임베딩 구현 · 로컬 대체물
+  - 고유명사 추출
+  - 산식 판정과 애매한 구간의 Jev 사건 소속 판정
+  - 사건 병합 · 닫기
 - 운영자 화면: 사건 목록, 사건별 기사, 애매한 판정 기록
 - 수집한 기사로 사건 라벨 평가 세트를 만든다
-- **완료 기준**: 평가 세트로 묶음 정확도(B-cubed F1)를 재고, 운영자가 표본을 검수해 임계값을 정한다. arm64 지원 방향(실행 검사 추가 또는 지원 철회)을 정한다.
+- **완료 기준**
+  - 평가 세트로 군집 정확도(B-cubed F1)를 재고, 운영자가 표본을 검수해 임계값을 정한다
+  - arm64 지원 방향(실행 검사 추가 또는 지원 철회)을 정한다
 
 ## M4. 스토리라인
 
-- 사건들을 잇는 공유 스토리라인 — 사용자와 무관, 운영자 비용, 생성형 LLM 없음. 잇는 방법(사건의 소속 여럿, 스토리라인 사이의 포함과 이어짐(인과))을 이 마일스톤이 정한다 ([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
-- 스토리라인의 큰 판정 — `event` 의 큰 사건 판정 · 기준 · 운영자 API · 화면과 평가 도구의 큰 사건 측정을 거둔다 ([ADR-0103](adr/0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md))
+- 사건들을 잇는 공유 스토리라인([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
+  - 사용자와 무관하고, 운영자 비용이며, 생성형 LLM 을 쓰지 않는다
+  - 잇는 방법은 이 마일스톤이 정한다. 사건의 소속은 여럿일 수 있고, 스토리라인 사이에는 포함과 이어짐(인과)이 있다
+- 스토리라인의 큰 판정([ADR-0103](adr/0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)). 큰 사건에 관한 아래 것을 거둔다
+  - `event` 의 큰 사건 판정 · 기준
+  - `event` 의 큰 사건 운영자 API · 화면
+  - 평가 도구의 큰 사건 측정
 - 운영자 화면: 스토리라인 목록, 스토리라인별 사건, 큰 판정 결과
 - 스토리라인 라벨 평가 세트를 만든다
 - **완료 기준**: 평가 세트로 스토리라인 잇기 품질과 큰 판정 정밀도를 재고, 운영자가 표본을 검수해 기준을 정한다.
 
 ## M5. 사용자와 키
 
-- 자체 로그인(복구 코드, 봇 차단), 가입 정책(기본 닫힘 · 공개 가입 설정, 초대 링크, 운영자 계정 생성, 첫 운영자), 세션, CSRF
-- 운영자 경로(`/api/admin/**`)의 인증을 운영자 토큰에서 `ADMIN` 역할 계정의 세션으로 바꾸고 CSRF 를 켠다 — 경로와 역할 판정은 그대로이고, 운영자 토큰은 스크립트용으로 남는다([ADR-0183](adr/0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md))
-- 화면 내 알림(비밀번호 변경, 키 무효, 다이제스트 실패, 피드 상태 변화 — 운영자)
+- 자체 로그인(복구 코드, 봇 차단), 세션, CSRF
+- 가입 정책
+  - 기본 닫힘 · 공개 가입 설정
+  - 초대 링크
+  - 운영자 계정 생성
+  - 첫 운영자
+- 운영자 경로(`/api/admin/**`)의 인증을 운영자 토큰에서 `ADMIN` 역할 계정의 세션으로 바꾸고 CSRF 를 켠다. 경로와 역할 판정은 그대로이고, 운영자 토큰은 스크립트용으로 남는다([ADR-0183](adr/0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md))
+- 화면 내 알림(비밀번호 변경, 키 무효, 다이제스트 실패, 운영자에게 피드 상태 변화)
 - BYOK 키 등록·검증·삭제(OpenAI, Anthropic), envelope encryption, API 키 발급 안내
 - 키가 없는 사용자는 키 등록 페이지로만 이동
-- 관심 설정: 구독 주제, 지역·형식 제외, 자유 텍스트 관심사, 제외 소스, 생성 시각, 변화 리포트 설정
+- 관심 설정
+  - 구독 주제
+  - 지역·형식 제외
+  - 제외 소스
+  - 생성 시각
+  - 변화 리포트 설정
 - 개인정보 고지: 외부 전송 항목과 수집 항목(신호 이력 포함)
-- **완료 기준**: 사용자 간 데이터 격리 테스트 통과, 로그·오류 응답에 키가 남지 않음을 테스트로 확인한다. 계정 존재 노출 방지와 로그인 실패 지연이 테스트로 확인된다. 닫힌 가입에서 초대 없는 가입이 거부되고, 공개 가입을 켠 경로의 방어가 동작하는 것이 테스트로 확인된다.
+- **완료 기준**
+  - 사용자 간 데이터 격리 테스트가 통과하고, 로그·오류 응답에 키가 남지 않음을 테스트로 확인한다
+  - 계정 존재 노출 방지와 로그인 실패 지연이 테스트로 확인된다
+  - 닫힌 가입에서 초대 없는 가입이 거부되고, 공개 가입을 켠 경로의 방어가 동작하는 것이 테스트로 확인된다
 
 ## M6. 다이제스트
 
-- `DigestGenerator` + Spring profile `local`의 `FakeDigestGenerator`, 후보 선별(구독 필터 · 큰 스토리라인 슬롯 · 사건 단위 중복 제거 · 선정 이유 — 관심도는 중립), 프롬프트, 구조화 출력 검증, 저장
+- 생성 과정
+  - `DigestGenerator` + Spring profile `local`의 `FakeDigestGenerator`
+  - 후보 선별(구독 필터 · 큰 스토리라인 슬롯 · 사건 단위 중복 제거 · 선정 이유). 관심도는 중립이다
+  - 프롬프트
+  - 구조화 출력 검증
+  - 저장
 - 다이제스트가 스토리라인을 쓰는 방법(큰 슬롯에 넣는 기사, 사용자마다 달라지는 스토리라인 정보) ([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md) · [ADR-0103](adr/0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md))
 - 일정 기반 생성과 수동 재생성(횟수 제한)
-- 웹 UI: 오늘의 다이제스트, 지난 다이제스트, 원문 링크, 생성 상태와 토큰 사용량, 스토리라인 목록 · 타임라인
+- 웹 UI
+  - 오늘의 다이제스트
+  - 지난 다이제스트
+  - 원문 링크
+  - 생성 상태와 토큰 사용량
+  - 스토리라인 목록 · 타임라인
 - 이 마일스톤부터 테스트 사용자의 이력 데이터를 버리지 않는다. 이후 스키마 변경은 이 데이터를 보존하는 마이그레이션으로 한다
 - **완료 기준**: 테스트 사용자 몇 명이 1주일간 매일 다이제스트를 받는다. 실패율과 평균 토큰 사용량을 측정한다.
 
 ## M7. 피드백과 관심사 히스토리
 
-- 다이제스트 항목의 좋아요/싫어요(항목의 사건마다 기록), 싫어요 사건 후보 제외, 스토리라인 구독 · 해제, 구독 변경 이력 — 추가 전용 기록 ([ADR-0028](adr/0028-explicit-signals-and-interest-weighted-candidates.md) · [ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
+- 좋아요/싫어요와 스토리라인 구독. 신호는 추가 전용 기록으로 남긴다([ADR-0028](adr/0028-explicit-signals-and-interest-weighted-candidates.md) · [ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
+  - 다이제스트 항목의 좋아요/싫어요(항목의 사건마다 기록)
+  - 싫어요 사건 후보 제외
+  - 스토리라인 구독 · 해제
+  - 구독 변경 이력
 - 관심도 계산과 후보 순위 반영, 구독 제안
 - 웹 UI: 관심사 히스토리(기간별 주제 관심도, 새로 생긴 관심 · 사라진 관심)
 - **완료 기준**: 신호가 쌓인 테스트 사용자의 후보 순위에 관심도가 반영된다. 선정 이유별 반응(좋아요 / 싫어요)을 측정한다.
