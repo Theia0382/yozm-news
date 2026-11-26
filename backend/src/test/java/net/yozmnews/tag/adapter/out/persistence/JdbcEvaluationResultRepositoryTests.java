@@ -42,7 +42,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 적용된 실제 PostgreSQL 에서 본다. 테스트는 테스트 트랜잭션 안에서 돈다 — 흘려 받기의 트랜잭션 밖 갈래는 그 트랜잭션을 잠시 멈추고
  * 부른다. 지우기와 채움의 잠금 순서는 두 연결이 필요해 {@code EvaluationDeletionLockTests} 가 본다.
  * <p>
- * 지키는 규칙: tag-R15 · tag-R21 · tag-R29 · tag-R30 · tag-R33
+ * 지키는 규칙: tag-R15 · tag-R21 · tag-R29 · tag-R30 · tag-R31 · tag-R33
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

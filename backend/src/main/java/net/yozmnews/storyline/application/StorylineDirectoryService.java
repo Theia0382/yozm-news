@@ -49,7 +49,8 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 /**
- * 공개 조회 {@link StorylineDirectory} 의 구현 — docs/specs/storyline.md §4 · storyline-R19 · storyline-R21 ~ R24 · storyline-R33 · storyline-R37.
+ * 공개 조회 {@link StorylineDirectory} 의 구현 — docs/specs/storyline.md §4 · storyline-R19 · storyline-R21 ~ R25 · storyline-R33 ·
+ * storyline-R37 · storyline-R38.
  * <p>
  * 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 큰 판정은 {@link #bigStorylines(EventPeriod, BigStorylineCriteria)} 하나를 공개 조회와
  * 미리보기가 함께 쓴다. 스토리라인의 사건은 닫은 사건 집합({@link ClosedMembers} — 직접 소속과 포함을 따라 내려간 하위의 직접 소속)이고, 스토리라인

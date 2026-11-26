@@ -727,7 +727,7 @@ sequenceDiagram
 - `StorylineMerger` — 스토리라인 하나를 다른 스토리라인에 합치는 실행의 정본(storyline-R18 · R32). 정돈과 조각 합치기가 함께 쓰고, 트랜잭션 · 모듈 잠금 안에서 부른다
 - `RelationRound` — 관계 회차 하나(storyline-R17 · R27 ~ R31). 트랜잭션은 `TransactionTemplate` 으로 짧게 열고, 관계 판정은 트랜잭션 밖에서 부른다. 시각과 임대 만료 상한은 `platform` 의 앱 시계(`AppClock`, platform-R28)에서 얻는다. 트랜잭션 · 역할 애너테이션이 없다
 - `StorylineLinkingAdministrationService` — 공개 운영 API `StorylineLinkingAdministration` 의 구현(storyline-R15). 시각은 앱 시계(`InstantSource`, platform-R26)에서 얻는다
-- `StorylineDirectoryService` — 공개 조회 `StorylineDirectory` 의 구현(storyline-R19 · R21 ~ R24 · R33 · R37 · R38). 시각은 앱 시계(`InstantSource`, platform-R26)에서 얻는다. 트랜잭션 · 역할 애너테이션이 없다. 조회들이 함께 쓰는 길은 아래다
+- `StorylineDirectoryService` — 공개 조회 `StorylineDirectory` 의 구현(storyline-R19 · R21 ~ R25 · R33 · R37 · R38). 시각은 앱 시계(`InstantSource`, platform-R26)에서 얻는다. 트랜잭션 · 역할 애너테이션이 없다. 조회들이 함께 쓰는 길은 아래다
   - 닫은 사건 집합(`ClosedMembers`)을 만드는 길 하나. 스토리라인 값 · 타임라인 · 사건의 스토리라인 · 기간 집계가 쓴다
   - 스토리라인 집합마다 닫은 사건 집합의 합집합을 `event` 에 넘기는 길 하나. 목록 · 큰 판정의 기간 집계와 집합마다의 기간 집계가 쓴다
   - 큰 판정의 길 하나(패키지 비공개). 공개 조회는 지금 기준으로, 미리보기는 제안 기준으로 부른다. 기간의 스토리라인이 비면 기간 전체 집계를 읽지 않는다
@@ -1169,8 +1169,8 @@ sequenceDiagram
   - 사건을 함께 가진 상대는 창 밖이거나 점수를 셀 수 없어도 후보다
 - **storyline-R113** — 점수: 점수는 잇기의 산식 그대로다(`LinkingScoring`, storyline-R8)
   - 쌍 가운데 구성 사건 수가 적은 스토리라인(같으면 ID 가 큰 쪽)을 판정할 쪽으로, 다른 쪽을 견줄 것으로 둔다. 판정할 쪽이 S 가 아닌 쌍은 그 상대의 표현을 읽어 같은 식으로 매긴다
-  - 점수 후보는 판정할 쪽과 모델 버전이 같고, 시각 범위가 [판정할 쪽의 첫 기사 시각 − 창, 마지막 기사 시각 + 창] 과 겹치고, 코사인이 `LinkingScoring.cosineFloor(후보 점수 기준)` 이상인 스토리라인이다(`StorylineRepository.candidates`). 창은 관계 기준의 시간 창이다
-  - 말의 무게는 같은 구간의 말 수로 센다(`EventDirectory.termCounts`). 회차 안에서 판정할 쪽 스토리라인마다 한 번만 읽는다
+  - 점수 후보는 S 와 모델 버전이 같고, 시각 범위가 [S 의 첫 기사 시각 − 창, S 의 마지막 기사 시각 + 창] 과 겹치고, 코사인이 `LinkingScoring.cosineFloor(후보 점수 기준)` 이상인 스토리라인이다(`StorylineRepository.candidates`). 창은 관계 기준의 시간 창이다. 구간의 겹침과 코사인은 두 스토리라인에 대칭이라, 판정할 쪽이 상대인 쌍도 같은 후보에서 나온다
+  - 말의 무게는 판정할 쪽의 [첫 기사 시각 − 창, 마지막 기사 시각 + 창] 구간의 말 수로 센다(`EventDirectory.termCounts`). 회차 안에서 판정할 쪽 스토리라인마다 한 번만 읽는다
   - 점수는 물을 수 있는 상대(`RelationCandidates.askable`)에만 매긴다. 물을 수 있는 상대는 두 쪽 모두 사건 수 하한 이상이고 다시 물을 때인 상대다. 그 밖의 상대는 말 수를 읽지 않는다
   - 점수 후보의 구성 사건 수는 `StorylineRepository.members` 한 번으로 센다
 - **storyline-R114** — 순서: 사건을 함께 가진 쌍이 먼저다(함께 가진 사건 수 내림차순, 같으면 스토리라인 ID 순). 그다음은 점수 내림차순(같으면 ID 순)이다

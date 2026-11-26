@@ -34,7 +34,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 공개 API {@link TagSetAdministration} 의 구현 — docs/specs/tag.md §4 · tag-R11 ~ tag-R13.
+ * 공개 API {@link TagSetAdministration} 의 구현 — docs/specs/tag.md §4 · tag-R11 ~ tag-R13 · tag-R36.
  * <p>
  * 변경은 한 트랜잭션에서 표 잠금(활성 전환과 줄 서기) → 활성 버전 조회 → 지금 태그 기준 · 저장 기준 행 잠금 → 지난 저장 기준 최댓값(이력과
  * 끝난 채움의 저장 바닥 — {@link StoreFloors}) → 판정 → 쓰기다. 역할 애너테이션이 없다(두 역할 공통). 버전 연산은 {@link TagSetVersioning},

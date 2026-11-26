@@ -28,14 +28,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 평가 회차 하나 — docs/specs/tag.md §4 · tag-R19 · tag-R20.
+ * 평가 회차 하나 — docs/specs/tag.md §4 · tag-R18 · tag-R19 · tag-R20.
  * <p>
  * 대기를 점유해 커밋한 뒤, 기사마다 차례로 {@code evaluation} 의 태그 판정을 트랜잭션 밖에서 부른다 — 기사 내용 · 피드 맥락은 관문이
  * 기사 ID 로 읽는다. 결과는 기사마다 새 트랜잭션에서 점유 토큰이 맞을 때만 반영한다. 평가기 사용 불가 · 태그 판정의 예외(결과가 질문
  * 묶음과 어긋남 · 평가기의 예상 못한 예외)면 그 기사부터 남은 점유를 풀고 회차를 멈춘다.
  * <p>
  * 결과를 반영하는 트랜잭션은 먼저 표를 잠가 회차가 읽은 버전이 아직 활성인지 본다. 은퇴했으면 그 기사의 점유만 풀고(판정됐으면 그 버전의
- * 평가는 저장한다) 남은 점유를 풀어 회차를 멈춘다 — 대기 행은 기사에 지금 활성 버전의 평가가 있게 된 트랜잭션에서만 지운다(tag-R19).
+ * 평가는 저장한다) 남은 점유를 풀어 회차를 멈춘다(tag-R19). 대기 행은 기사에 지금 활성 버전의 평가가 있게 된 트랜잭션에서만
+ * 지운다(tag-R87).
  */
 @Service
 public class EvaluationRound {

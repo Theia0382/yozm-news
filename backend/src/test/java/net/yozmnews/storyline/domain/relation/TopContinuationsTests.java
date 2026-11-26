@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Timeout;
 /**
  * 스토리라인마다 그 꼭대기에서 이어짐을 앞 → 뒤로 따라 닿는 꼭대기.
  * <p>
- * 지키는 규칙: 이어짐의 꼭대기 단위 닫힘(docs/specs/storyline.md §5) · storyline-R37(꼭대기) · storyline-R25(순환 금지는 같은 종류의 원래
- * 스토리라인 사이에서만)
+ * 지키는 규칙: 이어짐의 꼭대기 단위 닫힘(docs/specs/storyline.md §5) · storyline-R37(꼭대기) · storyline-R38(이어짐으로 닿는 꼭대기) ·
+ * storyline-R25(순환 금지는 같은 종류의 원래 스토리라인 사이에서만)
  */
 class TopContinuationsTests {
 

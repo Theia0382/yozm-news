@@ -13,7 +13,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
  * 관계 기준 설정 — 아무것도 주지 않으면 기본값(확률 0.60 · 한 사안 0.20 · 사건 3 · 후보 점수 0.88 · 창 14일), 하나를 주면 그 값만 바뀌고,
  * 범위를 어기면 컨텍스트가 뜨지 않는다.
  * <p>
- * 지키는 규칙: storyline-R27 · storyline-R29
+ * 지키는 규칙: storyline-R17 · storyline-R27 · storyline-R29
  */
 class RelationPropertiesTests {
 

@@ -1,5 +1,5 @@
 // 독자 화면의 사건 흐름 문구 — 탭 · 개인 흐름 화면 · 공용 타임라인 · 흐름 추적이 같은 문구를 쓰게 한 곳에 둔다(docs/specs/reader.md ·
-// overview §8). 화면에서는 스토리라인을 "사건 흐름"(탭 · 화면 제목) · "흐름"(본문)이라 부른다 — 개발 이름은 스토리라인 그대로다.
+// docs/specs/web.md §2). 화면에서는 스토리라인을 "사건 흐름"(탭 · 화면 제목) · "흐름"(본문)이라 부른다 — 개발 이름은 스토리라인 그대로다.
 
 import type { SubscriptionAction } from "@/features/storylines/subscriptionQueries";
 import { formatDate, formatDateTime } from "@/shared/lib/dateTime";

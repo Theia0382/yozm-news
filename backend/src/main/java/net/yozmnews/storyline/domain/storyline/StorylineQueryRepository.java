@@ -9,7 +9,8 @@ import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 스토리라인 조회 저장소 — 공개 조회의 읽기 전용 질의 · docs/specs/storyline.md §4 · storyline-R21 · storyline-R22.
+ * 스토리라인 조회 저장소 — 공개 조회의 읽기 전용 질의 · docs/specs/storyline.md §4 · storyline-R21 · storyline-R22 ·
+ * storyline-R37.
  * <p>
  * 쓰기용 {@link StorylineRepository} 와 나눈다. 구성 사건 · 소속 여부는 {@link StorylineRepository#members} ·
  * {@link StorylineRepository#affiliated} 를 쓴다.

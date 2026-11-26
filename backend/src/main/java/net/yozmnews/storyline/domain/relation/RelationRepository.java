@@ -9,7 +9,8 @@ import net.yozmnews.storyline.RelationOutcome;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 관계 저장소 — 관계 · 물은 기록 · 관계 기준 이력 · docs/specs/storyline.md §4 · storyline-R25 · storyline-R30 · storyline-R32.
+ * 관계 저장소 — 관계 · 물은 기록 · 관계 기준 이력 · docs/specs/storyline.md §4 · storyline-R25 ·
+ * storyline-R29 ~ storyline-R32.
  * <p>
  * 자기 자신 · 쌍마다 하나 · 포함의 상위 하나는 DB 제약이 함께 막는다. 순환은 판정이 모듈 잠금 안에서 확인한다.
  */

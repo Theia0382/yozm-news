@@ -1166,7 +1166,7 @@ sequenceDiagram
 - `TagKeyLineageService` — `TagKeyLineage` 의 구현(tag-R26). 트랜잭션을 열지 않는다
 - `ArticleEventsListener` — 기사 이벤트 리스너(tag-R18 · R21). 넣기의 시각은 `platform` 의 앱 시계(`InstantSource`, platform-R26)에서 얻는다
 - `PendingEvaluations` — 대기 점유. `claimDue(now, expiredBy)` 가 트랜잭션 하나에서 점유를 써 커밋한다(tag-R89 · R90)
-- `EvaluationRound` — 평가 회차 하나(tag-R19 · R20). 시각과 임대 만료 상한은 `platform` 의 앱 시계(`AppClock.expiredBy(EvaluationSchedule.LEASE)`, platform-R28)에서 얻는다
+- `EvaluationRound` — 평가 회차 하나(tag-R18 · R19 · R20). 시각과 임대 만료 상한은 `platform` 의 앱 시계(`AppClock.expiredBy(EvaluationSchedule.LEASE)`, platform-R28)에서 얻는다
 - `ArticleEvaluationsService` — `ArticleEvaluations` 의 구현(tag-R15). 트랜잭션을 열지 않는다
 - `EvaluationAdministrationService` — `EvaluationAdministration` 의 구현. 평가 현황의 트랜잭션은 tag-R149 다
 - `TopicCoverageService` — `TopicCoverage` 의 구현(tag-R30). 트랜잭션은 tag-R156 이다. 평가에 나온 버전마다 체계 · 지금 기준 · 계보 표를 호출 하나 안에서 한 번씩 읽는다

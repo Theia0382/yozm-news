@@ -403,7 +403,7 @@ class LinkingFlowTests {
 			.param("l2", l2)
 			.query(Long.class)
 			.single()).isZero();
-		// 합쳐진 스토리라인의 물은 기록과 관계 대기 행은 지워지고 남의 것은 남는다. 남는 쪽 L1 은 관계 대기에 든다(storyline-R26)
+		// 합쳐진 스토리라인의 물은 기록과 관계 대기 행은 지워지고 남의 것은 남는다. 남는 쪽 L1 은 관계 대기에 든다(storyline-R26 · storyline-R32)
 		assertThat(this.relations.askedAtSmallerEvents(l3)).isEqualTo(Map.of(l1, 2));
 		assertThat(this.jdbc.sql("select storyline_id from storyline_relation_queue order by storyline_id")
 			.query(Long.class)

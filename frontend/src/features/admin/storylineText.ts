@@ -1,7 +1,7 @@
 import type { Schemas } from "@/features/admin/adminClient";
 import { formatProbability, formatSeconds } from "@/features/admin/metrics";
 
-// 스토리라인 화면들의 기준 · 관계 문구 — 목록과 상세가 같은 문구를 쓰게 한 곳에 둔다(docs/overview.md §8).
+// 스토리라인 화면들의 기준 · 관계 문구 — 목록과 상세가 같은 문구를 쓰게 한 곳에 둔다(화면 이름은 docs/specs/web.md §2).
 // 화면에서는 스토리라인을 "사건 흐름"(메뉴 · 화면 제목) · "흐름"(본문), 큰 판정에 든 것을 "큰 화제", 큰 판정과 그 기준을
 // "큰 화제 판정" · "큰 화제 기준"이라 부른다 — 개발 이름은 스토리라인 · 큰 판정 그대로다.
 

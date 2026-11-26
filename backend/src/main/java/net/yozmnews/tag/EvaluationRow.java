@@ -8,7 +8,8 @@ import net.yozmnews.article.ArticleId;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 평가 한 건의 판정 — 그 평가 버전의 지금 태그 기준 · 저장 기준으로 조회 때 판정한다 · docs/specs/tag.md §3 · tag-R33.
+ * 평가 한 건의 판정 — 그 평가 버전의 지금 태그 기준 · 저장 기준으로 조회 때 판정한다 · docs/specs/tag.md §3 · tag-R15 ·
+ * tag-R33.
  *
  * @param topics 붙은 주제 중분류 — 체계 순
  * @param topicCategories 붙은 중분류의 대분류 — 체계 순

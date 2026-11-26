@@ -1,7 +1,8 @@
 package net.yozmnews.storyline;
 
 /**
- * 쌍을 마지막으로 물은 결말 — 물은 기록에 남고 운영자 조회가 낸다 · docs/specs/storyline.md §3 · storyline-R29 · storyline-R30.
+ * 쌍을 마지막으로 물은 결말 — 물은 기록에 남고 운영자 조회가 낸다 · docs/specs/storyline.md §3 · storyline-R17 ·
+ * storyline-R29 ~ storyline-R31 · storyline-R34.
  * <p>
  * {@link #NOTHING_TO_ASK} · {@link #REJECTED} 는 판정 원본이 남지 않은 결말이다.
  */
