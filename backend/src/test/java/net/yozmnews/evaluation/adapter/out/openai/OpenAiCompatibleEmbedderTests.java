@@ -33,7 +33,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
  * OpenAI 호환 외부 임베딩 — WireMock 을 제공자 자리에 두고 연결(경로 · 키 헤더 · 묶음 나누기 · 요청 본문)과 연결 쪽 실패(거절 · 마감 · 본문
  * 상한), 실패 문구의 비밀 값 노출을 본다. 응답 읽기 · 상태 갈래의 판단은 {@code domain/openai} 시험이 본다.
  * <p>
- * 지키는 규칙: ADR-0090 · ADR-0092 · docs/security.md(키 · 응답 본문 · 입력 텍스트가 문구에 남지 않는다)
+ * 지키는 규칙: ADR-0090 · ADR-0092 · docs/overview.md §6 비밀 값(키 · 응답 본문 · 입력 텍스트가 문구에 남지 않는다)
  */
 class OpenAiCompatibleEmbedderTests {
 

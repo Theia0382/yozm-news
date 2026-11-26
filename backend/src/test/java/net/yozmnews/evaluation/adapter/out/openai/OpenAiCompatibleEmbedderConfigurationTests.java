@@ -10,7 +10,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
  * OpenAI 호환 외부 임베딩의 결선 — 필수 값 · 범위 · 형식이 틀리면 기동하지 않고 문구에 설정 이름은 있되 키 값은 없음을 본다. 설정 레코드의
  * {@code toString} 이 키를 숨기는지도 본다.
  * <p>
- * 지키는 규칙: evaluation-R46 · docs/security.md(비밀 값이 문구에 남지 않는다)
+ * 지키는 규칙: evaluation-R46 · docs/overview.md §6 비밀 값(비밀 값이 문구에 남지 않는다)
  */
 class OpenAiCompatibleEmbedderConfigurationTests {
 
