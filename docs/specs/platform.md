@@ -8,7 +8,7 @@
 
 - **이벤트 발행 재처리** — 모듈 사이 이벤트의 리스너가 실패한 발행을 주기적으로 다시 처리하고, 상한을 넘긴 발행을 알린다
 - **남겨진 발행의 운영자 처리** — 재처리가 더 이상 다루지 않는 발행을 운영자가 보고 다시 처리하거나 폐기하는 공개 운영 API
-- **화면용 API 명세 설정** — 백엔드 코드가 만드는 화면용 API 명세의 고정 값과 속성 규칙, 운영자 경로 · 세션 경로 연산의 거부 응답(platform-R6). 구현은 이 모듈의 `OpenApiConfiguration` · `OpenApiPathsConfiguration` 과 `springdoc` 설정이다. 세션 사용자 인자를 명세에서 빼는 설정은 그 인자를 채우는 `account` 가 둔다([account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R6). 명세가 정본이라는 규약은 [overview.md §6](../overview.md#6-횡단-규약) "화면용 API 계약"에 있다
+- **화면용 API 명세 설정** — 백엔드 코드가 만드는 화면용 API 명세의 고정 값과 속성 규칙, 운영자 경로 · 세션 경로 연산의 거부 응답, 스키마 이름 · 연산 ID 의 겹침 검사(platform-R6). 구현은 이 모듈의 `OpenApiConfiguration` · `SchemaNameCheck` · `OpenApiPathsConfiguration` 과 `springdoc` 설정이다. 세션 사용자 인자를 명세에서 빼는 설정은 그 인자를 채우는 `account` 가 둔다([account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R6). 명세가 정본이라는 규약은 [overview.md §6](../overview.md#6-횡단-규약) "화면용 API 계약"에 있다
 - **API 계약 확인 엔드포인트** — 명세에서 프론트엔드 생성 타입까지의 파이프라인을 확인하는 엔드포인트(platform-R7)
 - **역할** — 앱 역할 profile(`web` · `worker`)과 구성요소의 역할 표시, 역할이 하나도 켜지지 않았을 때의 기동 검사, 작업 역할의 스케줄링(platform-R8 · R9)
 - **DB 확장 요건** — DB 에 pgvector 확장을 설치하는 마이그레이션과, 설치된 확장이 최소 버전 이상인지 기동 때 확인하는 검사(platform-R19)
@@ -773,7 +773,7 @@ HTTP 엔드포인트:
 | 역할 | 구성 요소 |
 |---|---|
 | 작업 역할 | `EventResubmissionJob` · `WorkerSchedulingConfiguration` |
-| 화면 역할 | `PingController` · `OpenApiConfiguration` · `ProblemResponseAdvice` |
+| 화면 역할 | `PingController` · `OpenApiConfiguration`(그 bean 인 `SchemaNameCheck` 포함) · `ProblemResponseAdvice` |
 | 두 역할 공통 | 나머지. `EventPublicationAdministrationService` · `JdbcRegistryRows` · `VectorExtensionConfiguration` · `JdbcDatabaseExtensions` · `ClockConfiguration` · `MeasurementClockAdministrationService` · `JdbcMeasurementClockRows` 를 포함한다 |
 
 YAML 원문 읽기 타입은 빈이 아니다.
@@ -975,7 +975,8 @@ stateDiagram-v2
 | 측정용 시계의 운영 기능 | `MeasurementClockAdministrationService` | 공개 운영 API 호출(`admin` 의 운영자 요청, 화면 역할) | 상태 · 앞으로 넘기기(platform-R29). 측정용 시계가 아니면 `Off` 다. 넘기기는 하나씩 한다(platform-R127) |
 | 작업 역할의 스케줄링 | `WorkerSchedulingConfiguration` | 기동(작업 역할) | Spring 스케줄링을 켠다. Spring Modulith 의 멈춤 감시(platform-R36)가 이것으로 돈다(platform-R9) |
 | API 계약 확인 | `PingController` | `GET /api/ping` | platform-R7 |
-| 화면용 API 명세 | `OpenApiConfiguration` | 명세 생성 | 명세의 고정 값과 속성 규칙, 운영자 경로 연산과 세션 경로 연산의 401 · 403 · 429 문제 응답(platform-R6) |
+| 화면용 API 명세 | `OpenApiConfiguration` | 명세 생성 | 명세의 고정 값과 속성 규칙, 운영자 경로 연산과 세션 경로 연산의 401 · 403 · 429 문제 응답, 연산 ID 의 겹침 검사(platform-R6 · R129) |
+| 스키마 이름 겹침 검사 | `SchemaNameCheck` | 명세 생성(생성기의 변환기 사슬) | 생성 한 번 동안 스키마 정의의 이름과 타입을 기록하고, 생성 끝에서 겹침 · 보지 못한 스키마를 대조한다(platform-R128). 기록은 생성 시작부터 끝까지 그 스레드에 둔다 |
 | 컨트롤러 오류 | `ProblemResponseAdvice` | 컨트롤러 예외 | 컨트롤러 예외를 문제 응답으로 쓴다(platform-R12). 다른 모듈의 조언이 먼저 받는다(platform-R107) |
 
 ### `application`
@@ -1244,6 +1245,8 @@ stateDiagram-v2
   - platform-R91 — 세션 사용자 인자
   - platform-R92 — 담는 경로와 출력
   - platform-R93 — 명세 엔드포인트
+  - platform-R128 — 스키마 이름의 겹침
+  - platform-R129 — 연산 ID 의 겹침
 - **platform-R7** — `GET /api/ping` 은 `{"message": "pong"}` 을 돌려준다. 화면에는 쓰지 않고 사용자 데이터를 담지 않는다. 세션 없이 여는 공개 처리기다(`@PublicApi`, platform-R95)
 - **platform-R86** — 명세는 실행 환경과 무관하게 같다. `info` 는 제목 `요즘뉴스 화면용 API` · 버전 `0` 이고, `servers` 는 `/`(SPA 와 같은 오리진)다
 - **platform-R87** — 객체 스키마의 속성은 모두 필수로 낸다(이름 순). 응답은 null 인 속성도 키째 쓰고, null 가능성은 JSpecify `@Nullable` 이 타입으로 남긴다
@@ -1265,6 +1268,8 @@ stateDiagram-v2
 - **platform-R91** — 세션에서 채우는 사용자 인자(`UserId`)는 요청 인자로 담지 않는다. 그 설정은 `account` 가 둔다(account-R6)
 - **platform-R92** — 명세는 `/api/**`(`ApiPaths.API`) 경로만 담는다. 출력은 키 순 · 들여쓰기로 고정해 커밋된 명세와 바이트로 비교한다
 - **platform-R93** — 실행 중인 앱의 명세 엔드포인트는 기본으로 닫혀 있다
+- **platform-R128** — 스키마 이름은 생성기가 정한 이름이다 — 타입의 단순 클래스 이름이고, 제네릭 타입은 타입 인자의 이름을 이어 붙인다. 서로 다른 타입이 같은 스키마 이름을 받으면 명세 생성이 실패하고, 메시지에 그 이름과 두 타입의 전체 이름을 낸다. 같은 타입을 여러 처리기에서 쓰는 것은 겹침이 아니다. 생성기가 정의한 스키마를 검사가 보지 못했어도 생성이 실패한다([ADR-0345](../adr/0345-screen-api-schema-names-stay-simple-and-a-name-shared-by-two-types-fails-spec-generation.md))
+- **platform-R129** — 연산 ID 는 처리기 메서드 이름이고 화면용 API 전체에서 겹치지 않는다. 겹치면 접미사를 붙이지 않고 명세 생성이 실패하며, 메시지에 그 ID 와 겹친 연산들의 HTTP 메서드 · 경로를 낸다. 한 처리기를 경로나 HTTP 메서드 둘 이상에 매핑하면 연산이 같은 ID 를 받으므로 그런 처리기는 매핑마다 메서드를 나눈다([ADR-0346](../adr/0346-screen-api-operation-ids-are-handler-method-names-and-a-duplicate-fails-spec-generation-instead-of-a-suffix.md))
 
 ### 화면용 API 경로와 공개 처리기
 
