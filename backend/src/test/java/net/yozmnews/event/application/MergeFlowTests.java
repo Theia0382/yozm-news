@@ -9,12 +9,14 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import net.yozmnews.RoundRunRows;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
@@ -29,16 +31,19 @@ import net.yozmnews.event.EventReview;
 import net.yozmnews.event.JudgementUse;
 import net.yozmnews.event.MergedEvent;
 import net.yozmnews.event.EventsChanged;
+import net.yozmnews.event.domain.assignment.AssignmentSchedule;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.assignment.MergeJudgementRepository;
 import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventQueryRepository;
 import net.yozmnews.event.domain.event.EventRepository;
+import net.yozmnews.platform.RoundRunner;
 import org.assertj.core.groups.Tuple;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -67,6 +72,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 @ExtendWith(OutputCaptureExtension.class)
 class MergeFlowTests {
+
+	@Autowired
+	RoundRunner runner;
 
 	private static final Instant T = Instant.parse("2026-11-05T00:00:00Z");
 
@@ -437,7 +445,7 @@ class MergeFlowTests {
 		};
 
 		new MergeRound(this.events, this.queries, recording, this.judgements, this.criteriaHistory, CRITERIA, membership,
-				this.transaction, (InstantSource) () -> NOW)
+				this.transaction, (InstantSource) () -> NOW, this.runner)
 			.run();
 
 		assertThat(eventRow(small)).containsEntry("status", "MERGED").containsEntry("merged_into", large);
@@ -687,19 +695,130 @@ class MergeFlowTests {
 				tuple(small, 1, "2026-11-06T00:01:00Z"));
 	}
 
+	@Test
+	@Timeout(60)
+	void aRoundTakesAnotherBatchWhileEventsAreLeft() {
+		for (int i = 0; i < AssignmentSchedule.MERGE_BATCH + 1; i++) {
+			String axis = axis(i, 17);
+			event(axis, T, T, Map.of("말" + i, 1), axis);
+		}
+		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()));
+
+		round(membership).run();
+
+		assertThat(unchecked()).isZero();
+		assertThat(membership.queries).isEmpty();
+	}
+
+	@Test
+	@Timeout(60)
+	void exactlyTheLimitOfEventsIsCheckedByOneRound() {
+		for (int i = 0; i < 16; i++) {
+			String axis = axis(i, 16);
+			event(axis, T, T, Map.of("말" + i, 1), axis);
+		}
+
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
+
+		assertThat(unchecked()).isZero();
+	}
+
+	@Test
+	@Timeout(60)
+	void aFullBatchIsFollowedByAnEmptyOneAndTheRoundIsRecorded() {
+		for (int i = 0; i < 16; i++) {
+			String axis = axis(i, 16);
+			event(axis, T, T, Map.of("말" + i, 1), axis);
+		}
+		RoundRunRows.clear(this.jdbc);
+
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
+
+		assertThat(unchecked()).isZero();
+		assertThat(RoundRunRows.of(this.jdbc, "event-merge")).containsExactly("2 · 16 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void aShortBatchEndsTheRound() {
+		for (int i = 0; i < 15; i++) {
+			String axis = axis(i, 15);
+			event(axis, T, T, Map.of("말" + i, 1), axis);
+		}
+		RoundRunRows.clear(this.jdbc);
+
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
+
+		assertThat(unchecked()).isZero();
+		assertThat(RoundRunRows.of(this.jdbc, "event-merge")).containsExactly("1 · 15 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void aTransientFailureEndsTheRoundAfterItsBatch() {
+		// 뭉치 크기(16)만큼의 띠 사건과 뒤의 쌍 — 첫 뭉치가 모두 일시 실패하면 뒤의 쌍은 이 회차에 보지 않는다
+		for (int i = 0; i < 16; i++) {
+			event("[1,0]", T, T, Map.of("말" + i, 1), "[1,0]");
+		}
+		long other = event("[0,1]", T, T, Map.of("환율", 2), "[0,1]", "[0,1]");
+		long otherSmall = event("[0,1]", T, T, Map.of("환율", 1), "[0,1]");
+		RoundRunRows.clear(this.jdbc);
+
+		round(new Scripted(query -> new MembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "연결 실패"))).run();
+
+		assertThat(eventRow(otherSmall)).containsEntry("status", "OPEN");
+		assertThat(eventRow(other)).containsEntry("status", "OPEN");
+		assertThat(RoundRunRows.of(this.jdbc, "event-merge")).containsExactly("1 · 16 · BACKED_OFF");
+	}
+
+	@Test
+	@Timeout(60)
+	void anUnavailableEvaluatorEndsTheRoundAfterItsBatch() {
+		for (int i = 0; i < 16; i++) {
+			event("[1,0]", T, T, Map.of("말" + i, 1), "[1,0]");
+		}
+		long other = event("[0,1]", T, T, Map.of("환율", 2), "[0,1]", "[0,1]");
+		long otherSmall = event("[0,1]", T, T, Map.of("환율", 1), "[0,1]");
+		RoundRunRows.clear(this.jdbc);
+
+		round(new Scripted(query -> new MembershipJudgement.Failed(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, "키 무효")))
+			.run();
+
+		assertThat(eventRow(otherSmall)).containsEntry("status", "OPEN");
+		assertThat(eventRow(other)).containsEntry("status", "OPEN");
+		assertThat(RoundRunRows.of(this.jdbc, "event-merge")).containsExactly("1 · 16 · STOPPED");
+	}
+
+	/** {@code dims} 차원에서 {@code i} 번째 축만 1 인 벡터 — 서로 코사인 0 이라 후보가 아니다 */
+	private static String axis(int i, int dims) {
+		float[] values = new float[dims];
+		values[i] = 1;
+		return Arrays.toString(values).replace(" ", "");
+	}
+
+	/** 지금 기준으로 아직 확인하지 않은 열린 사건 수 */
+	private long unchecked() {
+		long criteria = this.criteriaHistory.find(CRITERIA).orElseThrow();
+		return this.jdbc.sql("""
+				select count(*) from events
+				where status = 'OPEN'
+				  and (merge_checked_revision < revision or merge_checked_criteria_id is distinct from :criteria)
+				""").param("criteria", criteria).query(Long.class).single();
+	}
+
 	private MergeRound round(EventMembership membership) {
 		return round(membership, CRITERIA);
 	}
 
 	private MergeRound round(EventMembership membership, AssignmentCriteria criteria) {
 		return new MergeRound(this.events, this.queries, this.assignments, this.judgements, this.criteriaHistory, criteria,
-				membership, this.transaction, (InstantSource) () -> NOW);
+				membership, this.transaction, (InstantSource) () -> NOW, this.runner);
 	}
 
 	/** 시계를 {@code now} 에 고정한 회차 */
 	private MergeRound roundAt(EventMembership membership, Instant now) {
 		return new MergeRound(this.events, this.queries, this.assignments, this.judgements, this.criteriaHistory, CRITERIA,
-				membership, this.transaction, (InstantSource) () -> now);
+				membership, this.transaction, (InstantSource) () -> now, this.runner);
 	}
 
 	/**

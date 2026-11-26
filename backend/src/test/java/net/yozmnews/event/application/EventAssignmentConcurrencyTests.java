@@ -28,6 +28,7 @@ import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
+import net.yozmnews.platform.RoundRunner;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @SpringBootTest
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class EventAssignmentConcurrencyTests {
+
+	@Autowired
+	RoundRunner runner;
 
 	private static final Instant NOW = Instant.parse("2026-11-06T00:00:00Z");
 
@@ -139,7 +143,7 @@ class EventAssignmentConcurrencyTests {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, assignments,
 				this.criteriaHistory, CRITERIA, this.articles,
 				query -> new MembershipJudgement.Judged(null, Map.of()), EventEmbeddings.modelOnly("model-a"),
-				this.transaction, TestClocks.fixed(now));
+				this.transaction, TestClocks.fixed(now), this.runner);
 	}
 
 	private long article(String vector, Instant availableAt) {

@@ -32,6 +32,7 @@ import net.yozmnews.event.domain.event.EventQueryRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
+import net.yozmnews.platform.RoundRunner;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,6 +59,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 @ExtendWith(OutputCaptureExtension.class)
 class EventMergeConcurrencyTests {
+
+	@Autowired
+	RoundRunner runner;
 
 	private static final Instant T = Instant.parse("2026-11-05T00:00:00Z");
 
@@ -176,13 +180,13 @@ class EventMergeConcurrencyTests {
 
 	private MergeRound merge(EventArticleRepository assignments) {
 		return new MergeRound(this.events, this.queries, assignments, this.judgements, this.criteriaHistory, CRITERIA,
-				query -> new MembershipJudgement.Judged(null, Map.of()), this.transaction, (InstantSource) () -> NOW);
+				query -> new MembershipJudgement.Judged(null, Map.of()), this.transaction, (InstantSource) () -> NOW, this.runner);
 	}
 
 	private AssignmentRound assign() {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments,
 				this.criteriaHistory, CRITERIA, this.articles, query -> new MembershipJudgement.Judged(null, Map.of()),
-				EventEmbeddings.modelOnly("model-a"), this.transaction, TestClocks.fixed(NOW));
+				EventEmbeddings.modelOnly("model-a"), this.transaction, TestClocks.fixed(NOW), this.runner);
 	}
 
 	private void remove(long article) {

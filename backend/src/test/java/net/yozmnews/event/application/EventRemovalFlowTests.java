@@ -37,6 +37,7 @@ import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
+import net.yozmnews.platform.RoundRunner;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,6 +66,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @RecordApplicationEvents
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class EventRemovalFlowTests {
+
+	@Autowired
+	RoundRunner runner;
 
 	private static final Instant NOW = Instant.parse("2026-11-06T00:00:00Z");
 
@@ -356,7 +360,7 @@ class EventRemovalFlowTests {
 	private AssignmentRound round(EventArticleRepository assignments, EventMembership membership) {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, assignments,
 				this.criteriaHistory, CRITERIA, this.articles, membership, EventEmbeddings.modelOnly("model-a"),
-				this.transaction, TestClocks.fixed(NOW));
+				this.transaction, TestClocks.fixed(NOW), this.runner);
 	}
 
 	private static EventMembership unasked() {

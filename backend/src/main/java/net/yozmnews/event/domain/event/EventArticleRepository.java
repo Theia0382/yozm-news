@@ -46,6 +46,16 @@ public interface EventArticleRepository {
 	 */
 	int keepClosed(long criteriaId, int limit);
 
+	/**
+	 * 재판정할 배정 수 — {@link #lockRejudgeTargets} 와 같은 조건(기준이 {@code criteriaId} 가 아닌 배정)이다. 잠그지 않는다. 닫힌 사건의 배정은
+	 * 기준만 새것으로 적을 대상({@link #keepClosed})이라 이 수에 든다.
+	 * @param criteriaId 지금 기준의 ID — 아직 등록되지 않았으면 {@link #NO_CRITERIA} 를 넘겨 모든 배정을 센다
+	 */
+	long countRejudgeTargets(long criteriaId);
+
+	/** 어느 기준 ID 와도 같지 않은 값 — 기준 이력 ID 는 1 부터다 */
+	long NO_CRITERIA = 0;
+
 	/** 기사들의 배정을 기사 ID 순으로 잠근다 — 배정이 없는 기사는 결과에 없다. 트랜잭션 안에서 부른다 */
 	List<EventArticle> lockByArticles(Collection<ArticleId> articleIds);
 

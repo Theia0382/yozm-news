@@ -38,6 +38,8 @@ import net.yozmnews.event.domain.feature.MatchFeatures;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
 import net.yozmnews.platform.AppClock;
+import net.yozmnews.platform.RoundBatch;
+import net.yozmnews.platform.RoundRunner;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +50,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 배정 회차 하나 — docs/specs/event.md §4 · event-R10 ~ event-R12 · event-R16.
  * <p>
- * 배정 대기를 점유해 커밋한 뒤, 기사마다 점유 순으로 하나씩 판정하고 짧은 트랜잭션에서 쓴다 — 앞 기사가 연 사건을 뒤 기사가 후보로 본다.
+ * 회차는 {@link RoundRunner} 로 뭉치를 되풀이한다 — 기준 이력은 회차에 한 번 등록한다. 뭉치 하나는 배정 대기를 점유해 커밋한 뒤, 기사마다
+ * 점유 순으로 하나씩 판정하고 짧은 트랜잭션에서 쓴다 — 앞 기사가 연 사건을 뒤 기사가 후보로 본다.
  * 사건 소속 판정은 트랜잭션 밖에서 부른다. 판정 · 적용 규칙은 {@code domain/assignment} 가 정하고, 이 클래스는 순서 · 트랜잭션 경계 ·
  * 실패 갈래의 실행만 맡는다. 판정의 예외를 밖으로 던지지 않는다 — 점유 · 기준 등록 · 기사 조회 · 점유 풀기의 예외는 회차 밖으로
  * 나가고, 그때 점유한 기사는 점유가 만료된 뒤 다시 처리된다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
@@ -57,6 +60,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class AssignmentRound {
 
 	private static final Logger logger = LoggerFactory.getLogger(AssignmentRound.class);
+
+	/** 회차 이름 — 회차 기록 · 처리 현황의 키 */
+	static final String NAME = "event-assignment";
 
 	private final AssignmentQueueRepository queue;
 
@@ -82,20 +88,22 @@ public class AssignmentRound {
 
 	private final AppClock clock;
 
+	private final RoundRunner runner;
+
 	@Autowired
 	AssignmentRound(AssignmentQueueRepository queue, IntakeQueueRepository intake, MatchFeaturesRepository features,
 			EventRepository events, EventArticleRepository assignments, CriteriaRepository criteriaHistory,
 			AssignmentSettings settings, ArticleDirectory articles, EventMembership membership, TextEmbedding embedding,
-			TransactionTemplate transaction, AppClock clock) {
+			TransactionTemplate transaction, AppClock clock, RoundRunner runner) {
 		this(queue, intake, features, events, assignments, criteriaHistory, settings.criteria(), articles, membership,
-				embedding, transaction, clock);
+				embedding, transaction, clock, runner);
 	}
 
 	/** 시험이 기준을 넣는다 */
 	AssignmentRound(AssignmentQueueRepository queue, IntakeQueueRepository intake, MatchFeaturesRepository features,
 			EventRepository events, EventArticleRepository assignments, CriteriaRepository criteriaHistory,
 			AssignmentCriteria criteria, ArticleDirectory articles, EventMembership membership, TextEmbedding embedding,
-			TransactionTemplate transaction, AppClock clock) {
+			TransactionTemplate transaction, AppClock clock, RoundRunner runner) {
 		this.queue = queue;
 		this.intake = intake;
 		this.features = features;
@@ -108,43 +116,57 @@ public class AssignmentRound {
 		this.embedding = embedding;
 		this.transaction = transaction;
 		this.clock = clock;
+		this.runner = runner;
 	}
 
-	/** 회차 하나를 돈다 — 생성자로 받은 {@link TextEmbedding} 의 정보가 지금 모델 버전을 정한다 */
+	/** 회차 하나를 돈다 — 뭉치를 회차 규칙까지 되풀이한다(docs/specs/platform.md 반복 회차) */
 	public void run() {
+		CriteriaOnce criteriaId = new CriteriaOnce();
+		this.runner.run(NAME, () -> batch(criteriaId));
+	}
+
+	/**
+	 * 뭉치 하나 — 생성자로 받은 {@link TextEmbedding} 의 정보가 지금 모델 버전을 정한다. 점유한 기사가 있을 때 기준 이력을 회차에 한 번 등록한다.
+	 * 판정 일시 실패로 미룬 기사가 있으면 뭉치를 마친 뒤 회차를 끝내게 한다.
+	 */
+	RoundBatch batch(CriteriaOnce criteria) {
 		String model = this.embedding.info().modelVersion();
 		Instant now = this.clock.instant();
 		List<PendingAssignment> claimed = claim(now);
 		if (claimed.isEmpty()) {
-			return;
+			return RoundBatch.finished(0, AssignmentSchedule.BATCH_SIZE);
 		}
-		long criteriaId = Objects.requireNonNull(
-				this.transaction.execute(status -> this.criteriaHistory.register(this.criteria, now)), "criteriaId");
+		long criteriaId = criteria.get(() -> Objects.requireNonNull(
+				this.transaction.execute(status -> this.criteriaHistory.register(this.criteria, now)), "criteriaId"));
 		Map<ArticleId, ArticleContent> contents = this.articles
 			.findAll(claimed.stream().map(PendingAssignment::articleId).toList());
+		boolean deferred = false;
 		for (int i = 0; i < claimed.size(); i++) {
 			PendingAssignment claim = claimed.get(i);
 			Step step;
 			try {
-				// 기사마다 시계를 다시 읽는다 — 회차가 길어도 재시도 시각 · 배정 시각이 그 기사를 처리한 때다
+				// 기사마다 시계를 다시 읽는다 — 뭉치가 길어도 재시도 시각 · 배정 시각이 그 기사를 처리한 때다
 				step = assign(claim, contents.get(claim.articleId()), model, criteriaId, this.clock.instant());
 			}
 			catch (RuntimeException ex) {
 				release(claimed.subList(i, claimed.size()));
 				logger.error("배정 회차가 예상하지 못한 오류로 멈췄다 — 기사 {}, 남은 기사 {}건", claim.articleId().value(),
 						claimed.size() - i, ex);
-				return;
+				return RoundBatch.stopped(claimed.size());
 			}
 			switch (step) {
 				case Step.Next next -> {
 				}
+				case Step.Deferred later -> deferred = true;
 				case Step.Stop stop -> {
 					release(claimed.subList(i, claimed.size()));
 					logger.warn("평가기를 쓸 수 없어 배정 회차를 멈췄다 — 남은 기사 {}건: {}", claimed.size() - i, stop.message());
-					return;
+					return RoundBatch.stopped(claimed.size());
 				}
 			}
 		}
+		return deferred ? RoundBatch.backedOff(claimed.size())
+				: RoundBatch.finished(claimed.size(), AssignmentSchedule.BATCH_SIZE);
 	}
 
 	private List<PendingAssignment> claim(Instant now) {
@@ -236,7 +258,7 @@ public class AssignmentRound {
 							status -> this.queue.retryIfLeased(article, token, next.attempts(), next.availableAt()));
 					logger.info("사건 소속 판정이 일시 실패해 다시 시도한다 — 기사 {}, 시도 {}: {}", article.value(),
 							next.attempts(), failed.message());
-					yield new Resolution.Finished(new Step.Next());
+					yield new Resolution.Finished(new Step.Deferred());
 				}
 				case ARTICLE_REJECTED -> {
 					logger.warn("평가기가 기사를 거부해 새 사건으로 끝낸다 — 기사 {}: {}", article.value(), failed.message());
@@ -289,7 +311,7 @@ public class AssignmentRound {
 
 	/**
 	 * 판정을 쓴다 — 점유 토큰이 맞아 대기 행을 지웠을 때만. 붙일 사건이 사라졌거나 열려 있지 않거나 모델 버전이 다르면, 또는 다른 경로가 먼저
-	 * 배정했으면 롤백하고 새 트랜잭션에서 점유를 풀거나(다음 회차가 다시 판정) 대기 행을 지운다 — 그러면 반영한 판정 원본을 가리키는 배정이
+	 * 배정했으면 롤백하고 새 트랜잭션에서 점유를 풀거나(다음 뭉치가 다시 판정) 대기 행을 지운다 — 그러면 반영한 판정 원본을 가리키는 배정이
 	 * 남지 않는다.
 	 * @param judgement 이 판정에 반영한 사건 소속 판정 원본 — 판정을 부르지 않았으면 null
 	 */
@@ -336,7 +358,7 @@ public class AssignmentRound {
 		Runnable afterRollback = switch (written) {
 			case EVENT_UNAVAILABLE -> () -> {
 				this.transaction.executeWithoutResult(status -> this.queue.releaseIfLeased(draft.article(), token));
-				logger.info("붙일 사건이 사라졌거나 닫혀 다음 회차에 다시 판정한다 — 기사 {}", draft.article().value());
+				logger.info("붙일 사건이 사라졌거나 닫혀 다음 뭉치에 다시 판정한다 — 기사 {}", draft.article().value());
 			};
 			case ALREADY_ASSIGNED ->
 				() -> this.transaction.executeWithoutResult(status -> this.queue.deleteIfLeased(draft.article(), token));
@@ -361,6 +383,10 @@ public class AssignmentRound {
 
 		/** 다음 기사로 */
 		record Next() implements Step {
+		}
+
+		/** 판정 일시 실패로 미뤘다 — 다음 기사로 가고, 회차는 이 뭉치 뒤에 끝낸다 */
+		record Deferred() implements Step {
 		}
 
 		/** 이 기사부터 남은 점유를 풀고 회차를 멈춘다 */

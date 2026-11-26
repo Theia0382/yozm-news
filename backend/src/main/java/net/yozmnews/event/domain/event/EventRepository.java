@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.domain.assignment.EventSnapshot;
+import net.yozmnews.event.domain.backlog.Backlog;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -66,6 +67,13 @@ public interface EventRepository {
 	 * @return 미루지 않은 사건이 먼저(사건 ID 순), 이어서 미룬 사건이 다시 볼 시각 · 사건 ID 순 — {@code limit} 개까지
 	 */
 	List<MergeSubject> mergeDue(long criteriaId, Instant now, int limit);
+
+	/**
+	 * 병합 회차가 볼 바뀐 열린 사건의 수 — {@link #mergeDue} 의 조건에서 다시 볼 시각만 빼고 세고, 그 가운데 다시 볼 시각이 {@code now} 뒤인
+	 * 것을 미룬 수로 센다. 잠그지 않는다.
+	 * @param criteriaId 지금 기준의 ID — 아직 등록되지 않았으면 {@link EventArticleRepository#NO_CRITERIA} 를 넘겨 모든 열린 사건을 센다
+	 */
+	Backlog mergeBacklog(long criteriaId, Instant now);
 
 	/**
 	 * 병합 확인을 표시하고 미룸을 지운다 — 사건의 {@code revision} 이 읽은 값 그대로일 때만이다. 그새 바뀌었으면 아무것도 쓰지 않아 회차가

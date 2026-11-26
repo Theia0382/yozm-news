@@ -38,6 +38,8 @@ import net.yozmnews.event.domain.event.EventQueryRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.event.LockedEvent;
 import net.yozmnews.event.domain.event.MergeSubject;
+import net.yozmnews.platform.RoundBatch;
+import net.yozmnews.platform.RoundRunner;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,13 +60,17 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 확인을 끝내지 못한 사건(판정의 일시 실패 · 판정할 기사 없음 · 합치지 못함)은 표시하지 않고 미룬다({@link EventRepository#deferMerge}) —
  * 다시 볼 시각은 지금 + {@link EvaluatorTiming#retryDelay} 에 이어서 미룬 횟수를 넣은 값이고, 그 시각이 지난 회차가 미루지 않은 사건 다음에
  * 본다.
- * 사건 소속 판정은 트랜잭션 밖에서 부른다. 회차마다 {@link AssignmentSchedule#MERGE_BATCH} 사건까지 본다. 예외를 밖으로 던지지 않는다.
+ * 사건 소속 판정은 트랜잭션 밖에서 부른다. 뭉치 하나가 {@link AssignmentSchedule#MERGE_BATCH} 사건까지 보고, 회차는 {@link RoundRunner} 로
+ * 뭉치를 되풀이한다 — 기준 이력은 회차에 한 번 등록하고, 판정 일시 실패로 미룬 사건이 있으면 그 뭉치 뒤에 끝낸다. 예외를 밖으로 던지지 않는다.
  * 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
  */
 @Service
 public class MergeRound {
 
 	private static final Logger logger = LoggerFactory.getLogger(MergeRound.class);
+
+	/** 회차 이름 — 회차 기록 · 처리 현황의 키 */
+	static final String NAME = "event-merge";
 
 	private final EventRepository events;
 
@@ -84,20 +90,22 @@ public class MergeRound {
 
 	private final InstantSource clock;
 
+	private final RoundRunner runner;
+
 	@Autowired
 	MergeRound(EventRepository events, EventQueryRepository queries, EventArticleRepository assignments,
 			MergeJudgementRepository judgements,
 			CriteriaRepository criteriaHistory, AssignmentSettings settings, EventMembership membership,
-			TransactionTemplate transaction, InstantSource clock) {
+			TransactionTemplate transaction, InstantSource clock, RoundRunner runner) {
 		this(events, queries, assignments, judgements, criteriaHistory, settings.criteria(), membership, transaction,
-				clock);
+				clock, runner);
 	}
 
 	/** 시험이 기준을 넣는다 */
 	MergeRound(EventRepository events, EventQueryRepository queries, EventArticleRepository assignments,
 			MergeJudgementRepository judgements,
 			CriteriaRepository criteriaHistory, AssignmentCriteria criteria, EventMembership membership,
-			TransactionTemplate transaction, InstantSource clock) {
+			TransactionTemplate transaction, InstantSource clock, RoundRunner runner) {
 		this.events = events;
 		this.queries = queries;
 		this.assignments = assignments;
@@ -107,20 +115,30 @@ public class MergeRound {
 		this.membership = membership;
 		this.transaction = transaction;
 		this.clock = clock;
+		this.runner = runner;
 	}
 
-	/** 회차 하나를 돈다 */
+	/** 회차 하나를 돈다 — 뭉치를 회차 규칙까지 되풀이한다(docs/specs/platform.md 반복 회차) */
 	public void run() {
+		CriteriaOnce criteriaId = new CriteriaOnce();
+		this.runner.run(NAME, () -> batch(criteriaId));
+	}
+
+	/** 뭉치 하나 — 기준 이력은 회차에 한 번 등록한다. 판정 일시 실패로 미룬 사건이 있으면 뭉치를 마친 뒤 회차를 끝내게 한다 */
+	RoundBatch batch(CriteriaOnce criteria) {
 		Set<Long> touched = new HashSet<>();
 		int merged = 0;
+		int seen = 0;
+		boolean deferred = false;
 		@Nullable Long current = null;
 		try {
-			long criteriaId = Objects.requireNonNull(
+			long criteriaId = criteria.get(() -> Objects.requireNonNull(
 					this.transaction.execute(status -> this.criteriaHistory.register(this.criteria, this.clock.instant())),
-					"criteriaId");
-			for (MergeSubject subject : this.events.mergeDue(criteriaId, this.clock.instant(),
-					AssignmentSchedule.MERGE_BATCH)) {
-				// 이 회차에서 앞서 합친 사건이다 — 읽어 둔 값이 낡았고, 남는 쪽은 revision 이 늘어 다음 회차가 다시 본다
+					"criteriaId"));
+			List<MergeSubject> due = this.events.mergeDue(criteriaId, this.clock.instant(), AssignmentSchedule.MERGE_BATCH);
+			seen = due.size();
+			for (MergeSubject subject : due) {
+				// 이 뭉치에서 앞서 합친 사건이다 — 읽어 둔 값이 낡았고, 남는 쪽은 revision 이 늘어 다음 뭉치가 다시 본다
 				if (touched.contains(subject.id())) {
 					continue;
 				}
@@ -134,22 +152,24 @@ public class MergeRound {
 					}
 					case Step.Next next -> {
 					}
+					case Step.Deferred later -> deferred = true;
 					case Step.Stop stop -> {
 						logger.warn("평가기를 쓸 수 없어 병합 회차를 멈췄다 — 사건 {}: {}", subject.id(), stop.message());
-						return;
+						return RoundBatch.stopped(seen);
 					}
 				}
 			}
 		}
 		catch (RuntimeException ex) {
 			logger.error("병합 회차가 예상하지 못한 오류로 멈췄다 — 사건 {}", current, ex);
-			return;
+			return RoundBatch.stopped(seen);
 		}
 		finally {
 			if (merged > 0) {
 				logger.info("사건 {}건을 합쳤다", merged);
 			}
 		}
+		return deferred ? RoundBatch.backedOff(seen) : RoundBatch.finished(seen, AssignmentSchedule.MERGE_BATCH);
 	}
 
 	/** 바뀐 사건 하나를 본다 — 판정은 트랜잭션 밖, 합치기는 한 트랜잭션 */
@@ -164,6 +184,10 @@ public class MergeRound {
 		return switch (resolution) {
 			case Resolution.Decided decided -> apply(subject, decided.decision(), criteriaId, now);
 			case Resolution.Later later -> defer(subject, now);
+			case Resolution.Retry retry -> {
+				defer(subject, now);
+				yield new Step.Deferred();
+			}
 			case Resolution.Halt halt -> new Step.Stop(halt.message());
 		};
 	}
@@ -178,7 +202,7 @@ public class MergeRound {
 							attach.eventId());
 					yield defer(subject, now);
 				}
-				// 합쳤으면 revision 이 늘어 표시되지 않는다 — 남는 사건은 다음 회차가 다시 본다(사슬 병합)
+				// 합쳤으면 revision 이 늘어 표시되지 않는다 — 남는 사건은 다음 뭉치가 다시 본다(사슬 병합)
 				this.events.markMergeChecked(subject.id(), subject.revision(), criteriaId);
 				yield done.get();
 			}
@@ -276,7 +300,7 @@ public class MergeRound {
 				case TRANSIENT -> {
 					logger.info("사건 병합 판정이 일시 실패해 미뤄 다시 본다 — 사건 {}: {}", subject.id(),
 							failed.message());
-					yield new Resolution.Later();
+					yield new Resolution.Retry();
 				}
 				case ARTICLE_REJECTED -> {
 					logger.warn("평가기가 기사를 거부해 병합 판정을 확률 없이 정한다 — 사건 {}: {}", subject.id(),
@@ -331,7 +355,11 @@ public class MergeRound {
 		record Next() implements Step {
 		}
 
-		/** 합쳤다 — 두 사건은 이 회차에서 다시 보지 않는다 */
+		/** 판정 일시 실패로 미뤘다 — 다음 사건으로 가고, 회차는 이 뭉치 뒤에 끝낸다 */
+		record Deferred() implements Step {
+		}
+
+		/** 합쳤다 — 두 사건은 이 뭉치에서 다시 보지 않는다 */
 		record Merged(long survivor, long absorbed) implements Step {
 		}
 
@@ -348,8 +376,12 @@ public class MergeRound {
 		record Decided(Decision decision) implements Resolution {
 		}
 
-		/** 표시하지 않고 미뤄 다시 본다 — 일시 실패 · 판정할 기사 없음 */
+		/** 표시하지 않고 미뤄 다시 본다 — 판정할 기사 없음 */
 		record Later() implements Resolution {
+		}
+
+		/** 판정 일시 실패 — 표시하지 않고 미뤄 다시 보고, 회차는 이 뭉치 뒤에 끝낸다 */
+		record Retry() implements Resolution {
 		}
 
 		/** 평가기를 쓸 수 없다 — 회차를 멈춘다 */

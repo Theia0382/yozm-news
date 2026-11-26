@@ -13,6 +13,7 @@ import java.util.UUID;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.PendingAssignment;
+import net.yozmnews.event.domain.backlog.Backlog;
 import net.yozmnews.event.domain.intake.IntakeLease;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -111,6 +112,17 @@ class JdbcAssignmentQueueRepository implements AssignmentQueueRepository {
 		this.jdbc.sql("delete from event_assignment_queue where article_id = any(:ids)")
 			.param("ids", articleIds.stream().map(ArticleId::value).toArray(Long[]::new))
 			.update();
+	}
+
+	@Override
+	public Backlog backlog(Instant now) {
+		return this.jdbc.sql("""
+				select count(*) as waiting, count(*) filter (where available_at > :now) as deferred
+				from event_assignment_queue
+				""")
+			.param("now", timestamp(now))
+			.query((rs, row) -> new Backlog(rs.getLong("waiting"), rs.getLong("deferred")))
+			.single();
 	}
 
 	private static PendingAssignment row(ResultSet rs, int row) throws SQLException {
