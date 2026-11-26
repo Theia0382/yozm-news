@@ -39,7 +39,7 @@
 | [0031](0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md) | 피드 요청은 내부 주소를 기본으로 막고, Apache HttpClient 로 한 번의 수집 전체에 마감 · 크기 상한을 건다 | 승인 (부분 대체: 0049 · 0065) |
 | [0032](0032-same-article-matching-avoids-false-merges-with-per-feed-entries-under-source-lock.md) | 같은 기사 판정은 기사를 잃지 않는 쪽으로 좁히고, 피드별 기록은 (기사, 피드)마다 한 행으로 소스 단위 잠금 안에서 쓴다 | 승인 (부분 대체: 0052 · 0217) |
 | [0033](0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md) | 피드 수집은 DB 점유로 겹침을 막고, 피드별 직전 항목으로 새 항목을 가르며, 같은 언론사 요청 사이는 요청 직전의 DB 예약으로 띄운다 | 승인 (부분 대체: 0040 · 0051 · 0066) |
-| [0034](0034-module-spec-as-public-interface-specification-and-docs-by-kind.md) | 모듈 Spec 은 모듈 공개 인터페이스의 명세로 코드보다 먼저 쓰고, 설계 문서는 종류 · 독자별 갈래로 나눈다 | 승인 (부분 대체: 0036) |
+| [0034](0034-module-spec-as-public-interface-specification-and-docs-by-kind.md) | 모듈 Spec 은 모듈 공개 인터페이스의 명세로 코드보다 먼저 쓰고, 설계 문서는 종류 · 독자별 갈래로 나눈다 | 승인 (부분 대체: 0036 · 0328 · 0333) |
 | [0035](0035-public-markdown-links-and-anchors-checked-by-separate-check-service.md) | 공개 마크다운의 상대 링크와 앵커는 별도 검사 서비스가 확인한다 | 승인 (부분 대체: 0100) |
 | [0036](0036-module-spec-holds-internal-structure-and-port-declarations-in-eight-sections.md) | 모듈 Spec 은 책임 단위의 내부 구조와 포트 선언까지 갖고, 절을 바깥에서 안쪽 순서의 여덟 절로 둔다 | 승인 |
 | [0037](0037-domain-may-use-non-replaceable-framework-types.md) | `domain` 은 교체하지 않는 프레임워크의 타입을 쓸 수 있고, 그 단위 테스트는 스프링 컨텍스트 없이 돈다 | 승인 |
@@ -72,7 +72,7 @@
 | [0064](0064-topic-coverage-counts-articles-by-first-evaluation-time-with-query-time-judgement-over-key-lineage-in-the-app.md) | 주제별 보도량은 기사의 첫 평가 시각으로 기간에 넣고, 최신 평가의 조회 시점 판정을 계보로 활성 버전 키에 이어 앱에서 센다 | 승인 (부분 대체: 0112) |
 | [0065](0065-blocked-address-fetch-failure-counts-as-temporary.md) | 막힌 주소로 가는 피드 요청은 일시 실패로 센다 | 승인 |
 | [0066](0066-overflow-suspected-only-when-previous-and-current-fetches-both-have-ten-or-more-keys.md) | 넘침 의심은 직전 · 이번 수집의 키가 모두 10개 이상일 때만 본다 | 승인 |
-| [0067](0067-partial-supersession-marked-in-status-line-and-above-replaced-sentence-and-supplements-in-follow-up-records.md) | ADR 의 부분 대체는 상태 줄과 대체된 문장 위 표시로 알리고, 결정을 바꾸지 않는 보충은 후속 기록으로 남긴다 | 승인 |
+| [0067](0067-partial-supersession-marked-in-status-line-and-above-replaced-sentence-and-supplements-in-follow-up-records.md) | ADR 의 부분 대체는 상태 줄과 대체된 문장 위 표시로 알리고, 결정을 바꾸지 않는 보충은 후속 기록으로 남긴다 | 승인 (부분 대체: 0332) |
 | [0068](0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md) | RSS 요약문은 운영자 화면에만 보이고, 인스턴스 사용자와 외부 API 에는 가공한 정보만 낸다 | 승인 |
 | [0069](0069-missing-tags-filled-by-the-evaluator-rereading-stored-raw-responses-over-an-operator-chosen-period.md) | 저장 기준을 낮춘 뒤 빠진 태그는 운영자가 정한 기간의 평가를 저장된 원본 응답으로 평가기가 다시 읽어 채운다 | 승인 |
 | [0070](0070-past-store-threshold-maximum-and-mixed-store-floors-computed-from-history-and-finished-backfills.md) | 지난 저장 기준 최댓값과 평가 현황의 저장 기준 섞임은 이력과 끝난 채움 기록으로 평가 시각 축의 저장 바닥을 계산해 낸다 | 승인 |
@@ -321,13 +321,19 @@
 | [0317](0317-a-change-report-row-points-to-the-previous-report-it-took-the-previous-values-from.md) | 변화 리포트 행은 생성 때 직전 값을 꺼낸 직전 리포트를 가리킨다 | 승인 |
 | [0318](0318-change-report-period-days-are-written-in-the-users-zone-at-start-and-the-row-keeps-that-zone.md) | 변화 리포트 기간의 날짜는 생성을 시작할 때의 사용자 시간대로 적고, 그 시간대를 리포트 행에 남긴다 | 승인 |
 | [0319](0319-the-change-report-screen-has-a-list-per-kind-and-a-report-page-with-four-states-and-the-failure-cause-only.md) | 변화 리포트 화면은 종류마다 목록과 한 편 화면으로 보이고, 상태는 넷, 실패는 코드의 무슨 일 문구만 보인다 | 승인 (부분 대체: 0323 · 0325) |
-| [0320](0320-operator-screens-operations-docs-and-the-evaluation-tool-also-call-a-storyline-an-event-flow-and-a-big-one-a-big-topic.md) | 운영자 화면 · 운영 문서 · 평가 도구도 스토리라인을 사건 흐름 · 흐름 · 큰 화제로 부른다 | 승인 |
+| [0320](0320-operator-screens-operations-docs-and-the-evaluation-tool-also-call-a-storyline-an-event-flow-and-a-big-one-a-big-topic.md) | 운영자 화면 · 운영 문서 · 평가 도구도 스토리라인을 사건 흐름 · 흐름 · 큰 화제로 부른다 | 승인 (부분 대체: 0328) |
 | [0321](0321-change-report-periods-end-at-the-digest-time-of-the-chosen-weekday-or-day-are-made-within-two-hours-and-a-changed-setting-makes-a-whole-new-period.md) | 변화 리포트는 고른 요일 · 날짜의 다이제스트 생성 시각에서 기간을 끊고, 그 시각 뒤 2시간 안에 만들며, 설정을 바꾸면 새 설정의 온전한 기간을 만든다 | 승인 |
 | [0322](0322-a-weekly-report-needs-three-ready-digest-days-a-monthly-report-two-ready-weeklies-wholly-inside-and-a-monthly-waits-for-unfinished-weeklies.md) | 주간 리포트는 그 주에 READY 다이제스트가 3일 이상, 월간은 그 기간에 다 든 READY 주간이 2편 이상일 때만 만들고, 월간은 끝나지 않은 주간을 기다리며 주간을 끄면 월간도 없다 | 승인 |
 | [0323](0323-report-generation-jobs-and-stalled-report-recovery-follow-the-digest-and-a-report-ending-without-a-start-records-the-zone.md) | 리포트의 생성 작업 · 거두기는 다이제스트를 따르고, 시작하지 않고 끝난 리포트도 그때의 시간대를 적는다 | 승인 |
 | [0324](0324-report-failures-become-notices-through-an-event-declared-by-the-receiving-user-module-like-digest-failures.md) | 리포트 실패는 받는 쪽 user 가 선언한 이벤트로 다이제스트와 같은 꼴의 알림이 되고, 실패 갈래 타입을 함께 쓴다 | 승인 |
 | [0325](0325-a-failed-report-is-regenerated-from-the-screen-on-the-same-row-up-to-three-times.md) | 실패한 리포트는 화면에서 같은 행을 다시 생성을 기다리게 해 리포트마다 세 번까지 다시 만든다 | 승인 |
-| [0326](0326-development-names-call-a-shared-storyline-storyline-a-user-storyline-user-storyline-and-a-judgement-candidate-of-unknown-kind-candidate.md) | 개발 이름은 공유 스토리라인을 `Storyline`, 사용자 스토리라인을 `UserStoryline` 으로 부르고, 종류를 모르는 판정 후보는 `Candidate` 로 부른다 | 승인 |
+| [0326](0326-development-names-call-a-shared-storyline-storyline-a-user-storyline-user-storyline-and-a-judgement-candidate-of-unknown-kind-candidate.md) | 개발 이름은 공유 스토리라인을 `Storyline`, 사용자 스토리라인을 `UserStoryline` 으로 부르고, 종류를 모르는 판정 후보는 `Candidate` 로 부른다 | 승인 (부분 대체: 0328) |
+| [0328](0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md) | 프론트엔드도 화면 Spec 하나(`web`)를 갖고, 화면 이름 · 화면 경로 · 화면 동작을 그 Spec 이 갖는다 | 승인 |
+| [0329](0329-a-large-rule-is-split-into-one-judgement-each-and-its-identifier-stays-as-a-group-head-covering-the-sub-rules.md) | 큰 규칙은 판단 하나씩 쪼개고, 원래 규칙 식별자는 하위 규칙을 덮는 묶음 머리로 남긴다 | 승인 |
+| [0330](0330-spec-rules-sit-in-number-order-within-topic-subsections-retired-rules-go-to-a-last-subsection-and-rules-get-no-anchors.md) | Spec §5 의 규칙은 주제별 하위 절 안에서 번호순으로 두고, 폐지한 규칙은 끝 절에 모으며, 규칙마다 앵커를 두지 않는다 | 승인 |
+| [0331](0331-a-development-term-has-only-the-meaning-of-one-code-name-and-words-with-several-meanings-are-renamed-per-meaning.md) | 개발 용어는 코드 이름 하나의 뜻만 갖고, 여러 뜻으로 쓰이던 말은 뜻마다 다른 말로 바꾼다 | 승인 |
+| [0332](0332-reasons-and-measurements-belong-to-the-deciding-adr-are-dropped-without-one-and-unmeasured-values-are-marked.md) | 판단의 이유와 실측은 그 판단의 ADR 이 갖고, 그 ADR 이 없으면 문서에 남기지 않으며, 재지 않은 잠정값은 `(측정 전)` 으로 표시한다 | 승인 |
+| [0333](0333-a-term-is-defined-in-the-spec-of-the-module-owning-the-concept-and-only-cross-cutting-terms-go-to-the-overview.md) | 용어의 정의는 그 개념을 소유한 모듈의 Spec 이 갖고, 주인을 한 모듈로 정할 수 없는 횡단 용어만 `overview` 가 갖는다 | 승인 |
 
 ## 운영 규칙
 
@@ -372,6 +378,8 @@
 ### 후속 기록
 
 보충은 말미 `## 후속 기록` 절에 날짜와 한 줄로 남긴다 — `- YYYY-MM-DD: {옛 ADR 의 자리} — {그 자리를 정하거나 보충한 ADR · 지금 상태 문서의 자리}`. 정해진 내용은 옮겨 적지 않는다.
+
+그 ADR 의 판단 근거가 된 실측도 후속 기록에 날짜 · 값 · 출처 한 줄로 남긴다 — `- YYYY-MM-DD: {옛 ADR 의 자리} 의 실측 — {값}({출처})`. 근거가 된 ADR 이 없는 실측의 처분은 [docs/README.md §4](../README.md#4-작성-규칙) "판단의 이유와 측정 기록"이 정한다([ADR-0332](0332-reasons-and-measurements-belong-to-the-deciding-adr-are-dropped-without-one-and-unmeasured-values-are-marked.md)).
 
 ## 양식
 

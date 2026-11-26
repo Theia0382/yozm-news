@@ -19,23 +19,16 @@
 
 ### 앱 메모리와 이미지 크기
 
-한 번 잰 값이다(amd64, 2026-11-07, 기사 59건). 힙 설정 · 기사 수 · 호스트에 따라 달라진다.
-
-| 상태 | `app` 메모리(`docker stats`) |
-|---|---|
-| 기본 로컬 임베딩, 기동 직후 | 1.21 GiB |
-| 기본 로컬 임베딩, 기사 59건을 임베딩한 뒤 | 1.29 GiB |
-| 외부 임베딩 방식(로컬 모델을 올리지 않음) | 0.87 GiB |
-
-- 로컬 모델 몫은 약 0.3 ~ 0.4 GiB 다. 메모리가 빠듯한 호스트는 외부 방식을 고를 수 있다([임베딩](configuration.md#임베딩))
-- `app` 이미지는 약 0.97 GB 다. 그 가운데 모델 파일 계층이 약 135 MB, 로컬 임베딩 실행 라이브러리(ONNX Runtime · 토크나이저 네이티브)가 약 69 MB 다. 모델 파일은 따로 된 계층이라 코드만 바뀐 업데이트는 그 계층을 다시 만들지 않는다
-- 위 이미지 크기는 LLM 공급자 라이브러리(OpenAI · Anthropic SDK 와 Spring AI)를 뺀 측정값이다. 그 라이브러리가 앱 jar 에 약 123 MB 를 더한다 — 더한 뒤의 이미지 크기는 재지 않았다
+- 기본 로컬 임베딩은 앱 안에서 모델을 돌리므로 `app` 의 메모리가 는다. 이미지에는 모델 파일 계층과 로컬 임베딩 실행 라이브러리(ONNX Runtime · 토크나이저 네이티브)가 더해진다. 잰 값은 [ADR-0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md)의 후속 기록에 있다
+- 메모리가 빠듯한 호스트는 외부 방식을 고를 수 있다([임베딩](configuration.md#임베딩))
+- 모델 파일은 따로 된 계층이라 코드만 바뀐 업데이트는 그 계층을 다시 만들지 않는다
+- LLM 공급자 라이브러리(OpenAI · Anthropic SDK 와 Spring AI)도 앱 jar 를 키운다. 잰 값은 [ADR-0149](../adr/0149-llm-calls-use-spring-ai-2-without-the-starter-and-build-sdk-clients-with-explicit-address-key-and-log-level-and-close-them.md)의 후속 기록에 있다
 
 ## 서비스
 
 | 서비스 | 이미지 | 하는 일 |
 |---|---|---|
-| `proxy` | `frontend/Dockerfile` target `proxy` — Caddy 에 SPA 빌드 결과를 담은 이미지 | SPA 정적 파일을 내려주고 백엔드 경로만 `app` 으로 넘긴다. 넘길 때 신뢰 범위로 정한 클라이언트 IP 를 `X-Real-IP` 에 덮어쓴다([공개](configuration.md#공개)). 넘기지 않는 경로(관리 엔드포인트 포함)는 SPA 가 답한다([넘기는 경로](../development/infrastructure.md#proxy-가-넘기는-경로)) |
+| `proxy` | `frontend/Dockerfile` target `proxy` — Caddy 에 SPA 빌드 결과를 담은 이미지 | SPA 정적 파일을 내려주고 백엔드 경로만 `app` 으로 넘긴다. 넘길 때 클라이언트 IP 를 `X-Real-IP` 에 덮어쓴다([security.md "악용 방지"](../security.md#악용-방지)). 넘기지 않는 경로(관리 엔드포인트 포함)는 SPA 가 답한다([넘기는 경로](../development/infrastructure.md#proxy-가-넘기는-경로)) |
 | `app` | `backend/Dockerfile` target `app` | 화면용 API 와 백그라운드 작업(작업 서버)을 한 프로세스에서 맡는다 — 정의가 두 역할 profile 을 켠다(`SPRING_PROFILES_ACTIVE: web,worker`, [platform Spec](../specs/platform.md#역할)). 자체 로그인 · 세션도 이 프로세스가 맡는다 |
 | `postgres` | 루트 `compose.yaml` 의 PostgreSQL 이미지(pgvector 확장이 든 이미지) | 데이터. 호스트에 공개하지 않는다 |
 | **(미구현)** `cloudflared` | Cloudflare Tunnel | `proxy` 로만 연결한다([공개 경로와 외부 서비스](#공개-경로와-외부-서비스)) |
@@ -44,8 +37,8 @@
 - `app` 과 `postgres` 는 호스트에 공개하지 않는다. 공개하는 것은 `proxy` 하나다
 - **설정 디렉터리** — 배포 구성은 `deploy/config/` 를 `app` 의 `/etc/yozmnews` 에 읽기 전용으로 붙인다. 운영자가 앱에 넘기는 파일을 여기에 둔다 — [LLM 키 암호화](configuration.md#llm-키-암호화)의 KEK 파일(필수)과 [허용 모델 목록](configuration.md#허용-모델-목록) 파일(선택)이다. 이 디렉터리의 파일은 저장소가 추적하지 않는다
 - **(미구현)** 역할을 나눠 띄우는 구성 — 같은 이미지를 `web` · `worker` 두 서비스로 띄우고 각 서비스가 `SPRING_PROFILES_ACTIVE` 로 자기 역할 하나를 켠다([overview.md §4](../overview.md#4-시스템-구성)). proxy 가 넘길 곳(`app` 고정)과 스모크가 아직 이 구성을 모른다
-- **외부 DB** — 배포 구성은 DB 접속 정보를 Compose 정의 안에서 `postgres` 서비스에 맞춰 고정해 넘긴다([DB 접속](configuration.md#db-접속)). 관리형 DB 를 쓰려면 `postgres` 서비스와 `app` 의 `depends_on` 을 빼고 접속 정보를 바꾼 정의를 써야 한다 — 지금 배포 구성에는 `deploy/.env` 만으로 바꾸는 경로가 없다
-- **DB 확장** — 앱은 DB 의 pgvector 확장(`vector`, 0.8 이상)을 쓴다([ADR-0027](../adr/0027-pgvector-for-vector-storage.md)). 앱이 기동할 때 마이그레이션이 확장을 설치하는데, 설치에는 superuser 권한이 필요하다. 배포 구성의 DB 계정은 superuser 라 따로 할 일이 없다. 앱 계정이 superuser 가 아닌 외부 DB 에서는 DBA 가 먼저 `CREATE EXTENSION vector` 로 설치한다 — 앱 계정의 검색 경로(`search_path`)에 있는 스키마(기본 `public`)에 둔다. 검색 경로 밖에 두면 확장의 타입(`vector`)을 스키마 이름 없이 쓸 수 없다
+- **외부 DB** — 배포 구성은 DB 접속 정보를 Compose 정의 안에서 `postgres` 서비스에 맞춰 고정해 넘긴다([DB 접속](configuration.md#db-접속)). 관리형 DB 를 쓰려면 `postgres` 서비스와 `app` 의 `depends_on` 을 빼고 접속 정보를 바꾼 정의를 써야 한다. 배포 구성에는 `deploy/.env` 만으로 바꾸는 경로가 없다
+- **DB 확장** — 앱은 DB 의 pgvector 확장(`vector`, 0.8 이상)을 쓴다([ADR-0027](../adr/0027-pgvector-for-vector-storage.md)). 앱이 기동할 때 마이그레이션이 확장을 설치하는데, 설치에는 superuser 권한이 필요하다. 배포 구성의 DB 계정은 superuser 라 따로 할 일이 없다. 앱 계정이 superuser 가 아닌 외부 DB 에서는 DBA 가 먼저 `CREATE EXTENSION vector` 로 설치한다. 설치할 곳은 앱 계정의 검색 경로(`search_path`)에 있는 스키마(기본 `public`)다. 검색 경로 밖에 두면 확장의 타입(`vector`)을 스키마 이름 없이 쓸 수 없다
   - 앱 계정이 superuser 가 아닌데 확장이 설치되어 있지 않으면 마이그레이션이 권한 오류로 실패해 앱이 뜨지 않는다
   - 설치된 확장이 0.8 보다 낮으면 앱이 기동을 멈추고 로그에 할 일을 남긴다 — DBA(확장 소유자)가 `ALTER EXTENSION vector UPDATE` 로 올린다. DB 서버에 0.8 이상의 pgvector 가 있어야 한다([platform Spec](../specs/platform.md#db-확장))
 
@@ -53,7 +46,11 @@
 
 저장소 루트에서 실행한다.
 
-1. 값을 준비한다 — `deploy/.env.example` 을 `deploy/.env` 로 복사하고 필수 값을 적는다([운영 설정](configuration.md)). 필수 값이 없거나 비어 있으면 Compose 가 변수 이름을 말하며 멈춘다. 운영자 화면을 쓸 첫 운영자 계정의 [이메일 · 초기 비밀번호](configuration.md#계정과-고지)도 적는다 — 운영자 계정이 없으면 운영자 화면을 쓸 수 없다. 스크립트 · 도구로 운영자 API 를 부를 때만 [운영자 토큰](configuration.md#운영자)을 적는다. LLM 키를 암호화하는 KEK 파일 `deploy/config/kek` 를 만든다 — 없으면 `app` 이 뜨지 않는다([LLM 키 암호화 키(KEK)](#llm-키-암호화-키kek))
+1. 값을 준비한다
+   - `deploy/.env.example` 을 `deploy/.env` 로 복사하고 필수 값을 적는다([운영 설정](configuration.md)). 필수 값이 없거나 비어 있으면 Compose 가 변수 이름을 말하며 멈춘다
+   - 운영자 화면을 쓸 첫 운영자 계정의 [이메일 · 초기 비밀번호](configuration.md#계정과-고지)도 적는다. 운영자 계정이 없으면 운영자 화면을 쓸 수 없다
+   - 스크립트 · 도구로 운영자 API 를 부를 때만 [운영자 토큰](configuration.md#운영자)을 적는다
+   - LLM 키를 암호화하는 KEK 파일 `deploy/config/kek` 를 만든다. 없으면 `app` 이 뜨지 않는다([LLM 키 암호화 키(KEK)](#llm-키-암호화-키kek))
 2. 띄우고 확인한다
 
    ```sh
@@ -63,7 +60,10 @@
    bash deploy/smoke.sh                                          # 기동 상태 · 공개 범위 · 라우팅 · 운영자 경로 · 앱 역할 · 프리셋 적재 확인 — 종료 코드 0 이면 통과 (bash · docker · curl · sed 필요)
    ```
 
-   `deploy/` 에서는 `-f` 없이 `docker compose up -d --build --wait` 로 같다. 스모크는 공개 주소를 기본값(루프백)으로 둔 구성을 확인한다 — [공개](configuration.md#공개) 주소를 바꾼 구성에서는 공개 범위 항목이 실패한다. 운영자 경로는 운영자 토큰을 넣은 구성 · 넣지 않은 구성 모두 로그인을 요구하는지 확인한다. 로컬 모델 추론 항목(K14)은 개발용 시험 피드 서버가 있을 때만 돌고, 운영 인스턴스에서는 건너뛴다(`skip`) — 시험 소스를 등록하지 않는다([개발 인프라 — CI](../development/infrastructure.md#ci)).
+   - `deploy/` 에서는 `-f` 없이 `docker compose up -d --build --wait` 로 같다
+   - 스모크는 공개 주소를 기본값(루프백)으로 둔 구성을 확인한다. [공개](configuration.md#공개) 주소를 바꾼 구성에서는 공개 범위 항목이 실패한다
+   - 운영자 경로는 운영자 토큰을 넣은 구성 · 넣지 않은 구성 모두 로그인을 요구하는지 확인한다
+   - 로컬 모델 추론 항목은 개발용 시험 피드 서버가 있을 때만 돌고, 운영 인스턴스에서는 시험 소스를 등록하지 않고 건너뛴다(`skip`). 도는 조건은 [개발 인프라의 CI](../development/infrastructure.md#ci)에 있다
 3. 브라우저로 proxy 의 공개 주소를 연다 — 기본은 이 호스트의 루프백이다([공개](configuration.md#공개))
 4. 첫 운영자로 로그인해 비밀번호를 새로 정한다 — [첫 운영자](#첫-운영자). 운영자 화면은 `/admin` 이고 운영자 계정으로 연다
 5. 소스를 등록하고 켠다 — [소스 등록](sources.md). 소스와 피드를 켜기 전에는 아무것도 수집하지 않는다
@@ -82,14 +82,14 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 
 ### 첫 운영자
 
-운영자 계정은 환경 변수로만 만든다([계정과 고지](configuration.md#계정과-고지)).
+운영자 계정은 환경 변수로만 만든다. 두 변수의 값과 기동 규칙은 [계정과 고지](configuration.md#계정과-고지)에, 이 길만 두는 까닭은 [security.md "가입"](../security.md#가입)에 있다.
 
 1. `deploy/.env` 에 `YOZMNEWS_FIRST_ADMIN_EMAIL` · `YOZMNEWS_FIRST_ADMIN_PASSWORD` 를 적고 띄운다. `app` 로그(`docker compose -f deploy/compose.yaml logs app`)에 "첫 운영자 계정을 만들었다"가 나온다
-2. 그 이메일 · 초기 비밀번호로 로그인한다(운영자 화면 `/admin` 을 열면 로그인 화면으로 간다) — 비밀번호를 새로 정하는 화면만 열린다. 바꾸면 복구 코드가 한 번 나오고, 저장을 확인하면 운영자 화면으로 돌아온다. 운영자 계정의 복구 코드를 잃으면 비밀번호를 되찾을 길이 없으니 안전한 곳에 둔다
-3. 두 변수를 `deploy/.env` 에서 지운다. 남겨 두면 앱이 뜰 때마다 경고한다
+2. 그 이메일 · 초기 비밀번호로 로그인한다(운영자 화면 `/admin` 을 열면 로그인 화면으로 간다). 비밀번호를 새로 정하는 화면만 열린다. 바꾸면 복구 코드가 한 번 나오고, 저장을 확인하면 운영자 화면으로 돌아온다. 운영자 계정의 복구 코드를 잃으면 비밀번호를 되찾을 길이 없으니 안전한 곳에 둔다
+3. 두 변수를 `deploy/.env` 에서 지운다
 
-- 로그인 · 가입 · 비밀번호 변경은 TLS 로 연 주소나 `localhost` 에서만 된다 — 세션 쿠키가 언제나 `Secure` 다([ADR-0128](../adr/0128-session-and-csrf-cookies-are-always-secure-assuming-tls-in-front.md))
-- 값을 잘못 주면(하나만 · 이메일 아님 · 8 ~ 128자 밖 · 이미 있는 계정의 이메일) 앱이 뜨지 않고 로그가 변수 이름과 까닭을 말한다 — 고쳐서 다시 띄운다
+- 로그인 · 가입 · 비밀번호 변경은 TLS 로 연 주소나 `localhost` 에서만 된다([구성](#구성))
+- 값이 규칙을 어겨 앱이 뜨지 않으면 로그가 말하는 변수 이름과 까닭을 보고 고쳐서 다시 띄운다
 - 역할을 나눠 여러 프로세스를 띄워도 운영자 계정은 하나만 생긴다. 나머지 프로세스는 남은 값 경고를 낸다
 - 운영자 계정이 모두 정지 · 탈퇴하면 두 변수를 다시 주고 띄워 새 운영자를 만든다
 
@@ -99,7 +99,7 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 
 - **초대 링크** — 메모(누구에게 줄 링크인지)를 붙여 만들고 링크를 직접 전한다. 링크는 7일 뒤 만료되고 한 번만 쓴다. 링크는 운영자 화면을 연 주소로 만들어지므로, 받는 사람이 닿는 바깥 주소로 운영자 화면을 열고 링크의 주소를 확인한 뒤 전한다. 링크는 만든 때만 보인다 — 잃으면 취소하고 다시 만든다
 - **계정 만들기** — 이메일 · 표시 이름 · 초기 비밀번호로 만들고 초기 비밀번호를 따로 전한다. 받은 사람은 첫 로그인에서 비밀번호를 새로 정한다. 그 전에 초기 비밀번호를 잃었으면 "초기 비밀번호 다시 정하기"로 바꾼다
-- **공개 가입** — 켜면 로그인 화면에 가입 링크가 나와 누구나 가입한다. 가입에는 IP별 요청 제한이 걸리고, 봇 차단은 [봇 차단](configuration.md#봇-차단) 설정을 따른다 — 운영자 화면이 지금 봇 차단 상태를 알린다
+- **공개 가입** — 켜면 로그인 화면에 가입 링크가 나와 누구나 가입한다. 가입에 걸리는 방어는 [security.md "가입"](../security.md#가입)에 있다. 봇 차단은 [봇 차단](configuration.md#봇-차단) 설정을 따르고, 운영자 화면이 지금 봇 차단 상태를 알린다
 - 비밀번호를 잊은 사용자는 로그인 화면의 "복구 코드로 비밀번호 재설정"으로 되찾는다. 복구 코드가 없으면 되찾을 수 없다 — 메일을 보내지 않는다. 운영자가 만든 계정으로 아직 첫 로그인을 하지 않았으면 "초기 비밀번호 다시 정하기"로 새 초기 비밀번호를 준다
 
 ## 업데이트
@@ -107,11 +107,11 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 - 저장소를 새 버전으로 받고 [배포 구성 실행](#배포-구성-실행)의 `up` 을 다시 돌린다 — 바뀐 이미지가 다시 빌드되고 바뀐 서비스만 다시 뜬다
 - DB 마이그레이션은 `app` 이 기동할 때 Flyway 가 실행한다
 - **PostgreSQL 메이저가 바뀐 버전으로 올릴 때** — 새 메이저는 데이터를 다른 경로에 두어, 그대로 띄우면 기존 데이터를 두고 빈 클러스터로 뜬다. 올리기 전에 `pg_dump` 로 덤프하고, 새 버전으로 띄운 뒤 복원한다([ADR-0021](../adr/0021-separate-deploy-compose-with-single-app-service.md))
-- **마이그레이션이 큰 표를 고쳐 쓰는 버전** — Flyway 는 마이그레이션마다 한 트랜잭션으로 돌고, 끝날 때까지 `app` 이 뜨지 않는다. 태그 판정 원본 응답을 평가 표에서 판정 원본 표로 옮기는 `V26` 은 평가 행 수에 비례해 걸리고, 평가 표의 모든 행을 고쳐 써 그 표는 PostgreSQL 자동 정리(autovacuum)가 옛 행 자리를 새 행에 다시 쓸 때까지 커진 채로 남는다 — 옮긴 원본만큼의 새 표도 더해진다. 올리기 전에 [백업](#백업과-복구)하고 디스크 여유를 본다
+- **마이그레이션이 큰 표를 고쳐 쓰는 버전** — Flyway 는 마이그레이션마다 한 트랜잭션으로 돌고, 끝날 때까지 `app` 이 뜨지 않는다. 태그 판정 원본 응답을 평가 표에서 판정 원본 표로 옮기는 `V26` 은 평가 행 수에 비례해 걸리고, 평가 표의 모든 행을 고쳐 써 그 표는 PostgreSQL 의 autovacuum 이 옛 행 자리를 새 행에 다시 쓸 때까지 커진 채로 남는다. 옮긴 원본만큼의 새 표도 더해진다. 올리기 전에 [백업](#백업과-복구)하고 디스크 여유를 본다
 - **큰 화제 기준이 흐름으로 옮겨 간 버전** — `V29` 가 사건 단위로 두던 기준의 값과 변경 이력을 지우고, 큰 화제 기준은 처음 값으로 시작한다. 조정해 둔 값이 있으면 올리기 전에 적어 두고, 올린 뒤 [큰 화제 화면](events.md#큰-화제-기준)에서 미리보기로 다시 맞춘다([ADR-0118](../adr/0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md))
 - **큰 화제 기준이 보도 강도 하나로 바뀐 버전** — `V40` 이 소스 기준 · 중요도 기준의 값과 변경 이력을 지우고, 큰 화제 기준은 처음 값으로 시작한다. 옛 두 값을 새 기준으로 옮기는 식은 없다 — 올린 뒤 [큰 화제 화면](events.md#큰-화제-기준)에서 미리보기로 다시 맞춘다([ADR-0147](../adr/0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md))
 - **기본 체계 파일의 중요도 문구 · 수준 수가 바뀐 버전** — 기본 체계 파일은 첫 기동에만 들어가, 올려도 돌고 있는 인스턴스는 지금 체계로 평가한다. 새 문구를 들이려면 [기본 체계 파일의 개정 들이기](tag-sets.md#기본-체계-파일의-개정-들이기)를 따른다([ADR-0285](../adr/0285-importance-asks-what-the-matter-now-changes-and-levels-run-to-society-wide-in-four-steps-without-field-words.md))
-- **리스너 · 반복 작업을 다른 모듈로 옮긴 버전** — 마이그레이션이 남은 이벤트 발행을 새 리스너로 옮기고, 옛 클래스로 만들어진 예약 · 대기 작업을 지운다. 다음 회차는 새 정의로 만들어지므로 운영자가 할 일은 없다([ADR-0113](../adr/0113-moving-listeners-or-jobs-between-modules-migrates-pending-publication-listener-ids-and-drops-pending-jobs-of-the-old-class.md))
+- **이벤트 처리 · 반복 작업을 다른 모듈로 옮긴 버전** — 마이그레이션이 남은 이벤트 발행을 새 처리 자리로 옮기고, 옛 정의로 만들어진 예약 · 대기 작업을 지운다. 반복 작업은 다음 실행부터 새 정의로 만들어지므로 운영자가 할 일은 없다([ADR-0113](../adr/0113-moving-listeners-or-jobs-between-modules-migrates-pending-publication-listener-ids-and-drops-pending-jobs-of-the-old-class.md))
 - **(미구현)** 이미지를 레지스트리(GHCR)에 두 아키텍처로 게시하고, 운영자는 새 버전을 `pull` 로 받아 띄운다. 게시는 릴리스 때 개발팀이 한다
 
 ## 헬스 체크와 관측
@@ -120,9 +120,27 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 - proxy 는 `/actuator/**` 를 앱으로 넘기지 않는다. 헬스 체크는 컨테이너 안에서 묻는다(위 healthcheck)
 - 작업 서버 대시보드(JobRunr)는 꺼져 있다 — 앱 보안 설정과 proxy 밖의 별도 포트(평문 basic 인증)로 떠서 운영자 계정 세션 · 운영자 토큰이 닿지 않는다([ADR-0023](../adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md))
 - 로그는 각 서비스의 컨테이너 로그(표준 출력 · 표준 오류)로 남는다 — `docker compose -f deploy/compose.yaml logs`
-- **남겨진 이벤트 발행** — 모듈 사이 이벤트의 처리가 여러 번 실패해 재처리가 멈춘 발행, 이벤트를 읽을 수 없어(이벤트 종류가 없거나 내용이 그 종류로 읽히지 않음) 재처리가 다루지 못하는 발행은 운영자 화면의 "이벤트 발행"(`/admin/event-publications`)에 나온다. 재처리가 멈춘 발행은 `app` 로그에도 `재처리 상한(6회)에 이른 실패 이벤트 발행` 경고로, 이벤트 종류가 없는 발행은 `Event '…' of unknown type '…' found` 경고로, 내용이 그 종류로 읽히지 않는 실패 발행은 `읽을 수 없어 다시 처리하지 않은 실패 이벤트 발행` 경고로 남는다(재처리 작업의 경고는 두 갈래를 ` · ` 로 이은 한 줄이다). 읽을 수 없는 발행이 남은 채 앱을 멈추면 종료 로그에 `Invocation of destroy method failed on bean with name 'eventPublicationRegistry'` 경고가 날 수 있다 — 남은 발행을 나열하다 그 내용을 읽지 못한 것이고 동작에는 영향이 없다. 원인을 고친 뒤 고른 발행을 "다시 처리"하면 지금 한 번 다시 보낸다 — 처리는 뒤에서 이어지므로 잠시 뒤 새로고침해 확인한다(성공하면 목록에서 사라진다). "폐기"는 고른 발행을 지운다 — 되돌릴 수 없고 그 이벤트는 다시 처리되지 않는다(예: 수집한 기사의 저장 이벤트를 지우면 그 기사는 저장되지 않고, 소스 · 피드 삭제 이벤트를 지우면 지운 소스 · 피드만 가진 기사가 지워지지 않고 남는다 — 남은 기사를 다시 지울 운영자 기능은 없으므로 삭제 이벤트는 다시 처리한다). 지운 발행은 `app` 로그에 `운영자가 이벤트 발행을 폐기했다` 경고로 남는다
+- **남겨진 이벤트 발행** — 아래 두 발행은 운영자 화면의 "이벤트 발행"(`/admin/event-publications`)에 나온다
+  - 모듈 사이 이벤트의 처리가 여러 번 실패해 재처리가 멈춘 발행
+  - 이벤트를 읽을 수 없어(이벤트 종류가 없거나 내용이 그 종류로 읽히지 않음) 재처리가 다루지 못하는 발행
+- 남겨진 발행은 `app` 로그에도 아래 경고로 남는다
+  - 재처리가 멈춘 발행 — `재처리 상한(6회)에 이른 실패 이벤트 발행`
+  - 이벤트 종류가 없는 발행 — `Event '…' of unknown type '…' found`
+  - 내용이 그 종류로 읽히지 않는 실패 발행 — `읽을 수 없어 다시 처리하지 않은 실패 이벤트 발행`
+- 재처리가 멈춘 발행과 내용이 읽히지 않는 실패 발행이 함께 있으면, 재처리 작업은 두 경고를 ` · ` 로 이은 한 줄로 남긴다
+- 읽을 수 없는 발행이 남은 채 앱을 멈추면 종료 로그에 `Invocation of destroy method failed on bean with name 'eventPublicationRegistry'` 경고가 날 수 있다. 남은 발행을 나열하다 그 내용을 읽지 못한 것이고 동작에는 영향이 없다
+- 원인을 고친 뒤 고른 발행을 "다시 처리"하면 지금 한 번 다시 보낸다. 처리는 뒤에서 이어지므로 잠시 뒤 새로고침해 확인한다(성공하면 목록에서 사라진다)
+- "폐기"는 고른 발행을 지운다. 되돌릴 수 없고 그 이벤트는 다시 처리되지 않는다. 지운 발행은 `app` 로그에 `운영자가 이벤트 발행을 폐기했다` 경고로 남는다
+  - 수집한 기사의 저장 이벤트를 지우면 그 기사는 저장되지 않는다
+  - 소스 · 피드 삭제 이벤트를 지우면 지운 소스 · 피드만 가진 기사가 지워지지 않고 남는다. 남은 기사를 다시 지울 운영자 기능은 없으므로 삭제 이벤트는 다시 처리한다
 - **(미구현)** 로그를 JSON 구조화 로그로 내고, 요청 ID 와 사용자 ID 를 담고, 비밀 값을 마스킹한다
-- **(미구현)** 지표는 Spring Boot Actuator 와 Micrometer 로 낸다. 핵심 지표는 피드별 수집 성공률, 평가 대기열 길이, Jev 지연 · 토큰, 사건 배정 수 · 애매한 구간 판정 비율 · 열린 사건 수, 다이제스트 · 변화 리포트 생성 성공률 · 소요 시간, 공급자별 오류율이다
+- **(미구현)** 지표는 Spring Boot Actuator 와 Micrometer 로 낸다. 핵심 지표는 아래다
+  - 피드별 수집 성공률
+  - 평가 대기열 길이
+  - Jev 지연 · 토큰
+  - 사건 배정 수 · 애매한 구간 판정 비율 · 열린 사건 수
+  - 다이제스트 · 변화 리포트 생성 성공률 · 소요 시간
+  - 공급자별 오류율
 - **(미구현)** 대시보드는 운영자 화면으로 시작하고, 필요해지면 지표를 외부(Grafana Cloud 무료 티어 등)로 내보낸다
 - **(미구현)** 오류 추적 서비스(Sentry 등)는 선택이다. 붙인다면 요청 본문과 헤더 전송을 끈다
 
@@ -140,22 +158,25 @@ Cloudflare 는 권장 구성이지 필수가 아니다. 운영자는 Tunnel 대�
 - Jev 호출은 Cloudflare 를 거치지 않는다 — 앱이 TypeSafe System One API 로 직접 보내고, 같은 스키마를 내는 다른 경로로 바꾸려면 기본 주소를 바꾼다([공유 평가](configuration.md#공유-평가))
 - 기사 임베딩은 기본으로 앱 안에서 하고 밖으로 보내지 않는다. 외부 방식을 고르면 앱이 설정한 주소로 직접 보낸다([임베딩](configuration.md#임베딩))
 - 사용자 BYOK LLM 호출(키 검증 · 생성)은 사용자가 키를 등록한 공급자의 주소로만 보낸다 — OpenAI · Anthropic 은 공급자(`api.openai.com` · `api.anthropic.com`)에 직접, OpenRouter 는 중계 공급자(`openrouter.ai`)로 보내고 OpenRouter 가 그 모델의 회사나 호스팅 공급자로 옮긴다. OpenRouter 요청에는 학습에 쓰는 공급자를 빼는 라우팅을 싣는다([ADR-0203](../adr/0203-openrouter-requests-exclude-providers-that-train-on-data-and-ask-for-providers-that-support-every-parameter-and-carry-no-app-attribution-headers.md)). 주소는 설정으로 바꿀 수 없고, 프록시를 쓰지 않으며 리다이렉트를 따르지 않는다([llm Spec](../specs/llm.md#공급자-클라이언트))
-- 봇 차단(Turnstile)은 운영자가 켜면 로그인 · 복구 코드 사용 · 공개 가입 화면에 붙는다([봇 차단](configuration.md#봇-차단)). 켜면 그 화면의 브라우저가 Cloudflare 에서 위젯을 받고, 앱이 토큰을 Cloudflare(`challenges.cloudflare.com`)에 확인한다 — 앱이 닿지 못하면 확인 없이 통과시키고 경고 로그를 남긴다([security.md](../security.md#악용-방지))
-- **앞단과 클라이언트 IP** — 요청 제한은 클라이언트 IP 로 센다. Tunnel · 리버스 프록시 뒤에서는 그 앞단이 proxy 의 신뢰 범위(기본 사설 대역)에서 붙어야 하고, 앞단은 `X-Forwarded-For` 에 클라이언트 IP 를 덧붙여야 한다(Cloudflare · Caddy 는 기본으로, nginx 는 `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for`). 앞단 없이 proxy 포트를 직접 공개하면 신뢰 범위를 비운다 — [공개](configuration.md#공개)
+- 봇 차단(Turnstile)은 운영자가 켜면 로그인 · 복구 코드 사용 · 공개 가입 화면에 붙는다([봇 차단](configuration.md#봇-차단)). 켜면 그 화면의 브라우저가 Cloudflare 에서 위젯을 받고, 앱이 토큰을 Cloudflare(`challenges.cloudflare.com`)에 확인한다. 앱이 닿지 못할 때의 처리는 [security.md "악용 방지"](../security.md#악용-방지)에 있다
+- **앞단과 클라이언트 IP** — Tunnel · 리버스 프록시 뒤에서는 아래처럼 앞단을 붙인다. 요청 제한이 세는 클라이언트 IP 를 proxy 가 정하는 방식은 [security.md "악용 방지"](../security.md#악용-방지)에 있다
+  - 앞단은 proxy 의 신뢰 범위(기본 사설 대역)에서 붙어야 한다. 범위를 바꾸는 값은 [공개](configuration.md#공개)에 있다
+  - 앞단은 `X-Forwarded-For` 에 클라이언트 IP 를 덧붙여야 한다. Cloudflare · Caddy 는 기본으로 덧붙이고, nginx 는 `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for` 로 덧붙인다
+  - 앞단 없이 proxy 포트를 직접 공개하면 신뢰 범위를 비운다([공개](configuration.md#공개))
 - 운영자 화면의 피드 켜기는 앱이 그 피드를 받아 확인한 뒤 답한다 — 같은 언론사의 앞선 요청을 기다린 시간(요청 하나당 최대 10초)과 받는 시간(최대 10초)이 더해진다. 배포 `proxy`(Caddy)는 응답 시간을 제한하지 않는다. 앞단(Tunnel · 리버스 프록시)에 응답 시간 제한이 있으면 그보다 길어진 켜기는 화면에 실패로 보이고, 서버의 판정 · 저장은 그대로 끝난다 — 목록을 다시 읽으면 결과가 보인다
 
 ## LLM 키 암호화 키(KEK)
 
-사용자가 등록한 LLM 키는 KEK 로 감싼 키로 암호화돼 DB 에 있다. KEK 는 `deploy/config/kek` 파일에 있다 — 형식과 기동 규칙은 [운영 설정 — LLM 키 암호화](configuration.md#llm-키-암호화).
+사용자가 등록한 LLM 키는 KEK 로 감싼 키로 암호화돼 DB 에 있다. KEK 는 `deploy/config/kek` 파일에 있다. 파일의 형식과 기동 규칙은 [운영 설정의 LLM 키 암호화](configuration.md#llm-키-암호화)에, 백업 · 잃음의 위험은 [security.md "BYOK 키 보관"](../security.md#byok-키-보관)에 있다.
 
 - **만들기** — 처음 띄우기 전에 한 번 만든다. 이 파일은 저장소가 추적하지 않는다
 
   ```sh
   printf '1:%s\n' "$(openssl rand -base64 32)" > deploy/config/kek
   ```
-- **이미 돌고 있는 인스턴스** — 이 파일 없이 돌던 인스턴스는 판을 올릴 때 파일을 만들어야 `app` 이 뜬다
-- **권한** — `app` 이 사용자 `65534` 로 파일을 읽는다. 읽지 못하면 `app` 이 뜨지 않고 기동 로그가 경로를 말한다
-- **백업** — DB 백업과 다른 위치에 둔다. DB 덤프와 KEK 가 함께 있으면 덤프를 얻은 사람이 사용자 키를 열 수 있다
+- **이 파일 없이 돌던 인스턴스** — 새 버전으로 올릴 때 파일을 만들어야 `app` 이 뜬다
+- **권한** — `app` 이 사용자 `65534` 로 파일을 읽으므로 그 사용자가 읽을 수 있게 둔다. 호스트의 다른 계정에게서 가리려면 `deploy/config/` 디렉터리의 권한으로 막는다. 읽지 못하면 `app` 이 뜨지 않고 기동 로그가 경로를 말한다
+- **백업** — DB 백업과 다른 위치에 둔다
 - **교체**
   1. 파일에 더 큰 버전의 줄을 더한다(옛 줄은 그대로 둔다) — `printf '2:%s\n' "$(openssl rand -base64 32)" >> deploy/config/kek`
   2. `app` 을 다시 띄운다. 새 키는 새 버전으로 감싸고, 작업 역할이 10분마다 옛 버전으로 감싼 키를 새 버전으로 다시 감싼다
@@ -171,4 +192,4 @@ Cloudflare 는 권장 구성이지 필수가 아니다. 운영자는 Tunnel 대�
 
 - **(미구현)** 매일 `pg_dump` 를 S3 호환 저장소(기본 R2)에 올리고 30일 보관한다
 - **(미구현)** 분기마다 복구 리허설을 한다 — 새 환경에 배포 구성을 띄우고 덤프를 복원해 동작을 확인한다
-- KEK 파일(`deploy/config/kek`)은 DB 백업과 다른 위치에 따로 백업한다([LLM 키 암호화 키(KEK)](#llm-키-암호화-키kek))
+- KEK 파일(`deploy/config/kek`)은 DB 백업과 따로 백업한다. 둘 곳은 [LLM 키 암호화 키(KEK)](#llm-키-암호화-키kek)의 백업을 따른다

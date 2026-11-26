@@ -54,3 +54,5 @@
 ## 후속 기록
 
 - 2026-10-30: 결과 절이 "정리는 Javadoc 이 Spec 을 가리키는 표기를 정할 때 한다"고 남긴 구성 요소의 책임 한 줄과 Javadoc 첫 문장의 겹침은 [ADR-0039](0039-code-comments-point-to-owning-docs-and-javadoc-format-checked-by-javac-and-javadoc.md)가 정리했다 — Javadoc 은 한 줄 요약과 Spec 위치를 두고, 요약 한 줄은 문서 위계의 예외로 겹쳐도 된다.
+- 2026-11-25: 결정의 여덟 절 — [ADR-0328](0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md) · [`specs/README` §2 "화면 Spec"](../specs/README.md#화면-spec)
+- 2026-11-25: 결정의 폐지한 규칙 — [ADR-0330](0330-spec-rules-sit-in-number-order-within-topic-subsections-retired-rules-go-to-a-last-subsection-and-rules-get-no-anchors.md) · [`specs/README` §3](../specs/README.md#3-쓰는-규칙) 규칙 2

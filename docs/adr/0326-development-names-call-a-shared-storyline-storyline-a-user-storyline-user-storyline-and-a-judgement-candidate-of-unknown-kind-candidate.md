@@ -1,6 +1,6 @@
 # ADR-0326: 개발 이름은 공유 스토리라인을 `Storyline`, 사용자 스토리라인을 `UserStoryline` 으로 부르고, 종류를 모르는 판정 후보는 `Candidate` 로 부른다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 화면 이름과 개발 이름의 대응의 자리([ADR-0328](0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md))
 - 날짜: 2026-11-25
 - 근거: [이슈 #274](https://github.com/Theia0382/yozm-news/issues/274) — 개발 이름은 스토리라인 = `storyline` 인데 코드 · 개발 문서 여러 곳이 공유 스토리라인과 사용자 스토리라인을 `Flow` · "흐름"으로도 불러, 한 개체를 개발 이름 둘로 불렀다. 구현 커밋 `c639c02` · `0f665f2` · `30d9416` · `6895591`
 - 관련: [ADR-0292](0292-reader-screens-call-a-storyline-an-event-flow.md)(개발 이름을 "흐름"으로 하는 안을 기각 — 같은 방향, 대체 없음), [ADR-0320](0320-operator-screens-operations-docs-and-the-evaluation-tool-also-call-a-storyline-an-event-flow-and-a-big-one-a-big-topic.md)(화면 · 운영 쪽 이름 — 대체 없음), [ADR-0304](0304-a-change-report-takes-previous-values-from-the-previous-reports-snapshot-matched-one-to-one-and-keeps-them-in-its-own-snapshot.md)(스냅숏 판 규칙을 따름 — 대체 없음), [ADR-0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md)(보충 — 판정 API 의 이름), [ADR-0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md)(보충 — 관계 판정 API 의 ID 이름)
@@ -24,6 +24,7 @@
 
 ## 결과
 
+> 부분 대체(둘째 문장) — [ADR-0328](0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md). 지금 상태: [web Spec §2](../specs/web.md#2-용어)
 - 한 개체를 개발 이름 하나로 부른다. 화면 쪽 이름("흐름")과 개발 쪽 이름의 대응은 [overview §8](../overview.md#8-용어)이 갖는다.
 - 판정 원본 표 · 칸 · 제약 · 인덱스 · 시퀀스 이름은 V89 가 바꾼다. PostgreSQL 이 표 · 칸 이름으로 지은 제약(기본 키 · NOT NULL · CHECK)까지 표의 제약 목록에서 찾아 바꾼다. 저장된 물은 후보의 키 `flowId` 는 `candidateId` 가 된다.
 - 리포트 스냅숏의 사용자 스토리라인 줄은 키 `userStorylines` 로 쓰고 꼴의 판이 2 다. 판이 같을 때만 읽는 규칙(ADR-0304 · [report Spec](../specs/report.md#5-규칙과-불변식) report-R19)대로 V90 이 저장된 1판을 2판으로 옮기고, 읽기는 2판 하나다.
@@ -41,3 +42,7 @@
 | 판정 원본 표를 `article_storyline_judgements` 로(사건 소속 원본과 같은 꼴) | 짝 띠의 후보가 이웃 사건이라 이름이 틀린다 |
 | 스냅숏 판을 2 로 올리고 1판 · 2판을 모두 읽는다 | 옛 키를 읽는 길이 코드에 남는다 |
 | 스냅숏 판은 그대로 두고 키만 고친다 | 꼴이 바뀌었는데 판이 같아, 옮기기 전에 쓴 1판을 새 코드가 빈 줄로 잘못 읽는다 |
+
+## 후속 기록
+
+- 2026-11-25: 결과의 "한 개체를 개발 이름 하나로 부른다" — [ADR-0331](0331-a-development-term-has-only-the-meaning-of-one-code-name-and-words-with-several-meanings-are-renamed-per-meaning.md) · [`docs/README.md` §4](../README.md#4-작성-규칙)

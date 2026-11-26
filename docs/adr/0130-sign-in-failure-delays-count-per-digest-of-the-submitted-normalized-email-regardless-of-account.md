@@ -23,7 +23,7 @@
 - 있는 계정과 없는 계정이 같은 기록 · 같은 지연 · 같은 응답을 받는다. 있는 계정에서는 계정별 지연과 같다.
 - 남의 이메일로 일부러 틀려 그 사람의 로그인을 지연 상한(15분)까지 늦출 수 있다. IP 별 요청 제한이 함께 줄인다.
 - 시도마다 DB 연결을 해시 대조 시간만큼 쥔다.
-- 없는 이메일의 기록도 쌓이므로 작업 역할이 오래된 기록을 지운다. 일정 값은 [user Spec](../specs/user.md#옮긴-규칙) user-R19 가 정본이다.
+- 없는 이메일의 기록도 쌓이므로 작업 역할이 오래된 기록을 지운다. 일정 값은 [user Spec](../specs/user.md#폐지한-규칙) user-R19 가 정본이다.
 
 ## 검토한 대안
 
@@ -35,5 +35,5 @@
 
 ## 후속 기록
 
-- 2026-11-13: 실패 지연 기록의 범위(복구 코드 · 현재 비밀번호 확인) — [ADR-0144](0144-recovery-code-failures-are-delayed-on-the-sign-in-schedule-in-a-separate-record-and-current-password-checks-share-the-sign-in-record.md) · [`user` user-R19](../specs/user.md#옮긴-규칙)
-- 2026-11-15: 결과 절 "IP 별 요청 제한이 함께 줄인다" — [ADR-0171](0171-sign-in-and-recovery-are-limited-per-ip-while-the-email-axis-stays-the-failure-delay.md) · [`user` "요청 방어"](../specs/user.md#옮긴-규칙) user-R38
+- 2026-11-13: 실패 지연 기록의 범위(복구 코드 · 현재 비밀번호 확인) — [ADR-0144](0144-recovery-code-failures-are-delayed-on-the-sign-in-schedule-in-a-separate-record-and-current-password-checks-share-the-sign-in-record.md) · [`user` user-R19](../specs/user.md#폐지한-규칙)
+- 2026-11-15: 결과 절 "IP 별 요청 제한이 함께 줄인다" — [ADR-0171](0171-sign-in-and-recovery-are-limited-per-ip-while-the-email-axis-stays-the-failure-delay.md) · [`user` "요청 방어"](../specs/user.md#폐지한-규칙) user-R38

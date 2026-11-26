@@ -68,5 +68,5 @@
 
 - 2026-11-04: 의존성 표에 없는 임베딩 — [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md) · [evaluation Spec `ArticleEmbedder`](../specs/evaluation.md#articleembedder)
 - 2026-11-14: 의존성 표 "LLM (OpenAI, Anthropic)" 행의 개발 · 테스트 대체물 — [ADR-0155](0155-llm-local-substitute-takes-only-keys-with-a-fixed-prefix-in-the-local-profile.md) · [llm Spec](../specs/llm.md#로컬-대체물) llm-R16
-- 2026-11-15: 의존성 표 "봇 차단 (Turnstile)" 행 — [ADR-0172](0172-bot-checks-use-turnstile-or-off-pass-when-the-verifier-is-unreachable-and-match-the-action.md) · [`user` "요청 방어"](../specs/user.md#옮긴-규칙) user-R41
+- 2026-11-15: 의존성 표 "봇 차단 (Turnstile)" 행 — [ADR-0172](0172-bot-checks-use-turnstile-or-off-pass-when-the-verifier-is-unreachable-and-match-the-action.md) · [`user` "요청 방어"](../specs/user.md#폐지한-규칙) user-R41
 - 2026-11-16: 의존성 표 "LLM (OpenAI, Anthropic)" 행의 고정 응답 다이제스트 생성기 — [ADR-0187](0187-the-digest-generators-local-substitute-always-stands-in-the-local-profile-and-real-generators-register-only-outside-it.md) · [digest Spec "로컬 대체물"](../specs/digest.md#로컬-대체물) digest-R12

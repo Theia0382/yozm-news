@@ -1,6 +1,6 @@
 # ADR-0034: 모듈 Spec 은 모듈 공개 인터페이스의 명세로 코드보다 먼저 쓰고, 설계 문서는 종류 · 독자별 갈래로 나눈다
 
-- 상태: 승인. 부분 대체 — Spec 이 담는 것 · 클래스 구조의 자리 · 절 목록과 번호 고정([ADR-0036](0036-module-spec-holds-internal-structure-and-port-declarations-in-eight-sections.md))
+- 상태: 승인. 부분 대체 — Spec 이 담는 것 · 클래스 구조의 자리 · 절 목록과 번호 고정([ADR-0036](0036-module-spec-holds-internal-structure-and-port-declarations-in-eight-sections.md)) · 규칙 식별자의 앞말 · 화면 이름의 자리([ADR-0328](0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md)) · 용어의 자리([ADR-0333](0333-a-term-is-defined-in-the-spec-of-the-module-owning-the-concept-and-only-cross-cutting-terms-go-to-the-overview.md))
 - 날짜: 2026-10-29
 - 근거: [이슈 #41](https://github.com/Theia0382/yozm-news/issues/41) — 기점 `cfd13e3` 에서 코드가 있는 세 모듈(`source` · `article` · `platform`)의 지식이 놓인 문서 · 코드 · ADR 을 대조
 - 관련: [ADR-0013](0013-architecture-patterns.md)(모듈 구조 · 모듈 문서 자동 생성 — 손으로 쓰는 Spec 은 그 생성물을 대체하지 않는다), [ADR-0020](0020-screen-api-contract-from-committed-openapi-spec.md)(화면용 API 형식의 정본은 `api/openapi.json` — Spec 은 엔드포인트만 적는다)
@@ -23,10 +23,12 @@
 - **새 모듈은 Spec 을 먼저 쓴다.** 그 모듈의 Spec 을 만드는 설계 이슈가 먼저이고, 구현 이슈는 그 Spec 을 토대로 한다. 공개 인터페이스 · 이벤트 · 작업 · 규칙 · 불변식을 바꾸는 변경은 Spec 을 고친다. 모듈마다 Spec 이 있는지 확인하는 자동 검사는 두지 않는다.
 > 부분 대체(둘째 · 셋째 문장) — [ADR-0036](0036-module-spec-holds-internal-structure-and-port-declarations-in-eight-sections.md). 지금 상태: [`specs/README` §2](../specs/README.md#2-공통-구조)
 - **공통 구조는 `docs/specs/README.md` 하나가 정본이다.** 모든 Spec 이 같은 번호의 아홉 절(책임과 범위 · 용어 · 공개 인터페이스 · 규칙과 불변식 · 작업과 리스너 · 데이터 · 설정 · 외부 의존 · 결정)을 갖고, 빈 절은 "해당 없음"으로 남긴다. 절 번호는 바꾸지 않는다 — 코드 주석이 `docs/specs/{모듈}.md §n` 으로 가리킨다.
+> 부분 대체(첫 문장의 앞말) — [ADR-0328](0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md). 지금 상태: [`specs/README` §3](../specs/README.md#3-쓰는-규칙) 규칙 2
 - **규칙 · 불변식에는 식별자 `{모듈}-R{번호}` 를 단다.** 테스트가 자기가 지키는 규칙을 이 식별자로 가리킨다. 지운 규칙의 번호는 다시 쓰지 않는다.
 - **아직 구현되지 않은 설계도 Spec 에 담고 `(미구현)` 으로 표시한다.** 구현하는 변경이 표시를 지운다.
 - **1층 `overview` 는 v1 전체의 시스템 지도다.** 아직 코드가 없는 모듈 · 의존 · 이벤트도 담고, 설계되지 않은 부분은 `(미설계)` 로 표시한다. **모듈 사이 의존의 정본은 `overview` §5** 이고, Spec 은 그 모듈이 내놓는 것(공개 인터페이스 · 발행 이벤트)만 정본으로 갖는다.
 - **모듈 테이블은 그 모듈 Spec 의 데이터 절이 서술한다.** 주요 컬럼 · 의미 · 제약의 뜻을 적고, 컬럼 타입 · 인덱스 · 제약 문면의 정본은 Flyway 마이그레이션이다(주요 컬럼은 사본). 모듈 사이 관계 · 보존 정책 · 프레임워크 테이블은 `data-model.md` 가 갖는다.
+> 부분 대체 — 화면 용어는 [ADR-0328](0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md), 그 밖의 용어의 자리는 [ADR-0333](0333-a-term-is-defined-in-the-spec-of-the-module-owning-the-concept-and-only-cross-cutting-terms-go-to-the-overview.md). 지금 상태: [`specs/README` §2](../specs/README.md#2-공통-구조) · [web Spec §2](../specs/web.md#2-용어)
 - **용어는 쓰는 범위가 자리를 정한다.** 한 모듈 안에서만 쓰는 용어는 그 Spec 의 용어 절, 여러 모듈 · 화면이 쓰는 용어는 `overview` §8 이다.
 - **`docs/` 는 종류 · 독자별 갈래로 나눈다** — 1층 `overview`, 2층 `specs/`, 개발 인프라 `development/`, 운영 `operations/`, 결정 `adr/`, QA `qa/`, 자료 `research/` · `archives/`, 계획 문서 `roadmap` · `open-questions`. 새 갈래(`specs/` · `development/` · `operations/`)마다 `README.md` 가 담는 것 · 담지 않는 것 · 문서 목록을 갖는다.
 - **전환 중인 설계 초안은 루트에 둔 채 옮긴다.** `docs/README.md` §1 의 행선지 표가 문서마다 남은 내용이 갈 곳을 정한다. 모듈에 속한 내용은 그 모듈의 Spec 으로 가고, `data-model` 의 모듈 사이 관계 · 보존 정책과 `security` 의 횡단 정책은 그 문서에 남는다.
@@ -56,3 +58,7 @@
 | 모듈 테이블은 `data-model` 에 남긴다 / Spec 에는 의미만 쓴다 | 앞은 모듈 지식이 두 문서로 나뉘고, 뒤는 Spec 을 토대로 스키마를 설계할 수 없다 |
 | 새 갈래는 디렉터리 없이 `docs/README.md` 에 자리만 / 빈 표시 파일만 | 갈래의 경계가 한 파일에 몰리거나 어디에도 없어, 그 갈래를 채우는 작업이 경계를 다시 정하게 된다 |
 | 모듈 의존을 각 Spec 의 절로 옮긴다 / 두 곳에 다 둔다 | 앞은 코드가 없는 모듈의 의존이 자리를 잃고, 뒤는 같은 의존이 두 곳에서 어긋난다 |
+
+## 후속 기록
+
+- 2026-11-25: 결정의 규칙 식별자 — [ADR-0329](0329-a-large-rule-is-split-into-one-judgement-each-and-its-identifier-stays-as-a-group-head-covering-the-sub-rules.md) · [`specs/README` §3](../specs/README.md#3-쓰는-규칙) 규칙 2

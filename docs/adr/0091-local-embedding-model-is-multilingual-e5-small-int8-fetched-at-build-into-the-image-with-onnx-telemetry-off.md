@@ -53,5 +53,6 @@
 
 ## 후속 기록
 
+- 2026-11-07: 결과 절 "이미지가 … 커지고, 앱 프로세스의 메모리가 는다" 의 실측 — 배포 구성의 `app` 메모리(`docker stats`, amd64, 기사 59건)는 기본 로컬 임베딩 기동 직후 1.21 GiB · 기사 59건을 임베딩한 뒤 1.29 GiB, 외부 임베딩 방식 0.87 GiB 로 로컬 모델 몫은 약 0.3 ~ 0.4 GiB 다. LLM 공급자 라이브러리를 더하기 전 `app` 이미지는 약 0.97 GB 이고, 그 가운데 모델 파일 계층이 약 135 MB, ONNX Runtime · 토크나이저 네이티브가 약 69 MB 다. 힙 설정 · 기사 수 · 호스트에 따라 달라진다(배포 문서의 측정 기록, 28c1d8d)
 - 2026-11-10: 결과 절 "arm64 실기 실행은 확인되지 않았다" — [ADR-0104](0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md) · [개발 인프라 "CI"](../development/infrastructure.md#ci)
 - 2026-11-11: 결정 절의 로컬 모델 구현이 속한 모듈 — [ADR-0114](0114-article-embedding-is-a-gateway-operation-of-evaluation-taking-callers-texts-checking-results-and-recording-nothing.md) · [evaluation Spec §4](../specs/evaluation.md#임베더-구현과-로컬-대체물)
