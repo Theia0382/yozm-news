@@ -86,7 +86,7 @@ dependencies {
 	testImplementation("org.wiremock:wiremock-standalone:3.13.2")
 	// DevComposeFile 이 직접 쓴다 — 버전은 Spring Boot 의존성 관리
 	testImplementation("org.yaml:snakeyaml")
-	// RoleMembershipTests 가 직접 쓴다. Spring Boot · Modulith 가 버전을 관리하지 않아 Modulith 가 들이는 판으로 직접 고정한다
+	// ArchUnit 으로 클래스 파일을 읽는 시험이 직접 쓴다. Spring Boot · Modulith 가 버전을 관리하지 않아 Modulith 가 들이는 판으로 직접 고정한다
 	testImplementation("com.tngtech.archunit:archunit:1.4.2")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

@@ -12,6 +12,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import net.yozmnews.llm.StoredKey;
 import net.yozmnews.llm.StoredKeySource;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 /**
  * 저장한 키의 공급 인터페이스의 경계 — 본 코드의 클래스 파일을 읽어, {@code llm} · {@code credential} 밖의 클래스가 공급 인터페이스의 두
@@ -19,29 +20,31 @@ import org.junit.jupiter.api.Test;
  * <p>
  * 지키는 규칙: llm-R18 · credential-R13
  */
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class StoredKeyBoundaryTests {
 
-	private static final JavaClasses PRODUCTION = new ClassFileImporter()
+	/** 본 코드의 클래스 — 이 시험 클래스의 수명 동안만 든다(docs/development/infrastructure.md "테스트 JVM") */
+	private final JavaClasses production = new ClassFileImporter()
 		.withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
 		.importPackages("net.yozmnews");
 
 	@Test
 	void onlyLlmAndCredentialDependOnTheSupplyInterface() {
 		// 대조 — 본 코드를 실제로 읽었다. 빈 집합이면 아래 규칙이 무엇이든 통과한다
-		assertThat(PRODUCTION.contain(StoredKeySource.class)).isTrue();
-		assertThat(PRODUCTION.size()).isGreaterThan(500);
+		assertThat(production.contain(StoredKeySource.class)).isTrue();
+		assertThat(production.size()).isGreaterThan(500);
 
 		noClasses().that()
 			.resideOutsideOfPackages("net.yozmnews.llm..", "net.yozmnews.credential..")
 			.should()
 			.dependOnClassesThat()
 			.belongToAnyOf(StoredKeySource.class, StoredKey.class)
-			.check(PRODUCTION);
+			.check(production);
 	}
 
 	@Test
 	void oneClassInCredentialKnowsTheSupplyInterface() {
-		List<String> dependents = PRODUCTION.stream()
+		List<String> dependents = production.stream()
 			.filter(type -> type.getPackageName().startsWith("net.yozmnews.credential"))
 			.filter(StoredKeyBoundaryTests::dependsOnTheSupplyInterface)
 			.map(JavaClass::getName)

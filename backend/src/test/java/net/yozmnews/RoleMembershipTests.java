@@ -14,6 +14,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.platform.WorkerRole;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
@@ -22,9 +23,11 @@ import org.springframework.stereotype.Component;
  * <p>
  * 지키는 규칙: platform-R9
  */
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RoleMembershipTests {
 
-	private static final JavaClasses CLASSES = new ClassFileImporter()
+	/** main 클래스 — 이 시험 클래스의 수명 동안만 든다(docs/development/infrastructure.md "테스트 JVM") */
+	private final JavaClasses classes = new ClassFileImporter()
 		.withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
 		.importPackages("net.yozmnews");
 
@@ -41,38 +44,38 @@ class RoleMembershipTests {
 	@Test
 	void webAdaptersBelongToTheWebRole() {
 		DescribedPredicate<JavaClass> webAdapters = resideInAPackage("..adapter.in.web..").and(SPRING_COMPONENT);
-		assertThat(CLASSES.that(webAdapters)).hasSizeGreaterThanOrEqualTo(2);
+		assertThat(classes.that(webAdapters)).hasSizeGreaterThanOrEqualTo(2);
 
-		classes().that(webAdapters).should().beMetaAnnotatedWith(WebRole.class).check(CLASSES);
+		classes().that(webAdapters).should().beMetaAnnotatedWith(WebRole.class).check(classes);
 	}
 
 	@Test
 	void jobEntryPointsBelongToTheWorkerRole() {
 		DescribedPredicate<JavaClass> jobEntryPoints = resideInAPackage("..adapter.in.job..").and(SPRING_COMPONENT);
-		assertThat(CLASSES.that(jobEntryPoints)).hasSizeGreaterThanOrEqualTo(4);
+		assertThat(classes.that(jobEntryPoints)).hasSizeGreaterThanOrEqualTo(4);
 
-		classes().that(jobEntryPoints).should().beMetaAnnotatedWith(WorkerRole.class).check(CLASSES);
+		classes().that(jobEntryPoints).should().beMetaAnnotatedWith(WorkerRole.class).check(classes);
 	}
 
 	@Test
 	void eventListenersBelongToBothRoles() {
 		// 리스너는 발행한 프로세스에서 돈다 — 한 역할에서 빼면 그 역할이 발행한 이벤트를 받지 못한다
-		assertThat(CLASSES.that(MODULE_LISTENER)).hasSizeGreaterThanOrEqualTo(1);
+		assertThat(classes.that(MODULE_LISTENER)).hasSizeGreaterThanOrEqualTo(1);
 
 		classes().that(MODULE_LISTENER)
 			.should()
 			.notBeMetaAnnotatedWith(WebRole.class)
 			.andShould()
 			.notBeMetaAnnotatedWith(WorkerRole.class)
-			.check(CLASSES);
+			.check(classes);
 	}
 
 	@Test
 	void noComponentBelongsToBothRoles() {
-		assertThat(CLASSES.that(WEB_ROLE)).hasSizeGreaterThanOrEqualTo(2);
-		assertThat(CLASSES.that(WORKER_ROLE)).hasSizeGreaterThanOrEqualTo(6);
+		assertThat(classes.that(WEB_ROLE)).hasSizeGreaterThanOrEqualTo(2);
+		assertThat(classes.that(WORKER_ROLE)).hasSizeGreaterThanOrEqualTo(6);
 
-		classes().that(WEB_ROLE).should().notBeMetaAnnotatedWith(WorkerRole.class).check(CLASSES);
+		classes().that(WEB_ROLE).should().notBeMetaAnnotatedWith(WorkerRole.class).check(classes);
 	}
 
 }
