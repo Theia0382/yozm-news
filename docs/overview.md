@@ -93,6 +93,7 @@ flowchart TB
 
 - 외부 API(제3자 조회용)와 MCP 어댑터 — [로드맵](roadmap.md)
 - 외부 로그인(OIDC 공급자 로그인 · 외부 계정 연결) — [로드맵](roadmap.md)
+- 2단계 인증
 - 사용자 피드 추가, 기사 본문 추출(파이프라인 자리만 둔다)
 - 분기 · 연간 변화 리포트, 키워드 구독
 - 메일 발송(이메일 인증 · 메일 기반 비밀번호 재설정 · 알림, [ADR-0011](adr/0011-no-email-in-v1.md)), 메신저 알림, 모바일 앱
@@ -326,7 +327,7 @@ flowchart LR
 | 트랜잭션 경계 | 외부 호출(LLM · Jev · 피드)은 DB 트랜잭션 밖에서 한다 — 진행 표시(상태 · 점유)를 커밋 → 외부 호출 → 새 트랜잭션에서 결과 저장 | [ADR-0013](adr/0013-architecture-patterns.md) · [ADR-0033](adr/0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md) |
 | 상태 전이 · 작업 | 상태 전이는 aggregate 메서드로만(피드의 수집 상태 · 피드 상태는 `domain` 의 상태 객체 · 판정 함수가 계산하고 SQL 로 쓴다), 백그라운드 작업과 이벤트 리스너는 다시 실행해도 결과가 같다(이벤트는 최소 한 번 처리된다) | [ADR-0013](adr/0013-architecture-patterns.md) · [ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) · [ADR-0033](adr/0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md) · [ADR-0040](adr/0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md) |
 | 사용자 범위 | 화면 · API 의 사용자 데이터 조회는 세션의 `userId` 로만 범위를 정한다. 요청으로 받은 사용자 ID 는 신뢰하지 않는다 — 화면용 API 처리기는 사용자를 세션에서 채우는 인자 `UserId` 로만 받고, 운영자 경로 밖의 처리기는 공개 표시(`@PublicApi`)가 있거나 사용자 격리 시험에 등록된다 | [security.md](security.md) · [account Spec](specs/account.md#화면용-api-의-공개와-세션-사용자) · [ADR-0125](adr/0125-screen-api-handlers-need-a-session-unless-marked-public-and-take-the-user-only-as-a-session-filled-argument.md) |
-| 비밀 값 | BYOK 키의 평문은 `platform` 의 `SecretValue` 로 감싸 다루고 로그 · 오류 · 응답 · 직렬화에 남지 않는다. 저장한 키는 `llm` 이 저장한 키의 길에서 물을 때만 `credential` 의 공급 구현이 복호화하고, 평문은 `SecretValue` 로 `llm` 에만 건너가 호출이 끝날 때까지만 있다. 사용자 키와 프롬프트는 공급자에만 간다 — 공급자 주소는 코드 상수다 | [security.md](security.md) · [platform Spec](specs/platform.md#비밀-값) · [llm Spec](specs/llm.md#공급자-클라이언트) · [credential Spec](specs/credential.md#저장한-키와-상태) |
+| 비밀 값 | BYOK 키와 운영자 비밀(표 아래 목록)은 로그 · 오류 문구 · 응답에 남지 않는다. 운영자 비밀은 그 비밀을 가진 모듈이 설정에서 읽어 값을 숨기는 타입으로만 다룬다. BYOK 키의 평문은 `platform` 의 `SecretValue` 로 감싸 다루고 직렬화에도 남지 않는다. 저장한 키는 `llm` 이 저장한 키의 길에서 물을 때만 `credential` 의 공급 구현이 복호화하고, 평문은 `SecretValue` 로 `llm` 에만 건너가 호출이 끝날 때까지만 있다. 사용자 키와 프롬프트는 공급자에만 간다 — 공급자 주소는 코드 상수다 | [ADR-0343](adr/0343-operator-secrets-like-byok-keys-never-reach-logs-error-messages-or-responses-and-the-convention-lives-in-overview.md) · [platform Spec](specs/platform.md#비밀-값) · [llm Spec](specs/llm.md#공급자-클라이언트) · [credential Spec](specs/credential.md#저장한-키와-상태) · [credential Spec "KEK"](specs/credential.md#kek) · [evaluation Spec §4](specs/evaluation.md#4-내부-구조) · [account Spec "운영자 접근 통제"](specs/account.md#운영자-접근-통제) · [account Spec "요청 방어"](specs/account.md#요청-방어) · [account Spec "첫 운영자와 운영자의 계정 운영"](specs/account.md#첫-운영자와-운영자의-계정-운영) |
 | LLM 입출력 | RSS 내용은 신뢰할 수 없는 입력, LLM 출력은 스키마로 검증하는 데이터 | [digest Spec](specs/digest.md#프롬프트-구성) · [platform Spec](specs/platform.md#llm-출력-읽기) · [security.md](security.md) |
 | 외부 의존성 | 표준 프로토콜 · 자체 인터페이스 뒤, 설정으로 교체 · 비활성, 로컬 대체물(profile `local` 에서만 등록하고 켜는 운영 설정은 없다). 평가기는 핵심 기능이라 교체만 하고 끄지 않는다 — 작업 역할은 평가기 없이 운영하지 않는다 | [ADR-0012](adr/0012-swappable-external-dependencies.md) · [ADR-0057](adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md) · [ADR-0061](adr/0061-worker-role-does-not-run-without-an-evaluator.md) |
 | 시각 | 앱의 지금은 `platform` 의 앱 시계(`AppClock` bean 하나)에서 읽는다 — 다른 곳에서 벽시계를 직접 읽지 않는다. 진행 중 작업의 멈춤(임대 · 기한)과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다. 측정용 시계(지난 데이터로 여러 날을 확인하는 일회용 인스턴스)는 profile `measurement` 와 DB 의 시계 행이 함께 있을 때만 뜨고, 그때는 수집하지 않는다 | [ADR-0250](adr/0250-the-apps-now-comes-from-one-appclock-bean-that-is-not-a-java-time-clock.md) · [ADR-0251](adr/0251-the-measurement-clock-starts-only-with-the-measurement-profile-and-a-clock-row-and-moves-forward-through-the-operator-api.md) · [ADR-0252](adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) · [ADR-0253](adr/0253-the-measurement-clock-does-not-collect-feeds.md) · [platform Spec](specs/platform.md#앱-시계) |
@@ -336,6 +337,15 @@ flowchart LR
 | 오류 응답 형식 | 판정 결과는 판별자 `result` 하나의 평평한 200 응답이고, 요청의 문제만 HTTP 오류다. 오류 본문은 RFC 9457 의 필드 이름을 따르는 `application/problem+json`(`platform` 의 `ApiProblem`)이고 모든 속성이 값을 갖는다 | [ADR-0044](adr/0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md) · [platform Spec](specs/platform.md#오류-응답-형식) |
 | 운영자 인가 | 운영자 경로(`/api/admin/**`)는 `ADMIN` 역할만 쓴다 — `ADMIN` 계정 세션(CSRF)으로 열고, 스크립트 · 도구는 선택 운영자 토큰으로 연다. LLM 키는 보지 않는다 | [ADR-0183](adr/0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md) · [ADR-0185](adr/0185-admin-paths-stay-outside-the-llm-key-gate-and-look-only-at-the-role.md) · [security.md](security.md#인가와-데이터-격리) · [account Spec](specs/account.md#운영자-접근-통제) |
 | 요청 방어 · 클라이언트 IP | 요청 제한 · 봇 차단은 처리기에 `platform` 의 표시를 달고 `account` 의 세션 체인이 처리기 앞에서 건다 — 각 모듈은 처리기에 표시만 단다. 클라이언트 IP 는 배포 proxy 가 신뢰 범위에서 정해 헤더 하나(`X-Real-IP`)로 넘기고, 앱은 그 헤더만 읽는다 | [ADR-0168](adr/0168-client-ip-is-read-by-the-proxy-from-trusted-ranges-right-to-left-and-passed-as-one-overwritten-header.md) · [ADR-0169](adr/0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [account Spec](specs/account.md#요청-방어) |
+
+"비밀 값" 행의 운영자 비밀은 운영자가 설정으로 주고 앱 모듈이 읽는 아래 여섯이다. DB 비밀번호는 앱 모듈이 아니라 프레임워크의 연결 설정이 다뤄 이 규약 밖이다.
+
+- Jev 키
+- 외부 임베딩 키
+- 봇 차단 비밀 키
+- 운영자 토큰
+- 첫 운영자 초기 비밀번호
+- KEK
 
 ## 7. 기술 스택
 

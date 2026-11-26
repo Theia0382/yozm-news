@@ -344,6 +344,7 @@
 | [0340](0340-sections-and-snapshot-fields-of-removed-report-kinds-are-kept-unread-and-snapshot-version-three-reads-version-two.md) | 없앤 섹션 종류의 저장된 섹션과 스냅숏 칸은 지우지 않고 읽지 않으며, 스냅숏 버전 3 은 버전 2 를 읽는 길을 둔다 | 승인 |
 | [0341](0341-a-monthly-report-does-not-compare-flow-coverage-with-the-previous-monthly-and-shows-the-flow-state-kept-at-generation.md) | 월간 리포트는 흐름 보도량을 직전 월간과 견주지 않고, 생성 때의 흐름 상태를 스냅숏에 남겨 보인다 | 승인 |
 | [0342](0342-there-is-no-article-evaluated-event-and-modules-using-evaluations-read-them-by-query.md) | 평가 결과 이벤트 `ArticleEvaluated` 는 두지 않고, 평가를 쓰는 모듈은 조회로 읽는다 | 승인 |
+| [0343](0343-operator-secrets-like-byok-keys-never-reach-logs-error-messages-or-responses-and-the-convention-lives-in-overview.md) | 운영자 비밀도 BYOK 키처럼 로그 · 오류 문구 · 응답에 남기지 않고, 그 규약의 정본은 `overview` §6 이다 | 승인 |
 
 ## 운영 규칙
 
