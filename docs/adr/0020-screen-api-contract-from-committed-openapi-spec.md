@@ -48,3 +48,4 @@
 ## 후속 기록
 
 - 2026-10-31: 결과 절이 "그런 타입을 화면 API 에 처음 들이는 작업이 정한다"고 남긴 오류 타입의 처리는 [ADR-0044](0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md)가 정했다 — Spring `ProblemDetail` 을 직렬화하지 않고, RFC 9457 의 필드 이름을 따르며 모든 속성이 값을 갖는 자체 레코드로 낸다.
+- 2026-11-26: 명세 설정에 이름 규칙 둘을 더했다 — 서로 다른 타입이 같은 스키마 이름을 받으면 명세 생성이 실패한다([ADR-0345](0345-screen-api-schema-names-stay-simple-and-a-name-shared-by-two-types-fails-spec-generation.md)), 연산 ID 가 겹치면 접미사를 붙이지 않고 명세 생성이 실패한다([ADR-0346](0346-screen-api-operation-ids-are-handler-method-names-and-a-duplicate-fails-spec-generation-instead-of-a-suffix.md)).

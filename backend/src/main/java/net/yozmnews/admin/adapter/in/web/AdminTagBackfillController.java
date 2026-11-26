@@ -36,7 +36,7 @@ class AdminTagBackfillController {
 	@ApiResponse(responseCode = "400", description = BAD_REQUEST,
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	TagBackfillReviewResponse review(@Valid @RequestBody TagBackfillRequest body) {
+	TagBackfillReviewResponse reviewTagBackfill(@Valid @RequestBody TagBackfillRequest body) {
 		return TagBackfillReviewResponse.of(this.administration.review(body.days()));
 	}
 

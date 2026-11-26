@@ -59,7 +59,7 @@ class AdminSourceController {
 	@ApiResponse(responseCode = "400", description = "요청 본문의 형식이 틀렸다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	RegistrationResponse register(@Valid @RequestBody ProfileText body) {
+	RegistrationResponse registerSource(@Valid @RequestBody ProfileText body) {
 		return RegistrationResponse.of(this.administration.registerOperatorProfile(body.profile()));
 	}
 
@@ -97,7 +97,7 @@ class AdminSourceController {
 	@ApiResponse(responseCode = "409", description = "측정용 시계라 실제 피드를 요청하지 않는다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	PreviewResponse preview(@Valid @RequestBody PreviewRequest body) {
+	PreviewResponse previewProfile(@Valid @RequestBody PreviewRequest body) {
 		return PreviewResponse.of(this.administration.previewOperatorProfile(body.profile(), body.feedKey()));
 	}
 
@@ -109,7 +109,7 @@ class AdminSourceController {
 	@ApiResponse(responseCode = "409", description = "다른 요청이 먼저 바꿨다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	SourceEnableResponse enable(@PathVariable long id) {
+	SourceEnableResponse enableSource(@PathVariable long id) {
 		return SourceEnableResponse.of(this.administration.enableSource(AdminIds.source(id)));
 	}
 
@@ -121,7 +121,7 @@ class AdminSourceController {
 	@ApiResponse(responseCode = "409", description = "다른 요청이 먼저 바꿨다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	void disable(@PathVariable long id) {
+	void disableSource(@PathVariable long id) {
 		this.administration.disableSource(AdminIds.source(id));
 	}
 
@@ -133,7 +133,7 @@ class AdminSourceController {
 	@ApiResponse(responseCode = "409", description = "다른 요청이 먼저 바꿨다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	void hide(@PathVariable long id) {
+	void hideSource(@PathVariable long id) {
 		this.administration.hideSource(AdminIds.source(id));
 	}
 
@@ -145,7 +145,7 @@ class AdminSourceController {
 	@ApiResponse(responseCode = "409", description = "다른 요청이 먼저 바꿨다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	void unhide(@PathVariable long id) {
+	void unhideSource(@PathVariable long id) {
 		this.administration.unhideSource(AdminIds.source(id));
 	}
 
@@ -154,7 +154,7 @@ class AdminSourceController {
 	@ApiResponse(responseCode = "404", description = "없는 소스다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	void delete(@PathVariable long id) {
+	void deleteSource(@PathVariable long id) {
 		this.administration.deleteSource(AdminIds.source(id));
 	}
 
@@ -169,7 +169,7 @@ class AdminSourceController {
 	@ApiResponse(responseCode = "409", description = "다른 요청이 먼저 바꿨다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	void changePollInterval(@PathVariable long id, @RequestBody PollIntervalRequest body) {
+	void changeSourcePollInterval(@PathVariable long id, @RequestBody PollIntervalRequest body) {
 		if (!this.administration.changeSourcePollInterval(AdminIds.source(id), body.minutes())) {
 			throw PollIntervals.belowMinimum();
 		}
