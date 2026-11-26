@@ -18,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import net.yozmnews.RoundRunRows;
 import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.evaluation.StorylineMembership;
@@ -28,6 +29,7 @@ import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import net.yozmnews.event.EventsChanged;
 import net.yozmnews.platform.AppClock;
+import net.yozmnews.platform.RoundRunner;
 import net.yozmnews.platform.VectorText;
 import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.RelationOutcome;
@@ -42,6 +44,7 @@ import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
 import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Score;
 import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
+import net.yozmnews.storyline.domain.queue.LinkingSchedule;
 import net.yozmnews.storyline.domain.relation.Relation;
 import net.yozmnews.storyline.domain.relation.RelationCriteria;
 import net.yozmnews.storyline.domain.relation.RelationKind;
@@ -54,6 +57,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -102,6 +106,9 @@ class LinkingFlowTests {
 	};
 
 	private static final StateCriteria STATE = new StateCriteria(Duration.ofDays(7), Duration.ofDays(30));
+
+	@Autowired
+	RoundRunner runner;
 
 	@Autowired
 	EventDirectory directory;
@@ -854,6 +861,59 @@ class LinkingFlowTests {
 		assertThat(queued(c)).hasValueSatisfying(row -> assertThat(row).containsEntry("order_at", null));
 	}
 
+	@Test
+	@Timeout(60)
+	void aRoundTakesAnotherBatchWhileTheQueueHasMore() {
+		lonelyEvents(LinkingSchedule.BATCH_SIZE + 1);
+
+		round(evenly()).run();
+
+		assertThat(this.jdbc.sql("select count(*) from storyline_linking_queue").query(Long.class).single()).isZero();
+	}
+
+	@Test
+	@Timeout(60)
+	void aFullQueueIsEmptiedInOneRound() {
+		lonelyEvents(32);
+
+		round(evenly()).run();
+
+		assertThat(this.jdbc.sql("select count(*) from storyline_linking_queue").query(Long.class).single()).isZero();
+	}
+
+	@Test
+	@Timeout(60)
+	void aFullBatchIsFollowedByAnEmptyOneAndTheRoundIsRecorded() {
+		lonelyEvents(32);
+		RoundRunRows.clear(this.jdbc);
+
+		round(evenly()).run();
+
+		assertThat(RoundRunRows.of(this.jdbc, "storyline-linking")).containsExactly("2 · 32 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void aShortBatchEndsTheRound() {
+		lonelyEvents(31);
+		RoundRunRows.clear(this.jdbc);
+
+		round(evenly()).run();
+
+		assertThat(this.jdbc.sql("select count(*) from storyline_linking_queue").query(Long.class).single()).isZero();
+		assertThat(RoundRunRows.of(this.jdbc, "storyline-linking")).containsExactly("1 · 31 · DRAINED");
+	}
+
+	/** 서로 15일씩 떨어진 [1,0] 사건 {@code count} 개를 대기에 넣는다 — 창(14일) 밖이라 서로 후보가 아니어서 모두 홀로 남는다 */
+	private void lonelyEvents(int count) {
+		Instant first = Instant.parse("2025-06-01T00:00:00Z");
+		for (int i = 0; i < count; i++) {
+			String at = first.plus(Duration.ofDays(15L * i)).toString();
+			long event = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, at, at, Map.of("금리", 1));
+			this.queue.enqueue(event, Instant.parse(at), NOW);
+		}
+	}
+
 	/** e1([1,0] 기사 3, 금리 3 · 물가 2) · e2([4,3] 기사 1, 금리 · 물가)를 넣고 회차 한 번으로 둘이 연 스토리라인을 만든다 */
 	private Pair openPair() {
 		long e1 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 3, "2026-11-05T00:00:00Z",
@@ -891,7 +951,7 @@ class LinkingFlowTests {
 				new StorylineLinker(events, this.storylines, this.queue, this.asked, this.relationQueue,
 						new StorylineMerger(this.storylines, this.relations, this.relationQueue, this.asked, events),
 						this.publisher),
-				NEVER_ASKED, this.transaction, clock);
+				NEVER_ASKED, this.transaction, clock, this.runner);
 	}
 
 	private long criteriaId() {

@@ -2,6 +2,7 @@ package net.yozmnews.storyline.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -16,6 +17,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
+import net.yozmnews.RoundRunRows;
 import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
@@ -30,10 +32,16 @@ import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.platform.AppClock;
+import net.yozmnews.platform.RoundBatch;
+import net.yozmnews.platform.RoundEnd;
+import net.yozmnews.platform.RoundQueue;
+import net.yozmnews.platform.RoundRunner;
+import net.yozmnews.platform.RoundSummary;
 import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.RetiredStoryline;
 import net.yozmnews.storyline.StorylineId;
+import net.yozmnews.storyline.StorylineProcessing;
 import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.storyline.StorylinesRetired;
 import net.yozmnews.storyline.domain.linking.Asked;
@@ -43,17 +51,20 @@ import net.yozmnews.storyline.domain.linking.LinkingCriteria;
 import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
 import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Score;
+import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
 import net.yozmnews.storyline.domain.relation.Relation;
 import net.yozmnews.storyline.domain.relation.RelationCriteria;
 import net.yozmnews.storyline.domain.relation.RelationKind;
 import net.yozmnews.storyline.domain.relation.RelationQueueRepository;
 import net.yozmnews.storyline.domain.relation.RelationRepository;
+import net.yozmnews.storyline.domain.relation.RelationSchedule;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -91,6 +102,9 @@ class RelationRoundFlowTests {
 	private static final String LATE = "2026-11-05T00:00:00Z";
 
 	@Autowired
+	RoundRunner runner;
+
+	@Autowired
 	EventDirectory directory;
 
 	@Autowired
@@ -107,6 +121,12 @@ class RelationRoundFlowTests {
 
 	@Autowired
 	RelationQueueRepository queue;
+
+	@Autowired
+	LinkingQueueRepository linkingQueue;
+
+	@Autowired
+	StorylineProcessing processing;
 
 	@Autowired
 	TransactionTemplate transaction;
@@ -275,7 +295,7 @@ class RelationRoundFlowTests {
 		};
 
 		new RelationRound(this.queue, this.relations, this.storylines, uneven, recording, CRITERIA, merger(uneven),
-				this.published::add, this.transaction, TestClocks.fixed(NOW))
+				this.published::add, this.transaction, TestClocks.fixed(NOW), this.runner)
 			.run();
 
 		// 판정할 쪽의 말은 금리 하나라 무게와 무관하게 겹침 1 — 후보다
@@ -690,6 +710,159 @@ class RelationRoundFlowTests {
 		assertThat(this.jdbc.sql("select count(*) from storyline_relations").query(Long.class).single()).isZero();
 	}
 
+	@Test
+	@Timeout(60)
+	void aRoundTakesAnotherBatchWhileTheQueueHasMore() {
+		for (int i = 0; i < RelationSchedule.BATCH_SIZE + 1; i++) {
+			this.queue.enqueue(away(1), NOW);
+		}
+
+		round(query -> {
+			throw new AssertionError("묻지 않아야 한다");
+		}).run();
+
+		assertThat(queued()).isEmpty();
+	}
+
+	@Test
+	@Timeout(60)
+	void aFullQueueIsEmptiedInOneRound() {
+		for (int i = 0; i < 4; i++) {
+			this.queue.enqueue(away(1), NOW);
+		}
+
+		round(query -> {
+			throw new AssertionError("묻지 않아야 한다");
+		}).run();
+
+		assertThat(queued()).isEmpty();
+	}
+
+	@Test
+	@Timeout(60)
+	void aFullBatchIsFollowedByAnEmptyOneAndTheRoundIsRecorded() {
+		for (int i = 0; i < 4; i++) {
+			this.queue.enqueue(away(1), NOW);
+		}
+		RoundRunRows.clear(this.jdbc);
+
+		round(query -> {
+			throw new AssertionError("묻지 않아야 한다");
+		}).run();
+
+		assertThat(RoundRunRows.of(this.jdbc, "storyline-relation")).containsExactly("2 · 4 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void aShortBatchEndsTheRound() {
+		for (int i = 0; i < 3; i++) {
+			this.queue.enqueue(away(1), NOW);
+		}
+		RoundRunRows.clear(this.jdbc);
+
+		round(query -> {
+			throw new AssertionError("묻지 않아야 한다");
+		}).run();
+
+		assertThat(queued()).isEmpty();
+		assertThat(RoundRunRows.of(this.jdbc, "storyline-relation")).containsExactly("1 · 3 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void aTransientFailureEndsTheRoundAfterItsBatch() {
+		long last = askingStorylineAndLonelyOnes();
+		RoundRunRows.clear(this.jdbc);
+
+		round(query -> new RelationJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "잠시 실패")).run();
+
+		assertThat(queueRow(last)).containsEntry("failures", 0).containsEntry("lease_token", null);
+		assertThat(RoundRunRows.of(this.jdbc, "storyline-relation")).containsExactly("1 · 4 · BACKED_OFF");
+	}
+
+	@Test
+	@Timeout(60)
+	void anUnavailableEvaluatorEndsTheRoundAfterItsBatch() {
+		long last = askingStorylineAndLonelyOnes();
+		RoundRunRows.clear(this.jdbc);
+
+		round(query -> new RelationJudgement.Failed(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, "키가 틀렸다")).run();
+
+		assertThat(this.asked).hasSize(1);
+		assertThat(queueRow(last)).containsEntry("failures", 0).containsEntry("lease_token", null);
+		assertThat(RoundRunRows.of(this.jdbc, "storyline-relation")).containsExactly("1 · 4 · STOPPED");
+	}
+
+	/** 쌍이 남아 점유를 푼 스토리라인은 같은 회차의 다음 뭉치가 다시 가져간다 */
+	@Test
+	@Timeout(60)
+	void aStorylineReleasedWithPairsLeftIsTakenAgainByTheNextBatch() {
+		long shared = event(EARLY, 1);
+		long hub = storyline("[1,0]", EARLY, LATE, shared, event(EARLY, 1), event(EARLY, 1));
+		for (int i = 0; i < 11; i++) {
+			storyline("[0,1]", LATE, LATE, shared, event(LATE, 1), event(LATE, 1));
+		}
+		this.queue.enqueue(hub, NOW);
+		for (int i = 0; i < 3; i++) {
+			this.queue.enqueue(away(1), NOW);
+		}
+		RoundRunRows.clear(this.jdbc);
+
+		round(answer(RelationAnswer.NONE, 0.9, 0.9, 0.9, 54)).run();
+
+		// 첫 뭉치는 허브의 다섯 쌍과 홀로인 셋, 둘째 뭉치는 다시 가져간 허브의 다섯 쌍 — 열한 번째 쌍이 남아 다음 회차를 기다린다
+		assertThat(this.asked).hasSize(10);
+		assertThat(queued()).containsExactly(hub);
+		assertThat(RoundRunRows.of(this.jdbc, "storyline-relation")).containsExactly("2 · 5 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void theProcessingCountsBothQueuesWithTheRowsWhoseTimeHasNotCome() {
+		long a = away(1);
+		long b = away(1);
+		this.queue.enqueue(a, NOW);
+		this.queue.enqueue(b, NOW);
+		this.jdbc.sql("update storyline_relation_queue set retry_at = now() + interval '1 day' where storyline_id = :id")
+			.param("id", b)
+			.update();
+		long later = event(LATE, 1);
+		for (long event : List.of(event(EARLY, 1), event(EARLY, 1), later)) {
+			this.linkingQueue.enqueue(event, Instant.parse(EARLY), NOW);
+		}
+		this.jdbc.sql("update storyline_linking_queue set retry_at = now() + interval '1 day' where event_id = :id")
+			.param("id", later)
+			.update();
+		RoundRunRows.clear(this.jdbc);
+		this.runner.run("storyline-relation", () -> RoundBatch.finished(3, 4));
+
+		List<RoundQueue> rounds = this.processing.rounds();
+
+		assertThat(rounds).extracting(RoundQueue::round, RoundQueue::waiting, RoundQueue::deferred)
+			.containsExactly(tuple("storyline-linking", 3L, 1L), tuple("storyline-relation", 2L, 1L));
+		assertThat(rounds.get(1).recent().handled()).isEqualTo(3);
+		assertThat(rounds.get(1).recent().runs()).isEqualTo(1);
+		assertThat(rounds.get(1).recent().last()).isNotNull()
+			.extracting(RoundSummary.LastRound::batches, RoundSummary.LastRound::handled, RoundSummary.LastRound::end)
+			.containsExactly(1, 3, RoundEnd.DRAINED);
+		assertThat(rounds.get(0).recent().last()).isNull();
+	}
+
+	/** 물을 쌍이 있는 스토리라인 하나와 쌍이 없는 스토리라인 넷을 이 순서로 대기에 넣는다 — 마지막 것의 ID 를 낸다 */
+	private long askingStorylineAndLonelyOnes() {
+		long shared = event(EARLY, 1);
+		long a = storyline("[1,0]", EARLY, LATE, shared, event(EARLY, 1), event(EARLY, 1));
+		storyline("[0,1]", LATE, LATE, shared, event(LATE, 1), event(LATE, 1));
+		this.queue.enqueue(a, NOW);
+		long last = 0;
+		for (int i = 0; i < 4; i++) {
+			last = away(1);
+			this.queue.enqueue(last, NOW);
+		}
+		return last;
+	}
+
 	private RelationRound round(StorylineRelation judge) {
 		return round(withRepresentatives(), judge);
 	}
@@ -705,7 +878,7 @@ class RelationRoundFlowTests {
 		};
 		EventDirectory even = evenly(events);
 		return new RelationRound(this.queue, this.relations, this.storylines, even, recording, CRITERIA, merger(even),
-				this.published::add, this.transaction, clock);
+				this.published::add, this.transaction, clock, this.runner);
 	}
 
 	private StorylineMerger merger(EventDirectory events) {

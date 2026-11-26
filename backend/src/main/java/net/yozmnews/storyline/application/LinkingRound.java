@@ -14,6 +14,8 @@ import net.yozmnews.evaluation.StorylineMembership;
 import net.yozmnews.evaluation.StorylineMembershipJudgement;
 import net.yozmnews.evaluation.StorylineMembershipQuery;
 import net.yozmnews.platform.AppClock;
+import net.yozmnews.platform.RoundBatch;
+import net.yozmnews.platform.RoundRunner;
 import net.yozmnews.storyline.domain.linking.LinkingCriteria;
 import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
 import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
@@ -27,11 +29,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 잇기 회차 하나 — docs/specs/storyline.md §4 · storyline-R3 · storyline-R4 · storyline-R36.
  * <p>
- * 지금 기준을 기준 이력에 등록하고, 대기를 순서 키 순으로 점유해 커밋한 뒤 사건마다 판정을 시도한다. 시도는 한 트랜잭션에서
+ * 회차는 {@link RoundRunner} 로 뭉치를 되풀이하고, 지금 기준을 기준 이력에 회차에 한 번 등록한다. 뭉치 하나는 대기를 순서 키 순으로 점유해
+ * 커밋한 뒤 사건마다 판정을 시도한다. 시도는 한 트랜잭션에서
  * {@link StorylineLinker#link} 를 부르고, 마쳤으면 점유 토큰과 다시 알림 수가 그대로일 때만 대기 행을 지운다 — 달라졌으면 점유만 푼다.
  * 물을 것이 있으면 트랜잭션 밖에서 {@link StorylineMembership} 에 묻고 짧은 트랜잭션에서 답을 기록한 뒤 다시 시도한다 — 사건 하나에
- * {@link LinkingSchedule#MAX_ATTEMPTS_PER_CLAIM} 번까지, 남으면 점유를 풀어 다음 회차가 잇는다. 평가기 일시 실패면 일시 실패를 세고 판정
- * 가능 시각을 미룬다 — 대기에서 빼지 않는다. 평가기를 쓸 수 없으면 이 사건부터 남은 점유를 풀고 회차를 멈춘다. 판정이 예상 못한 예외를 내면
+ * {@link LinkingSchedule#MAX_ATTEMPTS_PER_CLAIM} 번까지, 남으면 점유를 풀어 다음 뭉치가 잇는다. 평가기 일시 실패면 일시 실패를 세고 판정
+ * 가능 시각을 미룬다 — 대기에서 빼지 않고, 회차는 그 뭉치 뒤에 끝낸다. 평가기를 쓸 수 없으면 이 사건부터 남은 점유를 풀고 회차를 멈춘다. 판정이 예상 못한 예외를 내면
  * 그 트랜잭션은 롤백되고, 새 트랜잭션에서 실패 수를 올리고 다음 사건으로 넘어간다. 실패 수가 상한이면 대기에서 뺀다. 판정의 예외를 밖으로
  * 던지지 않는다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
  */
@@ -39,6 +42,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class LinkingRound {
 
 	private static final Logger logger = LoggerFactory.getLogger(LinkingRound.class);
+
+	/** 회차 이름 — 회차 기록 · 처리 현황의 키 */
+	static final String NAME = "storyline-linking";
 
 	private final LinkingQueueRepository queue;
 
@@ -54,8 +60,11 @@ public class LinkingRound {
 
 	private final AppClock clock;
 
+	private final RoundRunner runner;
+
 	LinkingRound(LinkingQueueRepository queue, LinkingCriteriaRepository criteriaHistory, LinkingCriteria criteria,
-			StorylineLinker linker, StorylineMembership membership, TransactionTemplate transaction, AppClock clock) {
+			StorylineLinker linker, StorylineMembership membership, TransactionTemplate transaction, AppClock clock,
+			RoundRunner runner) {
 		this.queue = queue;
 		this.criteriaHistory = criteriaHistory;
 		this.criteria = criteria;
@@ -63,27 +72,42 @@ public class LinkingRound {
 		this.membership = membership;
 		this.transaction = transaction;
 		this.clock = clock;
+		this.runner = runner;
 	}
 
-	/** 회차 하나를 돈다 */
+	/** 회차 하나를 돈다 — 뭉치를 회차 규칙까지 되풀이한다(docs/specs/platform.md 반복 회차) */
 	public void run() {
+		CriteriaOnce criteriaId = new CriteriaOnce();
+		this.runner.run(NAME, () -> batch(criteriaId));
+	}
+
+	/** 뭉치 하나 — 기준 이력은 회차에 한 번 등록한다. 판정 일시 실패로 미룬 사건이 있으면 뭉치를 마친 뒤 회차를 끝내게 한다 */
+	RoundBatch batch(CriteriaOnce criteria) {
 		Instant now = this.clock.instant();
-		Long criteriaId = this.transaction.execute(status -> this.criteriaHistory.register(this.criteria, now));
-		long registered = Objects.requireNonNull(criteriaId, "criteriaId");
+		long registered = criteria.get(() -> Objects.requireNonNull(
+				this.transaction.execute(status -> this.criteriaHistory.register(this.criteria, now)), "criteriaId"));
 		List<PendingEvent> claimed = claim(now);
+		boolean deferred = false;
 		for (int i = 0; i < claimed.size(); i++) {
 			PendingEvent claim = claimed.get(i);
 			UUID token = Objects.requireNonNull(claim.lease(), "lease").token();
 			try {
-				if (judge(claim, token, registered) == Next.STOP) {
-					release(claimed.subList(i, claimed.size()));
-					return;
+				switch (judge(claim, token, registered)) {
+					case STOP -> {
+						release(claimed.subList(i, claimed.size()));
+						return RoundBatch.stopped(claimed.size());
+					}
+					case DEFERRED -> deferred = true;
+					case ATTEMPT, EVENT -> {
+					}
 				}
 			}
 			catch (RuntimeException ex) {
 				fail(claim.eventId(), token, ex);
 			}
 		}
+		return deferred ? RoundBatch.backedOff(claimed.size())
+				: RoundBatch.finished(claimed.size(), LinkingSchedule.BATCH_SIZE);
 	}
 
 	private List<PendingEvent> claim(Instant now) {
@@ -121,7 +145,7 @@ public class LinkingRound {
 				return next;
 			}
 		}
-		// 시도를 다 썼다 — 다음 회차가 지금 상태로 잇는다
+		// 시도를 다 썼다 — 다음 뭉치가 지금 상태로 잇는다
 		this.transaction.executeWithoutResult(status -> this.queue.releaseIfLeased(claim.eventId(), token));
 		return Next.EVENT;
 	}
@@ -156,7 +180,7 @@ public class LinkingRound {
 			case StorylineMembershipJudgement.Failed failed -> switch (failed.kind()) {
 				case TRANSIENT -> {
 					defer(claim.eventId(), token);
-					yield Next.EVENT;
+					yield Next.DEFERRED;
 				}
 				case ARTICLE_REJECTED -> {
 					// 같은 기사라 다시 보내도 같다 — 물은 후보를 확률 없이 기록하고 판정을 잇는다
@@ -219,6 +243,9 @@ public class LinkingRound {
 
 		/** 다음 사건 */
 		EVENT,
+
+		/** 판정 일시 실패로 미뤘다 — 다음 사건으로 가고, 회차는 이 뭉치 뒤에 끝낸다 */
+		DEFERRED,
 
 		/** 회차를 멈춘다 */
 		STOP
