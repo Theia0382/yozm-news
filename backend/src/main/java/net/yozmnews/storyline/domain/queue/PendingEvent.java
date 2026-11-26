@@ -9,7 +9,7 @@ import net.yozmnews.event.EventView;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 잇기 대기 행 하나와 그 점유 — docs/specs/storyline.md §4 · storyline-R2 · storyline-R3.
+ * 잇기 대기 행 하나와 그 점유 — docs/specs/storyline.md §4 · storyline-R2 · storyline-R3 · storyline-R4.
  *
  * @param orderAt 순서 키 — 사건의 첫 기사 시각, 지워졌거나 합쳐진 사건이면 null(맨 앞)
  * @param notifications 다시 알림 수 — 처리 중에 다시 온 알림을 가른다

@@ -3,7 +3,7 @@
 	# 관리 API 를 열지 않고, 비root 사용자가 쓸 수 없는 디렉터리에 설정을 저장하지 않는다
 	admin off
 	persist_config off
-	# 클라이언트 IP 의 신뢰 경계 — docs/operations/configuration.md "공개"
+	# 클라이언트 IP 의 신뢰 경계 — docs/security.md "악용 방지". 값은 docs/operations/configuration.md "공개"
 	# 신뢰할 앞단(Tunnel · 리버스 프록시)의 범위에서 온 요청만 헤더의 클라이언트 IP 를 믿고, 헤더는 오른쪽부터 읽는다(앞단이 덧붙인 값부터).
 	# 기본은 사설 대역 — 같은 호스트의 앞단 · 컨테이너 Tunnel 이 사설 주소로 붙는다
 	servers {

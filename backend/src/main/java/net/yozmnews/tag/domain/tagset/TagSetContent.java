@@ -37,7 +37,7 @@ public record TagSetContent(QuestionTemplate topicTemplate, QuestionTemplate reg
 
 	/**
 	 * 태그 종류의 키 — 체계 순이다. 주제는 대분류 키와 그 중분류 전체 키를 대분류마다 이어 낸다 — 태그 종류별 키 집합의 정본
-	 * (tag-R22 ~ R26).
+	 * (tag-R22 ~ tag-R24 · tag-R26).
 	 */
 	public List<String> keys(TagKind kind) {
 		return switch (kind) {

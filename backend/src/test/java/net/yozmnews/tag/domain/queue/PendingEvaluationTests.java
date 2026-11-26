@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 평가 대기의 일정과 전이 — 정착 시간 · 점유 · 상한 없는 일시 실패의 재시도 간격 · 기사 거부 · 점유 해제.
  * <p>
- * 지키는 규칙: tag-R18 · tag-R20
+ * 지키는 규칙: tag-R18 · tag-R19 · tag-R20
  */
 class PendingEvaluationTests {
 

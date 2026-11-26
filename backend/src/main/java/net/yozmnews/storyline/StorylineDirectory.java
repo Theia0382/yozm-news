@@ -14,7 +14,7 @@ import org.jspecify.annotations.Nullable;
 /**
  * 다른 모듈이 스토리라인을 읽는 조회 — 스토리라인 · 스토리라인의 사건(타임라인) · 사건의 스토리라인 · 사건마다 포함 나무의 꼭대기 · 조회 기간의
  * 스토리라인 목록 · 큰 스토리라인 · 소속 없는 사건 · 스토리라인 묶음마다의 기간 집계 · 스토리라인의 관계 · docs/specs/storyline.md §3 · storyline-R19 ·
- * storyline-R21 ~ R24 · storyline-R33 · storyline-R37.
+ * storyline-R21 ~ R25 · storyline-R33 · storyline-R37 · storyline-R38.
  * <p>
  * 스토리라인의 사건 · 집계는 닫은 사건 집합으로 본다 — 직접 소속과, 포함을 따라 내려간 모든 하위의 직접 소속을 합친 것이다. 사용자 정보를
  * 받지 않는다. 트랜잭션을 열지 않는다 — 각 질의는 그 순간의 값이고, 사건 · 기간 집계는 {@code event} 의 공개 조회로 따로 읽는다. 모듈

@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 관계의 구조 — 상위 · 하위 · 조상 · 순환, 그리고 관계 · 기준 · 대기 행 값의 제약.
  * <p>
- * 지키는 규칙: storyline-R25 · storyline-R27 · storyline-R31
+ * 지키는 규칙: storyline-R25 ~ storyline-R27 · storyline-R31
  */
 class RelationGraphTests {
 

@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.util.Objects;
 
 /**
- * 관계 기준 — docs/specs/storyline.md §4 · storyline-R27 · storyline-R29 · §7.
+ * 관계 기준 — docs/specs/storyline.md §4 · storyline-R17 · storyline-R27 · storyline-R29 · §7.
  *
  * @param probability 확률 기준 — 가장 높은 답의 확률이 이 이상이어야 맺는다
  * @param oneMatter 한 사안 기준 — 두 스토리라인의 "한 사안" 확률 가운데 작은 쪽의 하한

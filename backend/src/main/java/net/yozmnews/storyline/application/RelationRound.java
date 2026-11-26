@@ -54,7 +54,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 관계 회차 하나 — docs/specs/storyline.md §4 · storyline-R27 ~ storyline-R31.
+ * 관계 회차 하나 — docs/specs/storyline.md §4 · storyline-R17 · storyline-R27 ~ storyline-R31.
  * <p>
  * 지금 기준을 관계 기준 이력에 등록하고 관계 대기를 스토리라인 ID 순으로 점유해 커밋한 뒤, 스토리라인마다 후보 쌍을 골라 순서대로 묻는다.
  * 관계 판정은 트랜잭션 밖이고, 결과는 쌍마다 모듈 잠금을 잡은 짧은 트랜잭션에서 두 스토리라인을 다시 읽어 반영한다. 후보를 모두 물었고 대기
@@ -308,7 +308,7 @@ public class RelationRound {
 	}
 
 	/**
-	 * 판정을 반영한다(storyline-R29 · R30) — 모듈 잠금 안에서 두 스토리라인을 다시 읽고, 없어졌으면 버린다. 같은 사안의 조각이고
+	 * 판정을 반영한다(storyline-R29 ~ storyline-R31) — 모듈 잠금 안에서 두 스토리라인을 다시 읽고, 없어졌으면 버린다. 같은 사안의 조각이고
 	 * 확률이 합치기 확률 기준 이상이면 두 스토리라인을 합친다(storyline-R17 — {@link FragmentMerge}).
 	 * @return 두 스토리라인을 합쳤는가
 	 */
@@ -331,7 +331,7 @@ public class RelationRound {
 				case RelationRule.Decision.Fragments fragments -> {
 					switch (FragmentMerge.decide(fragments, this.criteria)) {
 						case FragmentMerge.Action.Merge merge -> {
-							// 합친 쌍은 한쪽이 사라져 물은 기록을 남기지 않는다 — 근거는 합쳐진 행이 갖는다(storyline-R18)
+							// 합친 쌍은 한쪽이 사라져 물은 기록을 남기지 않는다(storyline-R30). 근거는 합쳐진 행이 갖는다(storyline-R18)
 							RetiredStoryline retired = this.merger.merge(merge.merged(), merge.survivor(),
 									new MergeBasis(judgementId, criteriaId), now);
 							this.queue.enqueue(merge.survivor(), now);

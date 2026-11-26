@@ -7,7 +7,7 @@ import net.yozmnews.event.EventId;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 스토리라인 하나 · docs/specs/storyline.md §3 · storyline-R21.
+ * 스토리라인 하나 · docs/specs/storyline.md §3 · storyline-R21 · storyline-R33.
  *
  * @param state 조회 시각의 상태(storyline-R16)
  * @param eventCount 닫은 사건 집합(storyline-R33 — 포함의 하위까지)의 사건 수 — 기간과 무관한 스토리라인 전체. 하위가 없으면 구성 사건
