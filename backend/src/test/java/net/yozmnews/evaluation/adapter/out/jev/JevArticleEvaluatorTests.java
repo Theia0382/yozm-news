@@ -57,8 +57,8 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
  * 사건 소속 판정도 같은 전송 · 갈래를 지나는지 본다.
  * 응답 본문은 실측 응답 · 공식 문서의 모양이다. 기본 주소에 경로가 있는 경우(OpenRouter 의 호환 경로처럼)를 쓴다.
  * <p>
- * 지키는 규칙: evaluation-R37 · evaluation-R38 · evaluation-R40 · evaluation-R41 · ADR-0058 · docs/security.md(키가 로그 · 문구에 남지
- * 않는다)
+ * 지키는 규칙: evaluation-R37 · evaluation-R38 · evaluation-R40 · evaluation-R41 · ADR-0058 ·
+ * docs/overview.md §6 비밀 값(키가 로그 · 문구에 남지 않는다)
  */
 @ExtendWith(OutputCaptureExtension.class)
 class JevArticleEvaluatorTests {

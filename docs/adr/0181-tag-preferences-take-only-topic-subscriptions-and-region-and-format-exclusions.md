@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-15
-- 근거: [이슈 #151](https://github.com/Theia0382/yozm-news/issues/151) — 후보 선별의 구독 필터([pipeline §6](../pipeline.md#후보-선별))가 쓰는 조합을 확인
+- 근거: [이슈 #151](https://github.com/Theia0382/yozm-news/issues/151) — 후보 선별의 구독 필터([digest Spec "후보 선별"](../specs/digest.md#후보-선별))가 쓰는 조합을 확인
 - 관련: [ADR-0010](0010-tag-taxonomy.md)(부분 대체 — 결정 절의 `mode` 문장과 결과 절의 "주제·지역 구독자")
 
 ## 맥락

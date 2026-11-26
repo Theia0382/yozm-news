@@ -6,7 +6,7 @@
 
 - 배포 단위는 Docker Compose 하나다. 운영자의 호스트(집 서버 · VPS · 관리형 클라우드) 어디서든 같은 정의로 띄운다([ADR-0006](../adr/0006-deployment-compose-cloudflare.md))
 - 서버 포트는 외부에 열지 않고 앞단(Cloudflare Tunnel 또는 운영자의 리버스 프록시)으로 공개한다. proxy 는 HTTP 만 받고 TLS 는 앞단이 맡는다
-- 로그인 세션 쿠키는 언제나 `Secure` 라, 앞단 TLS 없이 HTTP 주소로 연 화면에서는 로그인할 수 없다. 이 호스트의 `localhost` 로 여는 경우만 브라우저가 예외로 받는다([security.md "공통"](../security.md#공통))
+- 로그인 세션 쿠키는 언제나 `Secure` 라, 앞단 TLS 없이 HTTP 주소로 연 화면에서는 로그인할 수 없다. 이 호스트의 `localhost` 로 여는 경우만 브라우저가 예외로 받는다([account Spec "세션"](../specs/account.md#세션) account-R9)
 - 상태 저장소는 PostgreSQL 하나다([overview.md §3](../overview.md#3-품질-목표와-제약))
 
 ## 호스트 요건
@@ -82,7 +82,7 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 
 ### 첫 운영자
 
-운영자 계정은 환경 변수로만 만든다. 두 변수의 값과 기동 규칙은 [계정과 고지](configuration.md#계정과-고지)에, 이 길만 두는 까닭은 [security.md "가입"](../security.md#가입)에 있다.
+운영자 계정은 환경 변수로만 만든다. 두 변수의 값과 기동 규칙은 [계정과 고지](configuration.md#계정과-고지)에, 이 길만 두는 규칙은 [account Spec "계정을 만드는 길"](../specs/account.md#계정을-만드는-길)에 있다.
 
 1. `deploy/.env` 에 `YOZMNEWS_FIRST_ADMIN_EMAIL` · `YOZMNEWS_FIRST_ADMIN_PASSWORD` 를 적고 띄운다. `app` 로그(`docker compose -f deploy/compose.yaml logs app`)에 "첫 운영자 계정을 만들었다"가 나온다
 2. 그 이메일 · 초기 비밀번호로 로그인한다(운영자 화면 `/admin` 을 열면 로그인 화면으로 간다). 비밀번호를 새로 정하는 화면만 열린다. 바꾸면 복구 코드가 한 번 나오고, 저장을 확인하면 운영자 화면으로 돌아온다. 운영자 계정의 복구 코드를 잃으면 비밀번호를 되찾을 길이 없으니 안전한 곳에 둔다
@@ -99,7 +99,7 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 
 - **초대 링크** — 메모(누구에게 줄 링크인지)를 붙여 만들고 링크를 직접 전한다. 링크는 7일 뒤 만료되고 한 번만 쓴다. 링크는 운영자 화면을 연 주소로 만들어지므로, 받는 사람이 닿는 바깥 주소로 운영자 화면을 열고 링크의 주소를 확인한 뒤 전한다. 링크는 만든 때만 보인다 — 잃으면 취소하고 다시 만든다
 - **계정 만들기** — 이메일 · 표시 이름 · 초기 비밀번호로 만들고 초기 비밀번호를 따로 전한다. 받은 사람은 첫 로그인에서 비밀번호를 새로 정한다. 그 전에 초기 비밀번호를 잃었으면 "초기 비밀번호 다시 정하기"로 바꾼다
-- **공개 가입** — 켜면 로그인 화면에 가입 링크가 나와 누구나 가입한다. 가입에 걸리는 방어는 [security.md "가입"](../security.md#가입)에 있다. 봇 차단은 [봇 차단](configuration.md#봇-차단) 설정을 따르고, 운영자 화면이 지금 봇 차단 상태를 알린다
+- **공개 가입** — 켜면 로그인 화면에 가입 링크가 나와 누구나 가입한다. 가입에 걸리는 방어는 [security.md "악용 방지"](../security.md#악용-방지)에 있다. 봇 차단은 [봇 차단](configuration.md#봇-차단) 설정을 따르고, 운영자 화면이 지금 봇 차단 상태를 알린다
 - 비밀번호를 잊은 사용자는 로그인 화면의 "복구 코드로 비밀번호 재설정"으로 되찾는다. 복구 코드가 없으면 되찾을 수 없다 — 메일을 보내지 않는다. 운영자가 만든 계정으로 아직 첫 로그인을 하지 않았으면 "초기 비밀번호 다시 정하기"로 새 초기 비밀번호를 준다
 
 ## 업데이트
@@ -167,7 +167,7 @@ Cloudflare 는 권장 구성이지 필수가 아니다. 운영자는 Tunnel 대�
 
 ## LLM 키 암호화 키(KEK)
 
-사용자가 등록한 LLM 키는 KEK 로 감싼 키로 암호화돼 DB 에 있다. KEK 는 `deploy/config/kek` 파일에 있다. 파일의 형식과 기동 규칙은 [운영 설정의 LLM 키 암호화](configuration.md#llm-키-암호화)에, 백업 · 잃음의 위험은 [security.md "BYOK 키 보관"](../security.md#byok-키-보관)에 있다.
+사용자가 등록한 LLM 키는 KEK 로 감싼 키로 암호화돼 DB 에 있다. KEK 는 `deploy/config/kek` 파일에 있다. 파일의 형식과 기동 규칙은 [운영 설정의 LLM 키 암호화](configuration.md#llm-키-암호화)에, KEK 와 DB 덤프가 함께 새어 나갔을 때의 위험은 [security.md "BYOK 키 보관"](../security.md#byok-키-보관)에 있다.
 
 - **만들기** — 처음 띄우기 전에 한 번 만든다. 이 파일은 저장소가 추적하지 않는다
 

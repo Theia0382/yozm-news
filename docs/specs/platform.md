@@ -1028,7 +1028,7 @@ stateDiagram-v2
   - platform-R39 — 재제출 전에 이벤트를 읽어 보기
   - platform-R40 — 한 곳에서만 재제출
   - platform-R41 — 리스너의 처리 끝을 기다리지 않음
-- **platform-R5** — 완료된 발행은 바로 지운다. 실패한 발행은 운영자가 폐기할 때까지(platform-R48) 남는다. 이 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)의 이벤트 발행 기록 행이다
+- **platform-R5** — 완료된 발행은 바로 지운다. 실패한 발행은 운영자가 폐기할 때까지(platform-R48) 남는다. 이 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책)의 이벤트 발행 기록 행이다
 - **platform-R20** — 리스너 · 반복 작업을 다른 패키지로 옮기는 변경이 같은 변경에 두는 Flyway 마이그레이션을 덮는다.
   - platform-R42 — 미완료 발행의 리스너 ID
   - platform-R43 — 옮긴 반복 작업의 남은 작업 행

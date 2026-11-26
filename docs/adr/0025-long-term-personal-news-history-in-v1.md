@@ -21,7 +21,7 @@
   > 부분 대체 — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`overview` §8](../overview.md#8-용어)
   - **이슈**(`storyline`) — 한 사용자가 몇 주에서 몇 달에 걸쳐 따라가는 전개다. 다이제스트를 만드는 같은 LLM 호출이 그 사용자의 진행 중 이슈 목록을 받아, 그날의 주요 뉴스를 기존 이슈에 잇거나 새 이슈를 연다. 비용은 사용자가 낸다(BYOK).
   - **주요 뉴스**(`top_stories`) — 하루치 다이제스트에서 여러 기사를 종합한 섹션이다. [ADR-0003](0003-byok-personalized-digest.md) · [ADR-0007](0007-defer-event-clustering.md)이 "주요 이슈" · "하나의 이슈"라고 부른 것이 이것이다.
-> 부분 대체(셋째 문장) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`pipeline` §6](../pipeline.md#6-다이제스트-생성)
+> 부분 대체(셋째 문장) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [digest Spec "프롬프트 구성"](../specs/digest.md#프롬프트-구성)
 - **다이제스트 호출의 단위는 그대로다.** (사용자, 기간)마다 LLM 을 한 번 호출한다. 입력에 진행 중 이슈 목록이, 출력에 이슈 연결이 더해진다. 사용자 사이에 공유하는 생성물은 여전히 없다.
 > 부분 대체(다섯째 문장의 이슈의 변화) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`overview` §5](../overview.md#5-모듈-지도)
 - **변화 리포트**를 둔다. 사용자별 · BYOK 이고 (사용자, 리포트 기간)마다 LLM 을 한 번 호출한다. 호출은 `LlmClientFactory` 를 거치는 리포트 생성 포트(`ReportGenerator`)로 한다. v1 은 주간 · 월간이다. 입력에 원문은 없다 — 이슈의 변화, 사건 · 주제의 보도량, 관심도의 변화, 직전 리포트의 요약이다. 생성에 쓴 통계 스냅숏을 리포트와 함께 저장하고, 월간 리포트는 주간 리포트를 입력으로 삼아 계층으로 쌓는다.

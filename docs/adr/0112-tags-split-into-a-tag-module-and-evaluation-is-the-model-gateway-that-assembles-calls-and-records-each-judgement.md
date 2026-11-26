@@ -1,6 +1,6 @@
 # ADR-0112: 태그는 `tag` 모듈로 떼고, `evaluation` 은 판정마다 요청 조립 · 모델 호출 · 판정 원본 기록을 맡는 관문으로 둔다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 평가 결과 이벤트([ADR-0342](0342-there-is-no-article-evaluated-event-and-modules-using-evaluations-read-them-by-query.md))
 - 날짜: 2026-11-11
 - 근거: [이슈 #130](https://github.com/Theia0382/yozm-news/issues/130) — `evaluation` 의 태그 지식과 판정 서비스를 나누는 경계를 조사하고, 사건 소속 판정이 `evaluation` 에 기대는 꼴과 같게 태그 판정을 두기로 정함
 - 관련: [ADR-0055](0055-tag-and-store-thresholds-change-with-history-and-warn-instead-of-blocking.md)(태그 기준 · 저장 기준을 `evaluation` 이 갖는다는 문장 — 부분 대체), [ADR-0056](0056-platform-reads-yaml-text-and-applies-common-rejection.md)(기본 태그 체계 파일을 `evaluation` 이 읽는다는 문장 — 부분 대체), [ADR-0064](0064-topic-coverage-counts-articles-by-first-evaluation-time-with-query-time-judgement-over-key-lineage-in-the-app.md)(주제별 보도량을 `evaluation` 이 센다는 문장 — 부분 대체), [ADR-0071](0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md) · [ADR-0094](0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md)(기사 ID 를 넘기고 판정 원본 ID 로 잇는 꼴을 태그 판정으로 넓힘 — 보충), [ADR-0073](0073-event-membership-api-in-both-roles-looks-up-the-evaluator-on-call-and-fails-without-one.md)(평가기를 부를 때 찾는 방식을 태그 판정 API 에도 씀 — 보충)
@@ -24,6 +24,7 @@
 - **질문 문장과 입력 텍스트는 그 지식을 가진 쪽이 낸다.**
   - 태그 판정의 입력은 `evaluation` 소유의 질문 묶음 타입이고, 모양은 태그 판정이 묻는 구조(주제 두 단계 · 지역 · 형식 · 중요도)다. 질문 문장은 운영자가 바꾸는 `tag` 의 체계 데이터에서 온다. `tag` 의 체계 내용 타입이 이 질문 타입을 그대로 품어, 같은 모양의 타입을 두 벌 두지 않는다.
   - 사건 소속 질문 문구는 `evaluation` 의 코드 상수다(ADR-0072).
+> 부분 대체 — [ADR-0342](0342-there-is-no-article-evaluated-event-and-modules-using-evaluations-read-them-by-query.md). 지금 상태: [tag Spec §3](../specs/tag.md#3-공개-인터페이스)
 - **평가 결과를 알리는 `ArticleEvaluated` 는 `tag` 가 낸다.** 발행 시점 · 내용은 이 결정의 범위 밖이다.
 - **지운 기사 따르기는 두 모듈이 각자 한다.** `tag` 는 대기 · 평가 · 태그 행을, `evaluation` 은 판정 원본을 자기 리스너로 지운다.
 - 경계의 정본은 [overview.md §5](../overview.md#5-모듈-지도) · [tag Spec](../specs/tag.md) · [evaluation Spec](../specs/evaluation.md)이다.

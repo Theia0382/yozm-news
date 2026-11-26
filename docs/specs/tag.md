@@ -53,7 +53,7 @@
 | 덮는 범위 | 채움 하나가 다루는 평가 시각 `[요청 시각 − 일수 × 24시간, 요청 시각)`(tag-R158) |
 | 채울 저장 기준 | 채움을 요청한 순간 버전마다의 지금 저장 기준. 요청이 기록하고, 실행은 이 값까지 채운다(tag-R159) |
 | 저장 바닥 | 평가 시각 t 의 평가에 저장돼 있다고 볼 수 있는 확률의 하한. 그때 쓰였을 수 있는 저장 기준과 t 를 덮은 끝난 채움의 채울 저장 기준 가운데 작은 것이다(tag-R32) |
-| 기본 제외 | 형식 태그의 속성. 계정을 만들 때, 그리고 그 형식이 새로 생긴 버전을 켤 때 사용자의 제외로 넣는다([user Spec](user.md#관심-설정) user-R43 · R47) |
+| 기본 제외 | 형식 태그의 속성이고, 사용자의 형식 제외의 초깃값이다. 계정을 만들 때 활성 버전의 기본 제외 형식이 형식 제외로 들어가고, 그 형식이 새로 생긴 버전을 켤 때 기존 사용자의 형식 제외에 더해진다. 이미 있던 형식의 기본 제외가 바뀌어도 기존 사용자의 제외는 바뀌지 않는다([user Spec](user.md#관심-설정) user-R82 · R89). 다이제스트 후보 선별이 형식 제외에 든 형식의 기사를 뺀다([digest Spec](digest.md#후보-선별) digest-R114). 배경은 [ADR-0010](../adr/0010-tag-taxonomy.md) · [ADR-0177](../adr/0177-formats-newly-excluded-by-default-on-activation-are-added-to-existing-users-exclusions.md) |
 | 기본 체계 파일 | 저장소의 `backend/src/main/resources/tag-sets/default.yaml`. 첫 기동에 버전 1 로 들어간다(tag-R1 · R2). 첫 체계의 바탕은 [조사 초안](../research/2026-10-news-categories.md) 3.2 이고, 중요도 문구의 판단 원칙은 [ADR-0099](../adr/0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md) · [ADR-0285](../adr/0285-importance-asks-what-the-matter-now-changes-and-levels-run-to-society-wide-in-four-steps-without-field-words.md)에 있다 |
 | 첫 기동 적재 | 버전이 하나도 없을 때 기본 체계 파일을 버전 1 로 저장하는 기동 시 동작(tag-R2) |
 | 행위자 | 태그 기준 · 저장 기준을 정하거나 버전을 만든 주체의 종류. 시스템(첫 기동 적재)과 운영자(공개 운영 API)다(tag-R68) |
@@ -98,7 +98,7 @@
 - 주제별 보도량 조회 `TopicCoverage`
 - 집계 기간 `EvaluationPeriod`
 
-내는 이벤트는 활성 전환 `TagSetActivated` 하나다. 평가 결과를 알리는 `ArticleEvaluated` 도 이 모듈이 낸다. **(미설계)** 그 발행 시점과 내용은 정하지 않았다([overview.md §5](../overview.md#5-모듈-지도)).
+내는 이벤트는 활성 전환 `TagSetActivated` 하나다. 평가 결과를 알리는 이벤트는 두지 않는다 — 평가를 쓰는 모듈은 공개 조회로 읽는다([ADR-0342](../adr/0342-there-is-no-article-evaluated-event-and-modules-using-evaluations-read-them-by-query.md)).
 
 받는 이벤트는 `article` 의 `ArticleStored` · `ArticlesRemoved` 이고, 재평가 대상은 `article` 의 공개 조회 `ArticleDirectory.firstSeenSince` 로 읽는다([article Spec §3](article.md#3-공개-인터페이스)). 태그 판정은 `evaluation` 의 공개 API `ArticleTagging` 으로 한다([evaluation Spec §3](evaluation.md#3-공개-인터페이스)). 태그 질문(`TagQuestions`)과 그 값 타입(`TopicCategory` · `AskedTag` · `FormatChoice` · `FormatOption` · `ImportanceScale` · `ImportanceLevel`)은 `evaluation` 의 공개 타입이고, 이 모듈의 `TagSetView` 가 그것으로 체계 내용을 담는다. 태그 기준 · 저장 기준의 이력과 버전의 행위자 종류는 `platform` 의 `ChangeActor` 다.
 
@@ -1595,7 +1595,7 @@ sequenceDiagram
 - **tag-R170** — 열린 채움이 이어 가지 못하는 경우가 있다. 채움을 취소하는 길은 없고, 그동안 새 요청은 그 채움을 돌려받는다.
   - 요청 때 없던 버전의 평가가 범위에 있으면 회차마다 같은 쪽에서 멈춘다. 프로세스 사이 시계가 어긋났을 때만 생긴다
   - 점유 뒤 체계 · 기준 읽기(트랜잭션 밖)가 계속 실패하면 점유 만료마다 다시 시도한다
-- **tag-R171** — **(미설계)** 판정 원본 보존(180일, [data-model "보존 정책"](../data-model.md#보존-정책-초안))을 구현하면 원본이 없는 평가는 채울 수 없다. 그 처분은 보존을 구현하는 작업이 정한다
+- **tag-R171** — **(미설계)** 판정 원본 보존(180일, [data-model "보존 정책"](../data-model.md#보존-정책))을 구현하면 원본이 없는 평가는 채울 수 없다. 그 처분은 보존을 구현하는 작업이 정한다
 - **tag-R172** — 평가마다 쓴 저장 기준은 기록하지 않아, 이력과 끝난 채움으로 되짚는다. 이력 행의 저장 기준은 그 행의 시각부터 다음 행의 시각까지 유효하다. 양 끝을 포함하고, 다음 행의 시각이 앞서면 그 행의 시각 하나다. 마지막 행은 끝없이 유효하다. 바닥끼리는 크기로 견주어, scale 만 다른 값은 같은 바닥이다
 - **tag-R173** — 평가 시각 t 의 평가가 쓴 저장 기준은 `[t 까지의 경과가 점유 기간인 시각, t]` 와 겹치는 행의 값 가운데 가장 큰 것으로 본다. 점유 기간은 평가 회차의 것(`EvaluationSchedule.LEASE` 30분, tag-R91)이다. 경과는 시계가 넘긴 시간을 뺀 것이다(platform-R28). 넘긴 기록이 없으면 `[t − 30분, t]` 이고, 측정용 시계를 넘긴 구간은 30분에 들지 않는다(`ReadLag`)
 - **tag-R174** — t 를 덮은 끝난 채움이 있으면 바닥은 tag-R173 의 값과 채움의 채울 저장 기준 가운데 작은 것이다. 덮음은 끝났고 그 버전에서 건너뛴 평가가 없는 채움만이다. 진행 중이거나 건너뛴 평가가 있는 채움은 바닥을 내리지 않는다
@@ -1730,7 +1730,7 @@ sequenceDiagram
 - 요청 때 모든 버전의 채울 저장 기준과 대상 평가 수, 실행이 더하는 버전별 건수를 담는다
 - 건너뛴 평가가 있는 버전은 덮음이 아니다(tag-R174)
 
-`article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다. 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
+`article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다. 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책)에 있다.
 
 ## 7. 설정
 

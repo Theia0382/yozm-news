@@ -4,15 +4,17 @@
 
 ## 1. 문서 위계
 
-지식의 종류마다 한 층이 소유한다. 같은 지식을 두 층에 적지 않는다. 예외는 셋이다.
+지식의 종류마다 한 층이 소유한다. 같은 지식을 두 층에 적지 않는다. 예외는 넷이다.
 
 - 모듈 공개 인터페이스와 포트의 선언은 2층(Spec)이 정본이고, 3층(코드)의 선언은 사본이다
 - 모듈 테이블의 컬럼은 Flyway 마이그레이션이 정본이고, Spec 의 데이터 절에 주요 컬럼의 사본이 있다
 - 코드 주석은 정본의 위치를 가리킨다. Spec 이 정본인 공개 타입 · 포트 · 구성 요소에는 한 줄 요약을 함께 두고, 개발 인프라 · 운영 문서가 정본인 구성 파일에는 그 자리의 제약 한 문장을 함께 둔다. 그 밖의 지식은 위치로만 가리킨다([ADR-0039](adr/0039-code-comments-point-to-owning-docs-and-javadoc-format-checked-by-javac-and-javadoc.md))
+- 개인정보 고지의 수집 · 외부 전송 항목은 고지 화면 파일(`frontend/src/features/privacy/privacyTexts.ts`)이 정본이다. 고지의 원칙은 `security.md` 에 있다([ADR-0344](adr/0344-privacy-notice-items-are-owned-by-the-notice-screen-file-and-collected-items-cover-the-user-data-of-the-retention-table.md))
 
 | 층 | 문서 | 소유하는 지식 |
 |---|---|---|
 | **1층 개요** | [overview.md](overview.md) | 목적과 범위, 품질 목표, 시스템 구성과 모듈 지도, 횡단 규약과 용어 |
+| **횡단 문서** | [data-model.md](data-model.md) · [security.md](security.md) | 모듈 사이 데이터 관계 · 보존 정책 · 프레임워크 테이블, 여러 모듈에 걸친 보안 · 개인정보 · 저작권 정책 |
 | **2층 모듈 · 화면 Spec** | [specs/](specs/README.md) | 모듈 Spec 은 모듈의 책임과 용어, 공개 인터페이스(시그니처 포함)와 이벤트 계약, 내부 구조(구성 요소와 그 책임 · 협력)와 포트 선언, 규칙과 불변식과 데이터를 갖는다. 공개 인터페이스와 포트 선언의 정본이고 코드는 Spec 을 따른다. 새 모듈은 Spec 을 먼저 만든다. 화면 Spec([specs/web.md](specs/web.md))은 프론트엔드의 화면 이름 · 화면 경로 · 화면 동작을 갖는다 |
 | **3층 코드** | Javadoc · 테스트 · 코드 | 클래스 내부 상세(필드 · 메서드 · 알고리즘) · 비공개 시그니처의 정본. 모듈 공개 인터페이스 · 포트의 선언은 2층의 사본이다. 주석의 규칙은 [CONTRIBUTING.md §7](../CONTRIBUTING.md#주석) |
 | **개발 인프라** | [development/](development/README.md) | 개발 · 검사 환경, CI, 이미지 구성 |
@@ -21,17 +23,6 @@
 | **QA** | [qa/](qa/test-strategy.md) | 무엇을 테스트 증거로 인정하는가 |
 | **조사 자료** | [research/](research/) | 결정에 쓰인 사전 조사. 작성 시점의 사실이다 |
 | **동결 자료** | [archives/](archives/README.md) | 현행 규범이 아닌 과거 문서. 인용하지 않는다 |
-
-**전환 중인 문서**는 위 갈래가 생기기 전에 쓴 설계 초안이다. 남은 내용은 현행 설계로 읽고, 아래 행선지로 옮긴다. 다 옮긴 문서는 `archives/` 로 보낸다.
-
-| 문서 | 남은 내용의 행선지 |
-|---|---|
-| [architecture.md](architecture.md) | 모듈 포트 · 작업 → 그 모듈의 Spec(모듈을 만드는 이슈가 옮긴다). 외부 API · MCP → 1층 또는 그 기능을 가진 모듈의 Spec(그 기능을 설계하는 이슈가 고른다) |
-| [pipeline.md](pipeline.md) | 단계마다 그 단계를 가진 모듈의 Spec. 상단의 단계 흐름 그림은 이 문서를 `archives/` 로 보낼 때 `overview.md` 로 옮긴다 |
-| [data-model.md](data-model.md) | 모듈 테이블 → 그 모듈 Spec 의 데이터 절. 모듈 사이 관계(ER 개요) · 보존 정책 · 프레임워크 테이블은 이 문서에 남는다 — 전환이 끝나면 데이터 개요 문서로 남는다 |
-| [security.md](security.md) | 한 모듈이 구현하는 규칙 → 그 모듈의 Spec. 횡단 정책(인가 · 데이터 격리 · 개인정보 · 저작권 · 악용 방지)은 이 문서에 남는다 — 전환이 끝나면 횡단 보안 문서로 남는다 |
-
-[roadmap.md](roadmap.md) · [open-questions.md](open-questions.md) 는 계획 문서라 전환 대상이 아니다.
 
 ## 2. 문서 목록
 
@@ -42,10 +33,8 @@
 | 처음 읽기 | [overview.md](overview.md) | 시스템 개요 (1층) |
 | 설계 | [specs/](specs/README.md) | 모듈 · 화면 Spec (2층)의 목록 · 공통 구조 · 쓰는 규칙 |
 | | [adr/](adr/README.md) | 아키텍처 결정 기록 |
-| | [architecture.md](architecture.md) | 모듈 인터페이스 초안, 백그라운드 작업, 외부 API · MCP (전환 중) |
-| | [pipeline.md](pipeline.md) | 수집 → 평가 → 사건 묶기 → 다이제스트 생성 파이프라인, 관심 신호 · 스토리라인 · 변화 리포트 상세 (전환 중) |
-| | [data-model.md](data-model.md) | 데이터 모델과 보존 정책 (전환 중) |
-| | [security.md](security.md) | 인증과 인가, BYOK 키 보관, 저작권과 개인정보 (전환 중) |
+| | [data-model.md](data-model.md) | 모듈 사이 데이터 관계 · 보존 정책 · 프레임워크 테이블 |
+| | [security.md](security.md) | 인가와 데이터 격리, 악용 방지, LLM 입출력, 개인정보 원칙, 저작권의 횡단 정책 |
 | 개발 | [CONTRIBUTING.md](../CONTRIBUTING.md) | 개발 환경과 검사 명령, 이슈 · 브랜치 · 커밋 · PR 규약 |
 | | [development/](development/README.md) | 개발 인프라: 개발 · 검사 환경, CI, 이미지 구성 |
 | | [qa/test-strategy.md](qa/test-strategy.md) | 테스트 전략 |
@@ -61,7 +50,7 @@
 
 | 트리거 (변경 유형) | 갱신 대상 |
 |---|---|
-| 모듈 신설 · 폐지 · 의존 방향 변경 | `overview.md` §5 모듈 지도 |
+| 모듈 신설 · 폐지 · 의존(방향 · 공개 API) 변경 | `overview.md` §5 모듈 지도 |
 | 모듈 신설 | 그 모듈의 Spec(`specs/{모듈}.md`) 신설 + [specs/README.md](specs/README.md) §1 목록. Spec 은 구현보다 먼저 만든다([CONTRIBUTING.md §2](../CONTRIBUTING.md#2-이슈)) |
 | 모듈 공개 인터페이스 · 이벤트 · 포트 변경 | 해당 모듈 Spec + 의존하는 모듈 Spec |
 | 모듈의 작업 · 규칙 · 불변식 변경 | 해당 모듈 Spec + 의존하는 모듈 Spec |
@@ -69,10 +58,11 @@
 | 횡단 규약 변경 (트랜잭션 경계 · 사용자 범위 · 비밀 값 · 오류 응답 형식 등) | `overview.md` §6 + 관련 ADR |
 | 도메인 용어 신설 · 이름 변경 | 모듈 Spec 의 용어 절, 횡단 용어면 `overview.md` §8 |
 | 화면 신설 · 화면 동작 · 화면 이름 변경 | 화면 Spec([specs/web.md](specs/web.md)) |
-| 파이프라인 · 데이터 모델 · 보안 설계 변경 | 한 모듈에 속하면 그 모듈 Spec, 아니면 `pipeline` · `data-model` · `security`(§1 전환 중인 문서의 행선지) |
+| 여러 모듈을 잇는 흐름 · 데이터 모델 · 보안 설계 변경 | 한 모듈에 속하면 그 모듈 Spec. 여러 모듈을 잇는 흐름이면 `overview.md` §1, 모듈 사이 데이터 관계 · 보존이면 `data-model`, 보안 횡단 정책이면 `security` |
 | 개발 인프라 변경 (개발 환경 · 검사 정의 · CI · 이미지) | `development/`. 문서 검사의 판정이 바뀌면 §4 의 링크 규칙 |
 | 운영 변경 (배포 구성 · 운영 설정 · 호스팅 · 백업) | `operations/` |
 | DB 스키마 변경 | Flyway 마이그레이션이 정본 + 그 모듈 Spec 의 데이터 절(주요 컬럼 · 의미 · 제약의 뜻) |
+| 사용자 데이터 테이블 신설 · LLM 생성 입력 변경 | [data-model.md 보존 정책](data-model.md#보존-정책)의 행 + 고지 화면 파일(`frontend/src/features/privacy/privacyTexts.ts`)의 수집 · 외부 전송 항목([ADR-0344](adr/0344-privacy-notice-items-are-owned-by-the-notice-screen-file-and-collected-items-cover-the-user-data-of-the-retention-table.md)) |
 | 확정된 프로젝트 결정 ([ADR 선별 기준](adr/README.md#선별-기준) 충족) | ADR 신설 + [adr/README.md](adr/README.md) 표 행 + 관련 문서의 근거 링크 |
 | 결정 역전 · 보충 ([대체와 보충](adr/README.md#대체와-보충)) | 새 ADR + 구 ADR 에 알림. 대체면 상태 줄 · 표 행(부분 대체면 대체 표시도), 보충이면 후속 기록 |
 | 미결 사항 결정 | [open-questions.md](open-questions.md) 정리 + 해당 문서 · ADR |

@@ -952,7 +952,7 @@ sequenceDiagram
 판단의 이유는 [ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0084](../adr/0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md) · [ADR-0086](../adr/0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md) · [ADR-0087](../adr/0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md) · [ADR-0088](../adr/0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md) · [ADR-0089](../adr/0089-long-term-hnsw-indexes-on-closed-events-created-per-model-version-at-runtime-by-the-worker-role.md) · [ADR-0119](../adr/0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md) · [ADR-0213](../adr/0213-event-merge-defers-events-whose-check-did-not-finish-until-a-retry-time-on-the-event-row-and-never-drops-them.md)에 있다.
 
 - **event-R13** — 열린 사건끼리 합치는 사건 병합과, 사건을 닫고 그 뒤를 정비하는 사건 정비를 덮는다. 하위 규칙: event-R56 ~ R71
-- **event-R56** — 닫기 · 병합은 한 방향이다. 닫힌 사건을 다시 열거나 합친 사건을 나누지 않는다. 기준(사건 기준 · 닫는 기간 · 최대 기간)이 바뀌면 그 뒤의 닫기 · 병합에만 쓴다. 몇 주에 걸친 사건들은 스토리라인이 잇는다([pipeline.md §9](../pipeline.md#9-스토리라인))
+- **event-R56** — 닫기 · 병합은 한 방향이다. 닫힌 사건을 다시 열거나 합친 사건을 나누지 않는다. 기준(사건 기준 · 닫는 기간 · 최대 기간)이 바뀌면 그 뒤의 닫기 · 병합에만 쓴다. 몇 주에 걸친 사건들은 스토리라인이 잇는다([storyline Spec](storyline.md))
 - **event-R57** — 반복 작업이 재판정 회차 다음에 병합 회차를 돈다. 회차는 지금 기준을 기준 이력에 등록하고(event-R48), 바뀐 열린 사건을 16개(측정 전, `AssignmentSchedule.MERGE_BATCH`)까지 본다.
   - 바뀐 사건은 확인한 고친 횟수가 지금보다 작거나, 다른 기준으로 확인한 사건이다
   - 사건의 고친 횟수(`revision`)는 열 때 1 이고, 사건 값을 쓸 때마다(붙이기 · 빼기 · 옮기기 · 합치기) 하나 는다
@@ -1080,7 +1080,7 @@ sequenceDiagram
   - 배정에서는 쓰기를 되돌렸거나, 이 기록을 남기기 전(V21 전)의 원본이다
   - 병합에서는 쌍의 사건이 비어 지워져 기록이 함께 지워졌거나(event-R8), 쌍의 기록이 이미 있었거나, V21 전의 원본이다
 - **event-R84** — 한 원본을 배정과 병합 판정 기록이 함께 가리키지 않는다. 배정 판정의 판정할 기사는 배정 대기의 기사이고, 병합 판정은 병합 판정 기록에만 쓴다. 어기면 조회가 `IllegalStateException` 이다
-- **event-R85** — 판정 원본의 보존(180일)과 배정 · 병합 판정 기록의 보존(무기한)은 다르다. 원본이 지워져도 기록의 ID 는 남는다([data-model 보존 정책](../data-model.md#보존-정책-초안))
+- **event-R85** — 판정 원본의 보존(180일)과 배정 · 병합 판정 기록의 보존(무기한)은 다르다. 원본이 지워져도 기록의 ID 는 남는다([data-model 보존 정책](../data-model.md#보존-정책))
 
 ### 사건 변화 알림 · 잇기의 재료
 
@@ -1127,7 +1127,7 @@ sequenceDiagram
 - `V30__event_key_terms_term_index.sql` — 사건 핵심 말의 말 인덱스
 - `V54__event_merge_deferral.sql` — 병합 미룸의 이어서 미룬 횟수 · 다시 볼 시각
 
-장기 검색 인덱스는 마이그레이션이 아니라 사건 정비가 만든다(event-R69). `article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다. 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
+장기 검색 인덱스는 마이그레이션이 아니라 사건 정비가 만든다(event-R69). `article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다. 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책)에 있다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|

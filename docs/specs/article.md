@@ -495,7 +495,7 @@ public interface ContentExtractor {
 
 `source_id` · `feed_id` 는 `source` 의 테이블을 가리키지만 FK 를 두지 않는다. 모듈 사이는 ID 로만 참조한다.
 
-보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
+보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책)에 있다.
 
 ## 7. 설정
 

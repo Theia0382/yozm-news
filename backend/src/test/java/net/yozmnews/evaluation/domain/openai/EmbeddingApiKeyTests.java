@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 임베딩 API 키의 형식 검사와 값 숨김을 본다.
  * <p>
- * 지키는 규칙: docs/security.md(비밀 값이 문구에 남지 않는다)
+ * 지키는 규칙: docs/overview.md §6 비밀 값(비밀 값이 문구에 남지 않는다)
  */
 class EmbeddingApiKeyTests {
 

@@ -39,7 +39,7 @@
 
 ## 후속 기록
 
-- 2026-11-04: 결정 절의 다이제스트 호출 입출력 — [ADR-0025](0025-long-term-personal-news-history-in-v1.md) · [`pipeline` §6](../pipeline.md#6-다이제스트-생성)
+- 2026-11-04: 결정 절의 다이제스트 호출 입출력 — [ADR-0025](0025-long-term-personal-news-history-in-v1.md) · [digest Spec "프롬프트 구성"](../specs/digest.md#프롬프트-구성)
 - 2026-11-14: 결정 절 "LLM 키가 없는 사용자에게는 키 등록 페이지만 보여준다"의 범위(키 · 계정 · 알림 처리기는 연다) — [ADR-0160](0160-users-without-a-key-may-use-key-account-and-notice-handlers.md) · [`user` user-R5](../specs/user.md#폐지한-규칙)
 - 2026-11-15: 결정 절 "LLM 키가 없는 사용자에게는 키 등록 페이지만 보여준다"의 범위에 관심 설정 처리기를 더한다 — [ADR-0179](0179-interest-settings-handlers-are-open-without-a-key.md) · [`user` user-R5](../specs/user.md#폐지한-규칙)
 - 2026-11-23: 결정 절의 사용자 키로 만드는 생성물에 사용자 스토리라인의 정리를 더한다 — [ADR-0287](0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md) · [`user` "사용자 스토리라인의 정리"](../specs/user.md#사용자-스토리라인의-정리)

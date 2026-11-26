@@ -16,9 +16,9 @@
 
 - **가입 정책**: 가입은 기본으로 닫혀 있고, 운영자가 운영 설정으로 공개 가입을 열 수 있다. 열면 열린 가입 방어(계정 존재 노출을 감추는 일반 문구 · 가입 요청 제한 · 가입 화면 봇 차단)를 모두 적용한다.
 - **닫힌 가입에서는 두 방식으로 사람을 들인다.**
-  > 부분 대체(마지막 문장) — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [`security` "가입"](../security.md#가입)
+  > 부분 대체(마지막 문장) — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [account Spec "계정을 만드는 길"](../specs/account.md#계정을-만드는-길)
   - 초대 링크 — 운영자가 만든 일회용 · 만료 있는 링크를 직접 전한다(메일 없음). 토큰은 해시로만 저장하고 운영자가 취소할 수 있다. 받은 사람은 OIDC 나 자체 로그인 중 골라 가입한다.
-  > 부분 대체(마지막 문장) — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [`security` "가입"](../security.md#가입)
+  > 부분 대체(마지막 문장) — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [account Spec "계정을 만드는 길"](../specs/account.md#계정을-만드는-길)
   - 운영자 계정 생성 — 운영자가 이메일 · 초기 비밀번호로 자체 로그인 계정을 만든다. 첫 로그인 때 비밀번호 변경을 강제하고, 복구 코드는 그때 발급한다. OIDC 만 쓰는 사람은 초대 링크로 들인다.
 > 부분 대체(첫 문장 · 둘째 문장) — [ADR-0139](0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md). 지금 상태: [`account` "첫 운영자와 운영자의 계정 운영"](../specs/account.md#첫-운영자와-운영자의-계정-운영) account-R27
 - **첫 운영자**: 운영자(`ADMIN`)가 없으면 기동 때 일회용 운영자 초대 링크(짧은 만료)를 앱 로그에 출력한다(기본). 운영자가 생기면 출력하지 않는다. 환경 변수로 이메일 · 초기 비밀번호를 주면 링크 대신 그 값으로 자체 로그인 운영자 계정을 만든다.
@@ -27,7 +27,7 @@
   - 값이 비밀번호 규칙을 어기면 이유를 말하고 기동하지 않는다.
   > 부분 대체 — [ADR-0139](0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md). 지금 상태: [`account` "첫 운영자와 운영자의 계정 운영"](../specs/account.md#첫-운영자와-운영자의-계정-운영) account-R27
   - 값이 있으면 초대 링크를 출력하지 않는다.
-> 부분 대체 — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [`security` "가입"](../security.md#가입)
+> 부분 대체 — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [`overview` §2](../overview.md#2-범위)
 - **OIDC 경로의 닫힘**: 가입이 닫힌 인스턴스에서는 초대 없이 처음 보는 OIDC 계정으로 로그인해도 계정을 만들지 않는다. 닫힘이 OIDC 경로에서도 성립하려면 필요하다.
 - 설정 이름 · 초대 만료 값 · 저장 테이블 · 화면은 가입 기능을 만드는 작업이 정한다.
 

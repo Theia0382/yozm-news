@@ -26,3 +26,7 @@
 |---|---|
 | 키 등록 화면에 함께 둔다 | 키를 등록한 뒤에는 다시 보기 어렵다 |
 | 가입 화면에 둔다 | 운영자가 만든 계정과 첫 운영자는 가입 화면을 보지 않는다 |
+
+## 후속 기록
+
+- 2026-11-26: 결정 "고지 페이지 하나에 수집 항목과 외부 전송 항목을 둔다"의 항목 정본 — [ADR-0344](0344-privacy-notice-items-are-owned-by-the-notice-screen-file-and-collected-items-cover-the-user-data-of-the-retention-table.md) · 지금 상태 [security.md "개인정보"](../security.md#개인정보)

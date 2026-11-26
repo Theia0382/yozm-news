@@ -20,7 +20,7 @@
 - **자동 삭제는 운영 설정(보존 일수, 기본 꺼짐)으로 켠다.**
 > 부분 대체("화면 · 외부 API 에 요약문을 노출하지 않는 규칙") — [ADR-0068](0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md). 지금 상태: [`security` "저작권과 소스 이용조건"](../security.md#저작권과-소스-이용조건)
 - 화면 · 외부 API 에 요약문을 노출하지 않는 규칙과, 언론사가 삭제를 요청하면 요약문을 지우는 운영자 기능은 그대로 둔다.
-> 부분 대체(셋째 문장의 이슈를 잇는 부분) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`pipeline` §6](../pipeline.md#6-다이제스트-생성)
+> 부분 대체(셋째 문장의 이슈를 잇는 부분) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [storyline Spec "잇기 규칙"](../specs/storyline.md#잇기-규칙)
 - **장기 기능은 요약문이 없는 기사에서도 동작한다.** 재평가 · 벡터 재계산은 요약문이 남은 기사만 대상으로 하고, 검색은 제목 · 메타데이터로 대신한다. 이슈를 이을 때는 과거 기사의 요약문 대신 이슈마다 저장한 현재 상태 요약을 다이제스트 호출에 넘기고, 변화 리포트의 입력에는 원래 요약문이 들어가지 않는다.
 
 ## 결과
@@ -40,4 +40,4 @@
 ## 후속 기록
 
 - 2026-11-02: 체계를 바꿀 때의 재평가([ADR-0062](0062-tag-set-versions-from-operator-text-activated-forward-with-key-lineage-and-recent-reevaluation.md))는 결정 절의 "요약문이 남은 기사만"을 보존 정책으로 요약문을 지운 기사를 빼는 것으로 읽는다 — 처음부터 요약문이 없던 기사는 처음 평가와 같은 입력(제목만)이라 재평가 대상이다. 결과 절의 "제목 수준으로 줄어든다"는 지운 기사도 제목만으로 재평가하는 것처럼 읽혀 이 읽기와 갈린다. 자동 삭제는 아직 없어 지금은 두 읽기의 동작이 같고, 지운 요약문을 구별해 뺄지는 자동 삭제를 만드는 작업이 정한다
-- 2026-11-04: 결정 절 "요약문은 기본으로 무기한 보존한다"의 뜻 — [ADR-0051](0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) · [`data-model` "보존 정책 (초안)"](../data-model.md#보존-정책-초안)
+- 2026-11-04: 결정 절 "요약문은 기본으로 무기한 보존한다"의 뜻 — [ADR-0051](0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) · [`data-model` "보존 정책"](../data-model.md#보존-정책)

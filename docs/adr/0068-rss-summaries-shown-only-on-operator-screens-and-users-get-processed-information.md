@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-04
-- 근거: [이슈 #73](https://github.com/Theia0382/yozm-news/issues/73) — 기점 `45b16f3` 의 노출 규칙(ADR-0029 · [security.md](../security.md) · [overview.md](../overview.md) · [data-model.md](../data-model.md) · [architecture.md](../architecture.md))을 대조. 표본 검수 화면이 보일 기사 정보를 정하면서 결정
+- 근거: [이슈 #73](https://github.com/Theia0382/yozm-news/issues/73) — 기점 `45b16f3` 의 노출 규칙(ADR-0029 · [security.md](../security.md) · [overview.md](../overview.md) · [data-model.md](../data-model.md) · [roadmap "외부 API · MCP"](../roadmap.md#외부-api--mcp))을 대조. 표본 검수 화면이 보일 기사 정보를 정하면서 결정
 - 관련: [ADR-0029](0029-indefinite-summary-retention-with-optional-deletion.md)(요약문 노출 금지 — 이 ADR 이 부분 대체한다), [ADR-0047](0047-self-hosted-software-run-by-instance-operators.md)(개인이 자기 서버에 띄워 쓰는 소프트웨어 — 근거)
 
 ## 맥락

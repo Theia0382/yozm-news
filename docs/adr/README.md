@@ -117,7 +117,7 @@
 | [0109](0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) | 사건 묶기 기본값은 기본 임베딩 모델에 맞춰 평가 세트로 견주고 운영자 표본 검수로 확인해 정하며, 반감기는 상수로 두고 닫는 기간은 시간 창에 늦은 수집의 여유를 더한다 | 승인 |
 | [0110](0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md) | 스토리라인 평가는 고정 덤프의 시스템 사건에 라벨을 붙이고, 무작위 씨앗 사건과 그 스토리라인의 기간 전수로 겹치는 묶음을 잰다 | 승인 |
 | [0111](0111-storyline-gold-links-by-matter-with-mixed-events-on-their-central-happening-and-events-without-a-happening-following-their-matter.md) | 스토리라인 정답은 사안 단위로 잇고, 섞인 사건은 중심 일, 일이 없는 사건은 다룬 사안을 따른다 | 승인 |
-| [0112](0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md) | 태그는 `tag` 모듈로 떼고, `evaluation` 은 판정마다 요청 조립 · 모델 호출 · 판정 원본 기록을 맡는 관문으로 둔다 | 승인 |
+| [0112](0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md) | 태그는 `tag` 모듈로 떼고, `evaluation` 은 판정마다 요청 조립 · 모델 호출 · 판정 원본 기록을 맡는 관문으로 둔다 | 승인 (부분 대체: 0342) |
 | [0113](0113-moving-listeners-or-jobs-between-modules-migrates-pending-publication-listener-ids-and-drops-pending-jobs-of-the-old-class.md) | 모듈 사이로 리스너 · 반복 작업을 옮기면 미완료 발행의 리스너 ID 를 마이그레이션으로 옮기고, 옛 클래스의 남은 예약 작업을 지운다 | 승인 |
 | [0114](0114-article-embedding-is-a-gateway-operation-of-evaluation-taking-callers-texts-checking-results-and-recording-nothing.md) | 기사 임베딩은 `evaluation` 관문의 연산으로 두고, 텍스트는 부르는 쪽이 넘기며, 결과는 관문이 확인하고 기록하지 않는다 | 승인 |
 | [0115](0115-embedding-api-in-both-roles-looks-up-the-embedder-on-call-and-a-worker-startup-check-requires-one.md) | 기사 임베딩 공개 API 는 두 역할 공통 빈으로 두고 임베더는 부를 때 찾으며, 작업 역할의 임베더 요구는 `evaluation` 의 기동 검사가 맡는다 | 승인 |
@@ -343,6 +343,9 @@
 | [0339](0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md) | 변화 리포트의 섹션 종류는 추적한 흐름 · 관심 변화 둘이고, 구독 주제 보도량을 다루지 않는다 | 승인 |
 | [0340](0340-sections-and-snapshot-fields-of-removed-report-kinds-are-kept-unread-and-snapshot-version-three-reads-version-two.md) | 없앤 섹션 종류의 저장된 섹션과 스냅숏 칸은 지우지 않고 읽지 않으며, 스냅숏 버전 3 은 버전 2 를 읽는 길을 둔다 | 승인 |
 | [0341](0341-a-monthly-report-does-not-compare-flow-coverage-with-the-previous-monthly-and-shows-the-flow-state-kept-at-generation.md) | 월간 리포트는 흐름 보도량을 직전 월간과 견주지 않고, 생성 때의 흐름 상태를 스냅숏에 남겨 보인다 | 승인 |
+| [0342](0342-there-is-no-article-evaluated-event-and-modules-using-evaluations-read-them-by-query.md) | 평가 결과 이벤트 `ArticleEvaluated` 는 두지 않고, 평가를 쓰는 모듈은 조회로 읽는다 | 승인 |
+| [0343](0343-operator-secrets-like-byok-keys-never-reach-logs-error-messages-or-responses-and-the-convention-lives-in-overview.md) | 운영자 비밀도 BYOK 키처럼 로그 · 오류 문구 · 응답에 남기지 않고, 그 규약의 정본은 `overview` §6 이다 | 승인 |
+| [0344](0344-privacy-notice-items-are-owned-by-the-notice-screen-file-and-collected-items-cover-the-user-data-of-the-retention-table.md) | 개인정보 고지의 수집 · 외부 전송 항목은 고지 화면 파일이 정본이고, 수집 항목은 보존 정책 표의 사용자 데이터를 덮는다 | 승인 |
 
 ## 운영 규칙
 

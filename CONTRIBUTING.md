@@ -240,7 +240,7 @@ Issue: #12
   - JobRunr 를 올려 새 스크립트가 생기면 `FrameworkSchemaMigrationTests` 가 실패한다. 그 원문을 Flyway 새 버전 파일에 `-- jobrunr-migration:` 구획으로 옮기고, `-- jobrunr-migration-record` 구획에 기록 행을 더한다
   - Spring Modulith 를 올릴 때는 이벤트 발행 레지스트리의 스키마 버전이 바뀌었는지 릴리스 노트로 확인한다. 테스트는 지금 쓰는 버전의 원문만 대조하므로, 그 원문이 바뀌면 실패하지만 버전이 바뀐 것은 알리지 못한다. 원문이 `CREATE TABLE IF NOT EXISTS` 라 새 원문을 옮겨도 이미 있는 테이블은 바뀌지 않는다 — 바뀐 부분을 손으로 쓴 마이그레이션으로 더하고, 대조 테스트의 Modulith 대조를 새 원문에 맞게 고친다
 - 되돌릴 수 없는 스키마 변경은 두 번의 배포로 나눈다(확장 → 축소)
-- 사용자 데이터를 지우는 마이그레이션을 쓰지 않는다([ADR-0212](docs/adr/0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md)). 보존 대상과 기간은 [data-model.md 보존 정책](docs/data-model.md#보존-정책-초안)에 있다
+- 사용자 데이터를 지우는 마이그레이션을 쓰지 않는다([ADR-0212](docs/adr/0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md)). 보존 대상과 기간은 [data-model.md 보존 정책](docs/data-model.md#보존-정책)에 있다
   - 사용자 데이터가 가리키는 아래 행도 지우지 않고 ID 를 다시 매기지 않는다
     - 기사
     - 태그

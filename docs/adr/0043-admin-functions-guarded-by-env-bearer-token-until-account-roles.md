@@ -51,3 +51,4 @@
 ## 후속 기록
 
 - 2026-11-13: 결정 절 "계정 인증이 생기면"의 괄호(첫 운영자를 만드는 방법) — [ADR-0139](0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md) · [`user` user-R34](../specs/user.md#폐지한-규칙)
+- 2026-11-26: 결정 "토큰 형식이 틀리면 기동하지 않는다"의 "값은 로그 · 예외 문구 · 응답에 남기지 않는다" — [ADR-0343](0343-operator-secrets-like-byok-keys-never-reach-logs-error-messages-or-responses-and-the-convention-lives-in-overview.md) · [`overview` §6](../overview.md#6-횡단-규약)

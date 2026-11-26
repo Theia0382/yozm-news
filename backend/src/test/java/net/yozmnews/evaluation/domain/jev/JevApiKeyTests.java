@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Jev API 키 — 헤더에 실을 수 있는 값만 받고, 값을 문구에 담지 않는다.
  * <p>
- * 지키는 규칙: docs/security.md(로그 · 예외 메시지에 키가 남지 않는다)
+ * 지키는 규칙: docs/overview.md §6 비밀 값(로그 · 예외 메시지에 키가 남지 않는다)
  */
 class JevApiKeyTests {
 
