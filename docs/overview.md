@@ -373,7 +373,6 @@ flowchart LR
 | 판별자 | `result` · `reading` · `use` · `kind` | 평평한 응답이나 행에서 그 값의 종류를 가리는 칸. 종류마다 쓰이는 속성이 정해져 있다. 판정 결과 응답의 판별자는 `result` 다(§6 "오류 응답 형식", [ADR-0044](adr/0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md)) |
 | 다이제스트(Digest) | `Digest` | 한 사용자의 한 기간(기본: 하루)에 대해 LLM 이 여러 기사를 종합해 만든 결과물 |
 | 관심사 | — | 한 사용자의 관심과 그 변화. 관심도 · 관심사 히스토리로 나타낸다. 스토리라인 구독과 다른 개념이다 |
-| 관심사 히스토리 | `InterestHistory` | 쌓인 명시적 신호로 계산한 관심도의 기간별 변화. 주제 중분류의 관심 · 새로 생긴 관심 · 사라진 관심과 사용자가 바꾼 주제 구독을 보인다 |
 | 변화 리포트 | `report` | 한 사용자의 한 기간(주간 · 월간)에 무엇이 달라졌는지 LLM 이 써 낸 결과물 |
 
 한 모듈이 소유한 용어 가운데 여러 문서가 자주 쓰는 것의 자리는 아래다.
@@ -382,6 +381,6 @@ flowchart LR
 |---|---|
 | 소스 · 피드 · 수집 프로필 · 프리셋 · 운영자 프로필 | [source Spec §2](specs/source.md#2-용어) |
 | 태그 체계 · 태그 종류 · 태그 기준 · 주제 · 공유 평가 | [tag Spec §2](specs/tag.md#2-용어) |
-| 후보 · 항목 · 구독 제안 · 받은 소식 · 주요 뉴스 · 관심도 · 선정 이유 | [digest Spec §2](specs/digest.md#2-용어) |
+| 후보 · 항목 · 구독 제안 · 받은 소식 · 주요 뉴스 · 관심도 · 선정 이유 · 관심사 히스토리 | [digest Spec §2](specs/digest.md#2-용어) |
 | 큰 판정 | [storyline Spec §2](specs/storyline.md#2-용어) |
 | 정리 · 스토리라인 구독 | [user Spec §2](specs/user.md#2-용어) |

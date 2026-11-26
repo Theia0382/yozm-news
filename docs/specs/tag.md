@@ -53,7 +53,7 @@
 | 덮는 범위 | 채움 하나가 다루는 평가 시각 `[요청 시각 − 일수 × 24시간, 요청 시각)`(tag-R158) |
 | 채울 저장 기준 | 채움을 요청한 순간 버전마다의 지금 저장 기준. 요청이 기록하고, 실행은 이 값까지 채운다(tag-R159) |
 | 저장 바닥 | 평가 시각 t 의 평가에 저장돼 있다고 볼 수 있는 확률의 하한. 그때 쓰였을 수 있는 저장 기준과 t 를 덮은 끝난 채움의 채울 저장 기준 가운데 작은 것이다(tag-R32) |
-| 기본 제외 | 형식 태그의 속성. 계정을 만들 때, 그리고 그 형식이 새로 생긴 버전을 켤 때 사용자의 제외로 넣는다([user Spec](user.md#관심-설정) user-R43 · R47) |
+| 기본 제외 | 형식 태그의 속성이고, 사용자의 형식 제외의 초깃값이다. 계정을 만들 때 활성 버전의 기본 제외 형식이 형식 제외로 들어가고, 그 형식이 새로 생긴 버전을 켤 때 기존 사용자의 형식 제외에 더해진다. 이미 있던 형식의 기본 제외가 바뀌어도 기존 사용자의 제외는 바뀌지 않는다([user Spec](user.md#관심-설정) user-R82 · R89). 다이제스트 후보 선별이 형식 제외에 든 형식의 기사를 뺀다([digest Spec](digest.md#후보-선별) digest-R114). 배경은 [ADR-0010](../adr/0010-tag-taxonomy.md) · [ADR-0177](../adr/0177-formats-newly-excluded-by-default-on-activation-are-added-to-existing-users-exclusions.md) |
 | 기본 체계 파일 | 저장소의 `backend/src/main/resources/tag-sets/default.yaml`. 첫 기동에 버전 1 로 들어간다(tag-R1 · R2). 첫 체계의 바탕은 [조사 초안](../research/2026-10-news-categories.md) 3.2 이고, 중요도 문구의 판단 원칙은 [ADR-0099](../adr/0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md) · [ADR-0285](../adr/0285-importance-asks-what-the-matter-now-changes-and-levels-run-to-society-wide-in-four-steps-without-field-words.md)에 있다 |
 | 첫 기동 적재 | 버전이 하나도 없을 때 기본 체계 파일을 버전 1 로 저장하는 기동 시 동작(tag-R2) |
 | 행위자 | 태그 기준 · 저장 기준을 정하거나 버전을 만든 주체의 종류. 시스템(첫 기동 적재)과 운영자(공개 운영 API)다(tag-R68) |
