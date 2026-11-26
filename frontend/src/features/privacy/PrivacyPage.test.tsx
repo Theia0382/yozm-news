@@ -17,27 +17,23 @@ describe("PrivacyPage", () => {
     const collected = within(
       await screen.findByRole("region", { name: "저장하는 것" }),
     );
+    // 수집 항목은 보존 정책 표의 사용자 데이터를 덮는다 — 순서와 문구 그대로
     expect(
-      collected.getByText("이메일, 표시 이름, 비밀번호 해시"),
-    ).toBeInTheDocument();
-    expect(collected.getByText("관심 설정")).toBeInTheDocument();
-    expect(
-      collected.getByText(
-        "관심 신호 이력(좋아요 · 싫어요, 주제 구독과 흐름 추적의 변경)",
-      ),
-    ).toBeInTheDocument();
-    expect(collected.getByText("다이제스트와 변화 리포트")).toBeInTheDocument();
-    expect(
-      collected.getByText(
-        "관심이 쌓인 흐름의 정리(내 LLM 키로 만든 제목 · 요약)와 정리에 쓴 토큰 수",
-      ),
-    ).toBeInTheDocument();
-    expect(collected.getByText("암호화한 LLM 키")).toBeInTheDocument();
-    expect(
-      collected.getByText(
-        "요청 제한을 위한 IP 주소의 다이제스트 — 제한 창이 끝나면 지웁니다(창은 길어야 1시간)",
-      ),
-    ).toBeInTheDocument();
+      collected.getAllByRole("listitem").map((item) => item.textContent),
+    ).toEqual([
+      "이메일, 표시 이름, 비밀번호 해시",
+      "복구 코드의 다이제스트",
+      "관심 설정",
+      "관심 신호 이력(좋아요 · 싫어요, 주제 구독과 흐름 추적의 변경)",
+      "관심 신호를 준 흐름의 묶음과, 관심이 쌓인 흐름의 정리(내 LLM 키로 만든 제목 · 요약)와 정리에 쓴 토큰 수",
+      "구독 제안을 거절한 주제와 그때의 관심 값 · 시각",
+      "다이제스트와 변화 리포트",
+      "화면 내 알림",
+      "암호화한 LLM 키",
+      "로그인 세션 — 로그인한 사용자 ID만 담고, 비활성 기간이 지나면 지웁니다",
+      "로그인 · 복구에 실패한 이메일의 다이제스트와 실패 횟수 — 마지막 실패에서 24시간 뒤 지웁니다",
+      "요청 제한을 위한 IP 주소와 사용자 ID의 다이제스트 — 제한 창이 끝나면 지웁니다(창은 길어야 1시간)",
+    ]);
     expect(
       collected.getByText(/클릭과 열람은 추적하지 않습니다/),
     ).toBeInTheDocument();
