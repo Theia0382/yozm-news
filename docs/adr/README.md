@@ -350,6 +350,9 @@
 | [0346](0346-screen-api-operation-ids-are-handler-method-names-and-a-duplicate-fails-spec-generation-instead-of-a-suffix.md) | 화면용 API 명세의 연산 ID 는 처리기 메서드 이름이고, 겹치면 접미사를 붙이지 않고 명세 생성이 실패한다 | 승인 |
 | [0347](0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md) | 반복 회차는 뭉치를 마친 뒤 가져올 대기가 남았으면 시간 예산 안에서 같은 크기의 뭉치를 다시 가져온다 | 승인 |
 | [0348](0348-each-round-leaves-a-round-record-in-platform-and-the-operator-screen-shows-backlog-and-recent-throughput-per-round.md) | 회차마다 시작 · 끝 · 처리 수를 platform 의 회차 기록에 남기고, 운영자 화면 처리 현황이 회차마다 밀린 수와 최근 1시간 처리량을 보인다 | 승인 |
+| [0349](0349-test-jvm-heap-cap-stays-at-least-twice-the-measured-live-heap.md) | 테스트 JVM 의 힙 상한은 잰 살아 있는 힙 최대의 두 배 이상으로 둔다 | 승인 |
+| [0350](0350-test-jvm-exits-on-out-of-memory-without-a-default-heap-dump.md) | 테스트 JVM 은 메모리가 모자라면 바로 끝나고, 힙 덤프는 기본으로 남기지 않는다 | 승인 |
+| [0351](0351-non-web-test-contexts-are-generic-application-contexts.md) | 웹이 아닌 시험 컨텍스트는 GenericApplicationContext 로 만든다 | 승인 |
 
 ## 운영 규칙
 

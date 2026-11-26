@@ -70,6 +70,21 @@ PostgreSQL 이미지는 `compose.yaml` 의 `postgres` 서비스 `image` 한 줄�
 - **한 서버를 함께 쓴다** — 서버 전체에 걸친 것(역할 · 서버 설정 · 다른 데이터베이스의 연결)을 만들거나 읽는 테스트는 자기 데이터베이스 · 자기 연결로 좁혀 읽는다
 - 호스트에서 돌리는 테스트와 `bootTestRun` 도 같은 구성을 쓴다
 
+### 테스트 JVM
+
+백엔드 테스트는 Gradle 이 띄우는 테스트 JVM 하나에서 돈다. 설정은 `backend/build.gradle.kts` 의 시험 태스크에 있다.
+
+- **힙 상한** — 2 GiB(`maxHeapSize`). Gradle 의 기본값은 512 MiB 다
+  - 기준 — 상한은 잰 살아 있는 힙(강제 Full GC 뒤 크기) 최대의 두 배 이상이다. 근거와 잰 값은 [ADR-0349](../adr/0349-test-jvm-heap-cap-stays-at-least-twice-the-measured-live-heap.md)에 있다
+  - 다시 재기 — 테스트 JVM 에 GC 로그와 20초마다 힙 검사를 일으키는 JFR(`jdk.ObjectCount`)을 붙여 컨테이너 검사로 전체 테스트를 돌린다. 장치는 저장소 파일을 바꾸지 않고 Gradle init 스크립트와 Compose 덧씌우기 파일로 붙인다
+- **메모리가 모자라면 JVM 이 끝난다** — `-XX:+ExitOnOutOfMemoryError`. 어느 스레드에서 난 `OutOfMemoryError` 든 JVM 이 종료 코드 3 으로 끝나고 Gradle 이 시험 태스크를 실패시킨다. 결과 XML 은 그때까지 돈 시험 클래스만 남는다. 힙 덤프는 남기지 않는다([ADR-0350](../adr/0350-test-jvm-exits-on-out-of-memory-without-a-default-heap-dump.md))
+- **컨텍스트 캐시** — 스프링 컨텍스트 캐시는 기본 크기(32)를 쓰고, 캐시에 남은 컨텍스트마다 힙을 든다. 서버의 연결 수 한도도 이 크기에서 계산한다([테스트 DB](#테스트-db))
+- **웹이 아닌 시험 컨텍스트는 `GenericApplicationContext` 다** — 시험 클래스패스의 `META-INF/spring.factories` 가 등록한 `NonWebTestContextFactory` 가 웹이 아닌 종류(`@JdbcTest` · `@DataJdbcTest` · 시험이 직접 띄우는 웹이 아닌 앱)를 만들고, 웹 종류는 Spring Boot 의 공장이 만든다
+  - 까닭 — [ADR-0351](../adr/0351-non-web-test-contexts-are-generic-application-contexts.md)에 있다
+  - 지울 조건 — Spring Framework 의 `AnnotationConfigApplicationContext` 가 refresh 뒤 스캐너의 클래스 메타데이터를 놓게 되면 공장과 등록 줄을 지운다. Spring Framework 를 올릴 때 손으로 확인한다
+  - `RANDOM_PORT` 시험의 서버 컨텍스트는 Spring Boot 의 서블릿 공장이 만들어 이 처분 밖이다
+- **ArchUnit 분석 결과는 시험 클래스 수명 동안만 든다** — 시험이 ArchUnit 으로 읽은 클래스 집합(`JavaClasses`)은 static 필드에 두지 않는다. 인스턴스 필드에 두고 클래스당 인스턴스 하나(`@TestInstance(PER_CLASS)`)로 돌린다
+
 ### 테스트가 저장소 파일을 읽는 결선
 
 백엔드 테스트는 저장소 파일 다섯을 읽는다.
@@ -211,6 +226,10 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | 배포 target 의 실행 단계에 `RUN` 이 없다 | CI 단계 — `deploy-amd64` · `deploy-arm64` 의 두 아키텍처 빌드와 상대 아키텍처 에뮬레이션 확인 | `backend/Dockerfile` · `frontend/Dockerfile` · `ci.yml` |
 | PostgreSQL 이미지는 `compose.yaml` 한 줄이 정하고 테스트가 그 값을 PostgreSQL 호환 이미지로 선언해 쓴다 | 구조 + 테스트 `DevComposeFileTests`(파일 · 서비스 · 이미지가 없거나 보간 · 시스템 속성 없음은 실패) | `compose.yaml` · `backend/build.gradle.kts` |
 | 테스트의 스프링 컨텍스트마다 빈 데이터베이스를 따로 쓰고, 그 서버는 캐시에 남는 컨텍스트들의 연결 풀을 받는다 | 구조(컨텍스트의 접속 정보 빈이 데이터베이스를 새로 만든다) + 테스트 `SharedPostgresTests`(부를 때마다 같은 서버의 새 데이터베이스 · 새 데이터베이스는 비어 있고 서로 격리 · 서버의 연결 수 한도) | [테스트 DB](#테스트-db) |
+| 테스트 JVM 은 메모리가 모자라면 끝나고 Gradle 이 시험 태스크를 실패시킨다 | 테스트 `TestJvmSettingsTests`(JVM 을 띄운 인자로 `ExitOnOutOfMemoryError` 가 켜졌다) | [테스트 JVM](#테스트-jvm) · `backend/build.gradle.kts` |
+| 테스트 JVM 의 힙 상한이 잰 살아 있는 힙 최대의 두 배 이상이다 | 없음 — 다시 재는 것은 손으로 한다 | [테스트 JVM](#테스트-jvm) · `backend/build.gradle.kts` |
+| 웹이 아닌 시험 컨텍스트는 `GenericApplicationContext` 다 | 테스트 `NonWebTestContextTests`(`@JdbcTest` 가 받은 컨텍스트의 종류 · 등록한 공장이 웹 종류에 답하지 않음) | [테스트 JVM](#테스트-jvm) · `backend/src/test/resources/META-INF/spring.factories` |
+| 시험이 ArchUnit 분석 결과를 static 필드에 두지 않는다 | 테스트 `ImportedClassesLifetimeTests`. 부분 — 원시 타입이 `JavaClasses` 인 필드만 본다 | [테스트 JVM](#테스트-jvm) |
 | 배포 구성의 PostgreSQL 이 같은 이미지를 쓴다 | 구조(`extends`) + 스모크 K9 | `deploy/compose.yaml` · `deploy/smoke.sh` |
 | 배포 이미지가 두 아키텍처에서 기본 로컬 임베딩 모델로 추론하고, 표현의 모델 버전이 정보 파일과 같다 | 스모크 K14 — CI 의 두 배포 검사가 각 아키텍처의 러너에서 요구 표지와 함께 돈다. 부분 — 러너 CPU 에 없는 명령어 조합의 코어는 확인하지 않는다 | `deploy/smoke.sh` · `deploy/smoke/` · `backend/embedding-model.properties` |
 | 운영 인스턴스에서 스모크를 돌려도 시험 소스를 등록하지 않는다 | 구조 — K14 는 시험 피드 서버(스모크 덧씌우기)가 떠 있을 때만 돈다 | `deploy/smoke.sh` |

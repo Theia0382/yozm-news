@@ -26,6 +26,7 @@ import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 /**
  * 시계 정본 — main 클래스가 벽시계를 시계 결선 밖에서 직접 읽지 않는지 본다. 앱의 지금은 {@code AppClock} bean 하나에서 읽는다.
@@ -33,12 +34,14 @@ import org.junit.jupiter.api.Test;
  * 호출과 메서드 참조({@code Instant::now} 류)를 함께 본다. 실제 경과를 재는 단조 시계({@code System.nanoTime})는 지금을 읽는 곳이 아니라 규칙
  * 밖이다. 지키는 규칙: platform-R26
  */
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ClockSourceTests {
 
 	/** main 소스에서 실제 시간의 원천을 만드는 유일한 클래스 */
 	private static final String CLOCK_CONFIGURATION = "net.yozmnews.platform.application.ClockConfiguration";
 
-	private static final JavaClasses CLASSES = new ClassFileImporter()
+	/** main 클래스 — 이 시험 클래스의 수명 동안만 든다(docs/development/infrastructure.md "테스트 JVM") */
+	private final JavaClasses classes = new ClassFileImporter()
 		.withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
 		.importPackages("net.yozmnews");
 
@@ -53,12 +56,12 @@ class ClockSourceTests {
 	@Test
 	void mainClassesReadTheWallClockOnlyThroughTheClockConfiguration() {
 		// 대상이 있는지 먼저 센다 — 같은 판정이 허용 클래스의 실제 시간 원천 호출 둘(실제 시간의 시계 · 측정용 시계)을 잡는다
-		assertThat(CLASSES.get(CLOCK_CONFIGURATION).getAccessesFromSelf()).filteredOn(WALL_CLOCK_READ).hasSize(2);
+		assertThat(classes.get(CLOCK_CONFIGURATION).getAccessesFromSelf()).filteredOn(WALL_CLOCK_READ).hasSize(2);
 		noClasses().that()
 			.doNotHaveFullyQualifiedName(CLOCK_CONFIGURATION)
 			.should()
 			.accessTargetWhere(WALL_CLOCK_READ)
-			.check(CLASSES);
+			.check(classes);
 	}
 
 	private static boolean readsWallClock(JavaAccess<?> access) {
