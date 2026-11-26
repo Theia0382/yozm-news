@@ -65,8 +65,8 @@
 | 재평가 기간 | 활성화 요청이 정하는 일수. 활성화 시각에서 그 일수 안에 처음 본 기사를 재평가 대기에 넣는다(tag-R25) |
 | 평가 대기 | 평가할 기사의 목록(`evaluation_queue`, 기사마다 한 행). 평가 가능 시각 · 일시 실패 수 · 점유 · 실패 까닭을 갖는다(tag-R18). 실패로 남는 것은 기사 거부뿐이고, 일시 실패는 상한 없이 미룬다(tag-R20) |
 | 정착 시간 | 대기에 넣은 뒤 평가할 수 있기까지의 시간. 같은 기사의 다른 피드 엔트리가 붙기를 기다린다(tag-R85) |
-| 회차 | 반복 작업 한 번. 대기를 점유하고 차례로 평가한다(tag-R19) |
-| 점유 | 회차가 대기 행을 가져갔다는 표시(토큰 · 만료). 결과는 토큰이 맞을 때만 반영한다(tag-R93) |
+| 회차 | 반복 작업 한 번. 평가 회차는 뭉치를 시간 예산까지 되풀이하고([platform Spec §2](platform.md#2-용어)), 뭉치는 대기를 점유해 차례로 평가한다(tag-R19). 빠진 태그 채움의 회차는 채움 하나를 쪽마다 처리한다(tag-R31) |
+| 점유 | 뭉치가 대기 행을 가져갔다는 표시(토큰 · 만료). 결과는 토큰이 맞을 때만 반영한다(tag-R93) |
 | 회차 멈춤 | 그 기사부터 남은 점유를 풀고 회차를 끝내는 것. 기사는 대기에 그대로 남는다. 멈추는 때는 tag-R97 · R106 이다 |
 | `low_confidence` | 주제 태그가 태그 기준을 하나도 넘지 못해, 저장 기준 이상인 가장 높은 확률의 주제 태그 하나를 붙인 판정. 조회 때 정한다(tag-R78) |
 | 미분류 | 저장 기준 이상인 주제 태그가 없는 판정. 조회 때 정한다(tag-R78) |
@@ -93,6 +93,7 @@
 - 태그 키 계보 조회 `TagKeyLineage`
 - 평가 결과 조회 `ArticleEvaluations`
 - 평가 대기 · 평가 현황의 운영 API `EvaluationAdministration`
+- 처리 현황 조회 `TagProcessing`
 - 평가 검수의 운영 API `EvaluationReview`
 - 빠진 태그 채움의 운영 API `TagBackfillAdministration`
 - 주제별 보도량 조회 `TopicCoverage`
@@ -506,6 +507,21 @@ public record EvaluationQueueCounts(long waiting, long rejected, long retrying) 
 
 관련 규칙: tag-R18 · tag-R20 · tag-R29.
 
+### TagProcessing
+
+태그 평가 회차의 처리 현황이다(tag-R198). 구현은 `application` 의 `TagProcessingService` 다. 운영자 화면이 부른다.
+
+```java
+public interface TagProcessing {
+    List<RoundQueue> rounds();               // tag-evaluation
+}
+```
+
+- 계약
+  - 값 타입 `RoundQueue` 는 `platform` 의 공개 타입이다([platform Spec §3](platform.md#roundrunner--roundactivity--roundbatch--batchend--roundend--roundsummary--roundqueue))
+  - 남은 수 · 미룬 수는 `queueCounts()` 와 같은 질의 하나에서 나온다 — 남은 수는 `EvaluationQueueCounts.waiting` 과 같다
+  - 읽기 전용 트랜잭션에서 센다. 역할 애너테이션이 없다(두 역할 공통)
+
 ### EvaluationOverview · TopicStatusCounts · Share · TagShare · CountBucket · ProbabilityHistogram · ProbabilityBucket · StoredRange · ValueBucket · TokenSummary · TokenBucket
 
 ```java
@@ -843,7 +859,7 @@ public record TagKeyMapping(TagSetId from, TagSetId to, Map<TagKind, Map<String,
 - **버전 목록 · 원문 내보내기** — `TagSetVersioning` 이 버전을 읽고, 원문은 `TagSetWriter` 가 쓴다(tag-R27)
 - **태그 키 계보** — `TagKeyLineageService` 가 버전을 번호 순으로 읽어 `KeyLineage` 로 푼다(tag-R26)
 - **평가 대기 넣기** — `ArticleEventsListener` 가 `ArticleStored` 를 받아 기사를 대기에 넣는다(tag-R18)
-- **평가 회차** — 작업 역할의 `EvaluatePendingArticlesJob` 이 1분마다 `EvaluationRound` 를 돌린다. 회차는 `PendingEvaluations` 로 대기를 점유하고, 기사마다 트랜잭션 밖에서 `ArticleTagging.judge` 를 불러 결과를 기사마다 한 트랜잭션에서 반영한다(tag-R19 · R20, 그림 "평가 회차" · "결과 반영")
+- **평가 회차** — 작업 역할의 `EvaluatePendingArticlesJob` 이 1분마다 `EvaluationRound` 를 돌린다. `run()` 은 `platform` 의 `RoundRunner` 로 뭉치(`batch`)를 시간 예산까지 되풀이한다([platform-R130](platform.md#반복-회차) ~ R132). 뭉치는 `PendingEvaluations` 로 대기를 점유하고, 기사마다 트랜잭션 밖에서 `ArticleTagging.judge` 를 불러 결과를 기사마다 한 트랜잭션에서 반영한다(tag-R19 · R20, 그림 "평가 회차" · "결과 반영")
 - **지운 기사 따르기** — `ArticleEventsListener` 가 `ArticlesRemoved` 를 받아 한 트랜잭션에서 대기 행과 평가 · 태그 행을 지운다(tag-R21, 그림 "지운 기사 따르기")
 - **평가 결과 조회** — `ArticleEvaluationsService` 가 평가를 읽어 그 버전의 체계와 태그 기준 · 저장 기준으로 `TagJudgement` 가 판정한다(tag-R15)
 - **빠진 태그 채움** — `TagBackfillAdministrationService` 가 한 트랜잭션에서 채움을 기록하고, 작업 역할의 `BackfillMissingTagsJob` 이 1분마다 `TagBackfillRound` 를 돌려 쪽마다 판정 원본을 다시 읽어 태그 행을 더한다(tag-R31, 그림 "채움 요청" · "채움 회차")
@@ -1007,7 +1023,7 @@ sequenceDiagram
     rect rgba(128, 128, 128, 0.12)
     Note over R,Res: 트랜잭션 하나 (tag-R93)
     R->>TS: lockAgainstChange, 활성 전환과 충돌하는 표 잠금 (tag-R96)
-    R->>TS: isActive(회차가 읽은 버전) (tag-R96)
+    R->>TS: isActive(뭉치가 읽은 버전) (tag-R96)
     alt 활성이다
         R->>Q: 토큰이 맞을 때만 대기 행 지우기 · 바꾸기 (tag-R93 · tag-R98)
         opt 판정됨이고 대기 행을 지웠다
@@ -1166,7 +1182,8 @@ sequenceDiagram
 - `TagKeyLineageService` — `TagKeyLineage` 의 구현(tag-R26). 트랜잭션을 열지 않는다
 - `ArticleEventsListener` — 기사 이벤트 리스너(tag-R18 · R21). 넣기의 시각은 `platform` 의 앱 시계(`InstantSource`, platform-R26)에서 얻는다
 - `PendingEvaluations` — 대기 점유. `claimDue(now, expiredBy)` 가 트랜잭션 하나에서 점유를 써 커밋한다(tag-R89 · R90)
-- `EvaluationRound` — 평가 회차 하나(tag-R18 · R19 · R20). 시각과 임대 만료 상한은 `platform` 의 앱 시계(`AppClock.expiredBy(EvaluationSchedule.LEASE)`, platform-R28)에서 얻는다
+- `EvaluationRound` — 평가 회차 하나(tag-R18 · R19 · R20). 회차 이름 `tag-evaluation`. 활성 체계 · 저장 기준은 뭉치마다 읽는다(tag-R92 · R173). 일시 실패가 있으면 뭉치 결과가 `BACKED_OFF` 다. 시각과 임대 만료 상한은 `platform` 의 앱 시계(`AppClock.expiredBy(EvaluationSchedule.LEASE)`, platform-R28)에서 얻는다
+- `TagProcessingService` — 공개 조회 `TagProcessing` 의 구현(tag-R198)
 - `ArticleEvaluationsService` — `ArticleEvaluations` 의 구현(tag-R15). 트랜잭션을 열지 않는다
 - `EvaluationAdministrationService` — `EvaluationAdministration` 의 구현. 평가 현황의 트랜잭션은 tag-R149 다
 - `TopicCoverageService` — `TopicCoverage` 의 구현(tag-R30). 트랜잭션은 tag-R156 이다. 평가에 나온 버전마다 체계 · 지금 기준 · 계보 표를 호출 하나 안에서 한 번씩 읽는다
@@ -1218,7 +1235,8 @@ sequenceDiagram
 
 #### `domain/queue`
 
-- `EvaluationSchedule` — 정착 시간(`SETTLE_DELAY`) · 회차의 점유 상한(`BATCH_SIZE`) · 점유 기간(`LEASE`)의 정본(tag-R85 · R90 · R91). 재평가로 넣은 행의 평가 가능 시각(`eligibleAfterRequeue`)도 이것이 정한다(tag-R86). 재시도 간격은 `evaluation` 의 `EvaluatorTiming.retryDelay` 가 정본이다(tag-R101)
+- `EvaluationSchedule` — 정착 시간(`SETTLE_DELAY`) · 뭉치의 점유 상한(`BATCH_SIZE`) · 점유 기간(`LEASE`)의 정본(tag-R85 · R90 · R91). 재평가로 넣은 행의 평가 가능 시각(`eligibleAfterRequeue`)도 이것이 정한다(tag-R86). 재시도 간격은 `evaluation` 의 `EvaluatorTiming.retryDelay` 가 정본이다(tag-R101)
+- `EvaluationBacklog` — 대기의 남은 수 · 기사 거부로 실패로 남은 수 · 일시 실패를 겪은 수 · 미룬 수(정착 시간 · 일시 실패 미룸). 일시 실패 · 미룬 수가 남은 수보다 크면 `IllegalArgumentException` 이다. `EvaluationQueueRepository.counts(now)` 가 한 문장으로 세어 낸다. `queueCounts()` 와 처리 현황(tag-R198)이 함께 쓴다
 - `PendingEvaluation` — 대기 행 하나와 그 전이 `claim` · `afterTransient` · `afterRejected` · `released`. 실패로 남은 행은 점유가 없고 다시 전이하지 않는다(tag-R105)
 - `EvaluationQueueRepository` — 대기 저장소. aggregate 가 없다. 대기 행의 전이는 `PendingEvaluation` 이 계산하고, 점유 토큰을 조건으로 한 갱신 · 삭제로 쓴다(수집 상태와 같은 모양, [ADR-0033](../adr/0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md))
 - 그 밖의 값: `EvaluationLease` · `QueueFailure`(`ARTICLE_REJECTED`)
@@ -1425,19 +1443,19 @@ sequenceDiagram
 - **tag-R85** — 평가 가능 시각은 넣은 시각 + 정착 시간 30분(측정 전)이다(정본 `EvaluationSchedule.SETTLE_DELAY`)
 - **tag-R86** — 재평가(tag-R25)로 넣거나 되돌린 행의 평가 가능 시각은 그 시각이다. 정착 시간을 두지 않는다(정본 `EvaluationSchedule.eligibleAfterRequeue`)
 - **tag-R87** — 대기 행은 기사에 지금 활성 버전의 평가가 있게 된 트랜잭션에서만 지운다. 지운 기사는 예외다(tag-R95 · R109)
-- **tag-R88** — 회차는 작업 역할의 반복 작업으로 1분마다 돌고 재시도하지 않는다. 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다
-- **tag-R89** — 회차가 점유하는 대기 행은 아래를 모두 만족한다.
+- **tag-R88** — 회차는 작업 역할의 반복 작업으로 1분마다 돌고 재시도하지 않는다. 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다. 회차는 뭉치를 시간 예산까지 되풀이하고, 일시 실패가 하나라도 난 뭉치 · 회차를 멈추는 경우 뒤에는 끝낸다([platform-R130](platform.md#반복-회차) · R131 — [ADR-0347](../adr/0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md))
+- **tag-R89** — 뭉치가 점유하는 대기 행은 아래를 모두 만족한다.
   - 실패로 남지 않았다
   - 평가 가능 시각이 지났다
   - 점유가 없거나 만료됐다. 만료는 점유한 뒤 시계가 넘긴 시간을 뺀 경과가 임대 이상인 것이다(platform-R28)
-- **tag-R90** — 회차는 대상 행을 평가 가능 시각 · 기사 ID 순으로 `EvaluationSchedule.BATCH_SIZE` 50(측정 전)건까지 잠근다. 다른 트랜잭션이 잡은 행은 건너뛴다. 잠근 행에 점유(토큰 · 만료 = 지금 + 점유 기간)를 쓰고 커밋한다. 재평가 행도 같은 순서다(tag-R134)
+- **tag-R90** — 뭉치는 대상 행을 평가 가능 시각 · 기사 ID 순으로 `EvaluationSchedule.BATCH_SIZE` 50(측정 전)건까지 잠근다. 다른 트랜잭션이 잡은 행은 건너뛴다. 잠근 행에 점유(토큰 · 만료 = 지금 + 점유 기간)를 쓰고 커밋한다. 재평가 행도 같은 순서다(tag-R134)
 - **tag-R91** — 점유 기간(`EvaluationSchedule.LEASE`)은 `evaluation` 의 `EvaluatorTiming.LONGEST_JUDGEMENT` × `BATCH_SIZE` + 여유 5분 = 30분(측정 전)이다. 기사마다 판정 한 번을 가장 길게 기다려도 점유 안에 든다([evaluation-R53](evaluation.md#평가기-시간))
-- **tag-R92** — 회차는 활성 버전과 그 버전의 태그 기준 · 저장 기준을 트랜잭션 밖에서 읽는다. 점유 순으로 기사마다 태그 판정(`ArticleTagging.judge`)을 트랜잭션 밖에서 차례로 부르므로, 평가는 작업 서버 worker 가운데 많아야 하나를 쓴다. 기사 내용 · 피드 맥락은 `evaluation` 이 판정할 때 기사 ID 로 읽는다([evaluation-R40](evaluation.md#태그-판정))
-- **tag-R93** — 결과는 기사마다 새 트랜잭션에서 점유 토큰이 맞을 때만 반영한다. 점유가 만료돼 다른 회차가 가져갔거나 기사가 지워져 대기 행이 없으면 늦은 결과를 버린다
+- **tag-R92** — 뭉치는 활성 버전과 그 버전의 태그 기준 · 저장 기준을 트랜잭션 밖에서 뭉치마다 읽는다(저장 바닥의 읽기 지연이 뭉치 하나의 점유 기간에 기댄다 — tag-R173). 점유 순으로 기사마다 태그 판정(`ArticleTagging.judge`)을 트랜잭션 밖에서 차례로 부르므로, 평가는 작업 서버 worker 가운데 많아야 하나를 쓴다. 기사 내용 · 피드 맥락은 `evaluation` 이 판정할 때 기사 ID 로 읽는다([evaluation-R40](evaluation.md#태그-판정))
+- **tag-R93** — 결과는 기사마다 새 트랜잭션에서 점유 토큰이 맞을 때만 반영한다. 점유가 만료돼 다른 뭉치가 가져갔거나 기사가 지워져 대기 행이 없으면 늦은 결과를 버린다
 - **tag-R94** — 점유한 기사에 그 버전의 평가가 이미 있으면 판정하지 않고 대기 행을 지운다
 - **tag-R95** — 태그 판정이 기사 없음을 돌려주면 대기 행을 지우고 정보 로그를 남긴다. 기사 없음은 지워진 기사이고, 그때 평가기를 부르지 않았다
-- **tag-R96** — 결과를 반영하는 트랜잭션은 먼저 `tag_sets` 표를 `SHARE` 로 잠그고 회차가 읽은 버전이 아직 활성인지 본다. 이 트랜잭션은 성공 · 일시 실패 · 기사 거부와 그 버전의 평가가 이미 있어 지우는 경우다. 지운 기사를 대기에서 빼는 것은 버전과 무관해 확인하지 않는다
-- **tag-R97** — 회차가 읽은 버전이 활성이 아니면 아래와 같이 하고 회차를 멈춘다. 다음 회차가 새 활성 버전으로 평가한다.
+- **tag-R96** — 결과를 반영하는 트랜잭션은 먼저 `tag_sets` 표를 `SHARE` 로 잠그고 뭉치가 읽은 버전이 아직 활성인지 본다. 이 트랜잭션은 성공 · 일시 실패 · 기사 거부와 그 버전의 평가가 이미 있어 지우는 경우다. 지운 기사를 대기에서 빼는 것은 버전과 무관해 확인하지 않는다
+- **tag-R97** — 뭉치가 읽은 버전이 활성이 아니면 아래와 같이 하고 회차를 멈춘다. 다음 회차가 새 활성 버전으로 평가한다.
   - 그 기사의 점유만 푼다. 시도 수 · 평가 가능 시각은 그대로다
   - 성공이었으면 그 기사 · 그 버전의 평가가 아직 없을 때 평가 · 태그 행을 저장한다. 옛 버전의 평가도 유효하다
   - 남은 점유를 풀고 정보 로그를 남긴다
@@ -1448,7 +1466,7 @@ sequenceDiagram
 - **tag-R102** — 시도 수에는 상한이 없다. 일시 실패로는 실패로 남지 않고, 기사는 대기에 남는다
 - **tag-R103** — 일시 실패는 로그를 남기지 않는다. 일시 실패를 겪은 대기는 운영 API 가 센다(§3 `EvaluationQueueCounts.retrying`)
 - **tag-R104** — 기사 거부면 바로 실패(`ARTICLE_REJECTED`)로 남긴다. 실패로 남는 까닭은 이것 하나다
-- **tag-R105** — 실패로 남은 행은 회차가 다시 평가하지 않는다. 마지막 실패 문구와 함께 남아 운영 API 가 센다. 체계를 활성으로 바꿀 때 재평가 기간 안의 실패 행은 대기로 되돌린다(tag-R131)
+- **tag-R105** — 실패로 남은 행은 회차가 다시 평가하지 않는다. 처리 현황의 남은 수에도 들지 않는다(tag-R198). 마지막 실패 문구와 함께 남아 운영 API 가 센다. 체계를 활성으로 바꿀 때 재평가 기간 안의 실패 행은 대기로 되돌린다(tag-R131)
 - **tag-R106** — 평가기 사용 불가이거나 태그 판정이 예외를 던지면, 그 기사부터 남은 점유를 풀고 회차를 멈춘다. 시도 수 · 평가 가능 시각은 그대로라 기사를 잃지 않고 다음 회차가 다시 가져간다. 예외는 결과가 태그 질문과 어긋난 것과 평가기의 예상 못한 예외다([evaluation-R41](evaluation.md#태그-판정))
 - **tag-R107** — 평가기 사용 불가로 멈추면 경고 로그를, 예외로 멈추면 오류 로그를 기사 ID 와 함께 남긴다
 - **tag-R108** — 작업 역할은 평가기 없이 운영하지 않는다. 그 기동 검사는 `evaluation` 이 한다([evaluation-R43](evaluation.md#태그-판정))
@@ -1597,7 +1615,7 @@ sequenceDiagram
   - 점유 뒤 체계 · 기준 읽기(트랜잭션 밖)가 계속 실패하면 점유 만료마다 다시 시도한다
 - **tag-R171** — **(미설계)** 판정 원본 보존(180일, [data-model "보존 정책"](../data-model.md#보존-정책))을 구현하면 원본이 없는 평가는 채울 수 없다. 그 처분은 보존을 구현하는 작업이 정한다
 - **tag-R172** — 평가마다 쓴 저장 기준은 기록하지 않아, 이력과 끝난 채움으로 되짚는다. 이력 행의 저장 기준은 그 행의 시각부터 다음 행의 시각까지 유효하다. 양 끝을 포함하고, 다음 행의 시각이 앞서면 그 행의 시각 하나다. 마지막 행은 끝없이 유효하다. 바닥끼리는 크기로 견주어, scale 만 다른 값은 같은 바닥이다
-- **tag-R173** — 평가 시각 t 의 평가가 쓴 저장 기준은 `[t 까지의 경과가 점유 기간인 시각, t]` 와 겹치는 행의 값 가운데 가장 큰 것으로 본다. 점유 기간은 평가 회차의 것(`EvaluationSchedule.LEASE` 30분, tag-R91)이다. 경과는 시계가 넘긴 시간을 뺀 것이다(platform-R28). 넘긴 기록이 없으면 `[t − 30분, t]` 이고, 측정용 시계를 넘긴 구간은 30분에 들지 않는다(`ReadLag`)
+- **tag-R173** — 평가 시각 t 의 평가가 쓴 저장 기준은 `[t 까지의 경과가 점유 기간인 시각, t]` 와 겹치는 행의 값 가운데 가장 큰 것으로 본다. 점유 기간은 평가 뭉치의 것(`EvaluationSchedule.LEASE` 30분, tag-R91)이다 — 뭉치가 저장 기준을 뭉치 시작 때 읽기 때문이다(tag-R92). 경과는 시계가 넘긴 시간을 뺀 것이다(platform-R28). 넘긴 기록이 없으면 `[t − 30분, t]` 이고, 측정용 시계를 넘긴 구간은 30분에 들지 않는다(`ReadLag`)
 - **tag-R174** — t 를 덮은 끝난 채움이 있으면 바닥은 tag-R173 의 값과 채움의 채울 저장 기준 가운데 작은 것이다. 덮음은 끝났고 그 버전에서 건너뛴 평가가 없는 채움만이다. 진행 중이거나 건너뛴 평가가 있는 채움은 바닥을 내리지 않는다
 - **tag-R175** — 지난 저장 기준 최댓값(tag-R12)은 처음 값 시각부터 끝없이 본 바닥의 최댓값이다. 채움이 없으면 이력의 저장 기준 최댓값과 같다. 그래서 저장 기준을 내린 뒤 30분 안에 채움을 요청하면 "요청 시각부터 내린 시각 + 30분까지"가 덮이지 않아 경고가 남는다
 - **tag-R176** — 평가 현황의 저장 기준 섞임(tag-R145)은 집계 기간(처음 값 시각 전은 뺀다) 안에서 바닥이 둘 이상인가다. 실제 평가가 있는 시각만이 아니라 시각 축으로 본다. 그래서 섞이지 않았는데 참일 수는 있어도 섞였는데 거짓이지는 않다
@@ -1642,6 +1660,10 @@ sequenceDiagram
   - `TAG_BELOW_PAST_STORE` — 태그 기준 < 그 버전 · 그 태그 종류의 지난 저장 기준 최댓값(tag-R175)이고, 그 최댓값 > 지금 저장 기준
   - `STORE_THRESHOLD_CHANGED` — 처음 값 시각부터 끝없이 본 저장 바닥이 둘 이상이다(tag-R177). 평가 현황의 섞임(tag-R176)은 집계 기간 안만 본다
 - **tag-R194** — 어긋난 상태는 읽기 전용 `REPEATABLE READ` 트랜잭션 하나에서 지금 값 · 이력 · 끝난 채움을 읽어 정한다
+
+### 처리 현황
+
+- **tag-R198** — 처리 현황(`TagProcessing`)은 태그 평가 회차의 남은 수 · 미룬 수와 회차 기록의 최근 합(`platform` 의 `RoundActivity`)을 낸다([ADR-0348](../adr/0348-each-round-leaves-a-round-record-in-platform-and-the-operator-screen-shows-backlog-and-recent-throughput-per-round.md)). 남은 수는 실패로 남지 않은 대기(점유 중 포함)이고, 미룬 수는 그 가운데 평가 가능 시각이 지금 뒤인 대기(정착 시간 · 일시 실패 미룸)다. `queueCounts()` 와 같은 한 문장에서 센다
 
 ### 폐지한 규칙
 
@@ -1765,3 +1787,5 @@ sequenceDiagram
 | [0259](../adr/0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) | 평가기 요청 마감 · 판정 한 번의 가장 긴 시간 · 일시 실패 뒤 간격은 `evaluation` 의 공개 타입 하나가 정본이고, 판정을 부르는 대기의 점유 기간은 판정 한 번의 가장 긴 시간에서 계산한다 |
 | [0285](../adr/0285-importance-asks-what-the-matter-now-changes-and-levels-run-to-society-wide-in-four-steps-without-field-words.md) | 중요도 질문은 사안이 지금 일으키는 일로 묻고, 수준은 분야 말 없이 사회 전반까지 네 단계로 쓴다 |
 | [0286](../adr/0286-the-number-of-importance-levels-is-set-by-the-tag-set-from-one-without-gaps-two-to-five.md) | 중요도 수준 수는 체계가 정한다 — 1 부터 빈 곳 없이 2 ~ 5 개 |
+| [0347](../adr/0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md) | 반복 회차는 뭉치를 마친 뒤 가져올 대기가 남았으면 시간 예산 안에서 같은 크기의 뭉치를 다시 가져온다 |
+| [0348](../adr/0348-each-round-leaves-a-round-record-in-platform-and-the-operator-screen-shows-backlog-and-recent-throughput-per-round.md) | 회차마다 회차 기록을 남기고, 운영자 화면 처리 현황이 회차마다 밀린 수와 최근 1시간 처리량을 보인다 |

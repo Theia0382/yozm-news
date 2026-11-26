@@ -35,6 +35,7 @@
   - 시계가 넘긴 시간을 뺀 경과 판정(platform-R28)
   - 측정용 시계 운영 API(`MeasurementClockAdministration`). 처리기는 `admin` 의 것이다
   - 실제 시간이 아니면 거부하는 표시(`RealTimeRequiredException`)(platform-R30)
+- **반복 회차** — 반복 작업의 회차가 뭉치를 끝 조건까지 되풀이하게 하는 실행기(`RoundRunner`)와 끝 조건의 판정, 회차마다 남기는 회차 기록과 그 최근 합의 조회(`RoundActivity`), 기록 지우기(platform-R130 ~ R134). `event` · `storyline` · `tag` 의 회차가 쓰고, 그 모듈의 처리 현황 조회가 회차 기록을 붙인다
 
 하지 않는 것:
 
@@ -48,6 +49,7 @@
 - 길이 상한 값을 갖지 않는다. 상한은 쓰는 모듈의 정본이고, 이 모듈은 자르는 방법만 갖는다
 - 비밀 값을 저장하거나 암호화하지 않는다. 평문을 감싸는 타입과 헤더 값의 꼴만 갖는다
 - 진행 중 작업의 기한 · 임대 값과 그것을 무엇에 쓰는지는 갖지 않는다. 그것은 각 모듈의 정본이고, 이 모듈은 넘긴 시간을 뺀 경과의 산식만 갖는다(platform-R28)
+- 회차의 이름 · 뭉치 크기 · 점유 기간 · 대기 수를 갖지 않는다. 그것은 회차를 가진 모듈의 정본이고, 이 모듈은 뭉치를 되풀이하는 규칙과 회차 기록만 갖는다(platform-R130)
 
 다른 모듈과의 의존과 주고받는 이벤트는 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -74,6 +76,11 @@
 | 시계 행 | 측정용 시계의 출발 시각과 그에 대응하는 실제 시각을 담은 DB 행(`measurement_clock`). 운영자가 측정 DB 에 넣는다 |
 | 넘긴 기록 | 측정용 시계가 넘긴 구간(넘기기 전 시각 → 넘긴 뒤 시각)의 목록(`measurement_clock_jumps`) |
 | 경과 | 두 시각 사이의 길이에서 넘긴 구간과 겹친 길이를 뺀 것. 넘긴 기록이 없으면 단순한 차다(platform-R78) |
+| 회차 | 반복 작업이 한 번 돌 때 하는 일(`*Round`). 뭉치를 끝 조건까지 되풀이한다(platform-R130) |
+| 뭉치 | 회차가 한 번 점유해 처리하는 단위(`RoundBatch`). 크기의 상한 · 점유 기간은 회차를 가진 모듈이 정한다 |
+| 시간 예산 | 회차를 시작한 뒤 새 뭉치를 가져올 수 있는 경과(`RoundRules.LENGTH`, 5분)(platform-R131) |
+| 끝난 까닭 | 회차가 끝난 까닭(`RoundEnd`) — 가져올 대기 없음 · 시간 예산 · 일시 실패 · 멈춤 · 오류(platform-R131 · R132) |
+| 회차 기록 | 끝난 회차 하나의 시작 · 끝 · 뭉치 수 · 처리 수 · 끝난 까닭(`round_runs`)(platform-R132) |
 
 ## 3. 공개 인터페이스
 
@@ -99,6 +106,7 @@
 | 비밀 값 | `SecretValue` · `HeaderValueShape`. `HeaderValueShape` 는 중첩 enum 을 더하면 둘이다 |
 | 앱 시계 | `AppClock` · `RealTimeRequiredException` |
 | 측정용 시계 운영 API | `MeasurementClockAdministration` 과 결과 타입. 파일 5개이고 중첩 레코드를 더하면 타입 10개다 |
+| 반복 회차 | `RoundRunner` · `RoundActivity` · `RoundBatch` · `BatchEnd` · `RoundEnd` · `RoundSummary` · `RoundQueue`. 중첩 레코드(`RoundSummary.LastRound`)를 더하면 여덟이다 |
 
 애너테이션의 형태와 용도:
 
@@ -735,6 +743,47 @@ HTTP 엔드포인트:
 
 요청 · 응답 형식의 정본은 [`api/openapi.json`](../../api/openapi.json)이다([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)).
 
+### RoundRunner · RoundActivity · RoundBatch · BatchEnd · RoundEnd · RoundSummary · RoundQueue
+
+반복 회차의 실행과 회차 기록 조회. 구현은 `application` 의 `RoundRunService` 하나다(두 역할 공통 — 회차는 작업 역할, 처리 현황 조회는 화면 역할이 쓴다).
+
+```java
+public interface RoundRunner {
+    void run(String round, Supplier<RoundBatch> batch);
+}
+
+public interface RoundActivity {
+    RoundSummary recent(String round);
+}
+
+public record RoundBatch(int handled, BatchEnd end) {
+    public static RoundBatch finished(int handled, int limit);
+    public static RoundBatch backedOff(int handled);
+    public static RoundBatch stopped(int handled);
+}
+
+public enum BatchEnd { FULL, DRAINED, BACKED_OFF, STOPPED }
+
+public enum RoundEnd { DRAINED, BUDGET, BACKED_OFF, STOPPED, FAILED }
+
+public record RoundSummary(long handled, int runs, @Nullable LastRound last) {
+    public static final RoundSummary NONE;
+    public record LastRound(Instant startedAt, Instant endedAt, int batches, int handled, RoundEnd end) {}
+}
+
+public record RoundQueue(String round, long waiting, long deferred, RoundSummary recent) {}
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `RoundRunner.run(round, batch)` | 회차 하나를 돈다 — 뭉치를 부르고 끝 조건(platform-R131)이 끝내라 할 때까지 되풀이한 뒤 회차 기록을 남긴다(platform-R130 · R132). 트랜잭션을 열지 않는다. 회차 이름의 꼴이 틀리면 뭉치를 부르기 전에 `IllegalArgumentException`(platform-R134). 뭉치가 예외를 던지면 `FAILED` 로 기록하고 그 예외를 다시 던진다 |
+| `RoundActivity.recent(round)` | 최근 1시간(`RoundRules.RECENT`) 안에 끝난 회차의 처리 수 합 · 회차 수와 마지막으로 끝난 회차(창 밖이어도, 기록이 있으면) |
+| `RoundBatch.finished(handled, limit)` | 멈춤 · 일시 실패 없이 마친 뭉치 — 처리 수가 상한 이상이면 `FULL`, 아니면 `DRAINED`. 상한이 1 미만이면 `IllegalArgumentException` |
+| `RoundBatch.backedOff` · `stopped` | 일시 실패가 하나라도 난 뭉치(`BACKED_OFF`) · 회차를 멈추는 경우로 끝난 뭉치(`STOPPED`). 멈추는 경우는 뭉치가 정한다 |
+| `RoundQueue` | 회차 하나의 대기 현황 — 남은 수(점유 중 · 미룬 것 포함) · 미룬 수(다시 볼 시각이 아직 오지 않은 것)와 회차 기록의 최근 합. 각 모듈의 처리 현황 조회가 낸다. 음수이거나 미룬 수가 남은 수보다 많으면 `IllegalArgumentException` |
+
+관련 규칙: platform-R130 ~ R134. 판단의 이유는 [ADR-0347](../adr/0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md) · [ADR-0348](../adr/0348-each-round-leaves-a-round-record-in-platform-and-the-operator-screen-shows-backlog-and-recent-throughput-per-round.md)에 있다.
+
 ## 4. 내부 구조
 
 ### 개관
@@ -742,18 +791,20 @@ HTTP 엔드포인트:
 패키지와 책임:
 
 - (최상위) — §3 의 공개 타입
-- `adapter/in/job` — 이벤트 발행 재처리 반복 작업
+- `adapter/in/job` — 이벤트 발행 재처리 반복 작업, 회차 기록 지우기 반복 작업
 - `adapter/in/web` — API 계약 확인 엔드포인트, 화면용 API 명세 설정, 컨트롤러 오류의 문제 응답
-- `adapter/out/persistence` — `domain` 저장 인터페이스의 JDBC 구현. 이벤트 발행 레지스트리 행, 설치된 DB 확장, 측정용 시계의 표를 읽고 쓴다
+- `adapter/out/persistence` — `domain` 저장 인터페이스의 JDBC 구현. 이벤트 발행 레지스트리 행, 설치된 DB 확장, 측정용 시계의 표, 회차 기록을 읽고 쓴다
 - `application` — 아래 주제별 유스케이스와 결선
   - 이벤트 발행: 재처리 유스케이스, 남겨진 발행의 운영 유스케이스, 재처리 설정과 정책 결선
   - 기동 검사와 역할: 역할 검사 결선, DB 확장 요건 검사 결선, 작업 역할의 스케줄링
   - 화면용 API 명세가 담는 경로
   - 앱 시계: 결선과 두 구현(실제 시간 · 측정용 시계), 측정 profile 표시, 측정용 시계의 운영 유스케이스
+  - 반복 회차: 회차 실행 · 회차 기록 조회, 회차 기록 지우기
 - `domain` — 아래 주제별 판단의 정본과 저장 인터페이스
   - 이벤트 발행: 재처리 대상 · 남겨진 발행 판정과 그 설정 조건, 이벤트를 읽을 수 있는지의 판정, 레지스트리 행 저장 인터페이스
   - 기동 검사: 역할 판정, pgvector 확장 판정과 설치된 확장 저장 인터페이스
   - 앱 시계: 넘긴 기록과 경과 산식, 앱 시계의 기동 판정, 측정용 시계의 상태와 저장 인터페이스
+  - 반복 회차: 끝 조건 · 시간 예산 · 창 · 보존 기간 · 회차 이름 꼴의 정본, 회차 기록과 그 저장 인터페이스
 
 협력은 아래와 같다. 그림이 있는 과정의 호출 순서는 그림에 있다.
 
@@ -764,6 +815,7 @@ HTTP 엔드포인트:
 - **DB 확장 요건 검사** — `VectorExtensionConfiguration` 이 `DatabaseExtensions` 로 설치된 pgvector 확장의 버전을 읽어 `VectorExtension` 으로 판정한다. 어기면 기동하지 않는다(platform-R19)
 - **문제 응답** — `account` 의 보안 진입점과 이 모듈의 `ProblemResponseAdvice` 는 `ProblemResponses` 로 문제 응답을 쓴다(platform-R12)
 - **앱 시계의 기동** — `ClockConfiguration` 이 profile 과 `MeasurementClockRows` 의 시계 행을 `ClockStart` 로 판정해 `SystemClock` 이나 `MeasurementClock` 하나를 `AppClock` bean 으로 만든다. 두 구현의 경과 판정은 `ClockJumps` 에 맡긴다(platform-R26 · R27, 그림 "앱 시계의 기동")
+- **반복 회차** — 각 모듈의 회차(`run()`)가 `RoundRunner` 에 회차 이름과 뭉치 하나(지금까지의 회차 본문)를 넘긴다. `RoundRunService` 가 뭉치를 부르고 `RoundRules.endAfter` 가 끝내라 할 때까지 되풀이한 뒤 `RoundRunRepository` 에 회차 기록 한 행을 쓴다. 작업 역할의 반복 작업 `ForgetRoundRunsJob` 이 `RoundRunCleanup` 으로 보존 기간이 지난 기록을 지운다(platform-R130 ~ R133)
 - **측정용 시계의 넘기기** — `admin` 의 운영자 API 가 `MeasurementClockAdministrationService` 를 부른다. 서비스는 측정용 시계 bean 이 있을 때만 그 시계로 상태를 내고 넘긴다. 넘긴 구간은 시계가 `MeasurementClockRows` 에 먼저 쓴다(platform-R29, 그림 "측정용 시계의 넘기기")
 - **실제 시간 요구** — 실제 시간의 외부 요청을 하는 길이 `AppClock.requireRealTime()` 을 부른다. 화면용 API 에서 나온 `RealTimeRequiredException` 은 `ProblemResponseAdvice` 가 409 로 낸다(platform-R30)
 - **협력하지 않는 타입** — YAML 원문 읽기 · `CodePoints` · `ProbabilityRange` · `DayRange` 는 다른 구성 요소와 협력하지 않는다. 다른 모듈이 `YamlTextReader` 로 읽은 트리를 `StrictYamlBinding` 으로 바인딩한다
@@ -772,9 +824,9 @@ HTTP 엔드포인트:
 
 | 역할 | 구성 요소 |
 |---|---|
-| 작업 역할 | `EventResubmissionJob` · `WorkerSchedulingConfiguration` |
+| 작업 역할 | `EventResubmissionJob` · `WorkerSchedulingConfiguration` · `ForgetRoundRunsJob` |
 | 화면 역할 | `PingController` · `OpenApiConfiguration`(그 bean 인 `SchemaNameCheck` 포함) · `ProblemResponseAdvice` |
-| 두 역할 공통 | 나머지. `EventPublicationAdministrationService` · `JdbcRegistryRows` · `VectorExtensionConfiguration` · `JdbcDatabaseExtensions` · `ClockConfiguration` · `MeasurementClockAdministrationService` · `JdbcMeasurementClockRows` 를 포함한다 |
+| 두 역할 공통 | 나머지. `EventPublicationAdministrationService` · `JdbcRegistryRows` · `VectorExtensionConfiguration` · `JdbcDatabaseExtensions` · `ClockConfiguration` · `MeasurementClockAdministrationService` · `JdbcMeasurementClockRows` · `RoundRunService` · `RoundRunCleanup` · `JdbcRoundRunRepository` 를 포함한다 |
 
 YAML 원문 읽기 타입은 빈이 아니다.
 
@@ -973,6 +1025,8 @@ stateDiagram-v2
 | DB 확장 요건 검사 | `VectorExtensionConfiguration` | 기동(마이그레이션 뒤) | 설치된 pgvector 확장의 버전을 읽어, 요건을 어기면 기동하지 않는다(platform-R19) |
 | 앱 시계 | `ClockConfiguration` | 기동(마이그레이션 뒤) | profile 과 시계 행으로 앱 시계 하나를 만든다(platform-R26 · R27, 그림 "앱 시계의 기동") |
 | 측정용 시계의 운영 기능 | `MeasurementClockAdministrationService` | 공개 운영 API 호출(`admin` 의 운영자 요청, 화면 역할) | 상태 · 앞으로 넘기기(platform-R29). 측정용 시계가 아니면 `Off` 다. 넘기기는 하나씩 한다(platform-R127) |
+| 반복 회차 | `RoundRunService` | 각 모듈 회차의 `run()`(작업 역할), 처리 현황 조회(화면 역할) | 뭉치를 끝 조건까지 되풀이하고 회차 기록을 남긴다 · 최근 합을 낸다(platform-R130 ~ R132) |
+| 회차 기록 지우기, 반복 작업 ID `forget-round-runs` | `ForgetRoundRunsJob` | 하루마다 | `RoundRunCleanup` 으로 끝난 지 2일이 지난 회차 기록을 지운다(platform-R133). 재시도하지 않는다 |
 | 작업 역할의 스케줄링 | `WorkerSchedulingConfiguration` | 기동(작업 역할) | Spring 스케줄링을 켠다. Spring Modulith 의 멈춤 감시(platform-R36)가 이것으로 돈다(platform-R9) |
 | API 계약 확인 | `PingController` | `GET /api/ping` | platform-R7 |
 | 화면용 API 명세 | `OpenApiConfiguration` | 명세 생성 | 명세의 고정 값과 속성 규칙, 운영자 경로 연산과 세션 경로 연산의 401 · 403 · 429 문제 응답, 연산 ID 의 겹침 검사(platform-R6 · R129) |
@@ -993,6 +1047,8 @@ stateDiagram-v2
 - `SystemClock` — 실제 시간의 `AppClock`. 경과 판정은 넘긴 기록 없는 `ClockJumps.NONE` 에 맡긴다(platform-R26)
 - `MeasurementClock` — 측정용 시계의 `AppClock`. 지금의 산식과 넘기기를 갖는다(platform-R27 · R29, 그림 "측정용 시계의 넘기기")
 - `MeasurementOnly` — 측정 profile 에서만 켜는 구성요소의 메타 애너테이션(`@Profile`). 상수 `PROFILE = "measurement"` 가 profile 이름의 정본이다. 다른 `@Profile` 이 달린 구성요소에는 달지 않는다(platform-R27)
+- `RoundRunService` — `RoundRunner` · `RoundActivity` 의 구현. 트랜잭션 · 역할 애너테이션이 없다. 기록은 한 문장 쓰기라 따로 트랜잭션을 열지 않고, 기록을 만들거나 쓰지 못하면 오류 로그를 남기고 삼킨다(platform-R130 ~ R132)
+- `RoundRunCleanup` — 회차 기록 지우기 유스케이스(platform-R133)
 - `MeasurementClockAdministrationService` — 공개 운영 API `MeasurementClockAdministration` 의 구현. 측정용 시계 bean 이 없으면 `Off` 이고, 인자 개수(정확히 하나)를 보고 나머지는 측정용 시계에 맡긴다(platform-R29)
 
 ### `domain`
@@ -1007,8 +1063,11 @@ stateDiagram-v2
 - `ClockStart` — 앱 시계의 기동 판정 정본. profile 이름은 인자로 받는다(platform-R27)
 - `MeasurementClockState` — 측정용 시계의 저장된 상태(출발 시각 · 대응 실제 시각 · 넘긴 기록)
 - `MeasurementClockRows` — 시계 행과 넘긴 기록을 읽고 쓰는 저장 인터페이스(§6)
+- `RoundRules` — 반복 회차의 정본. 시간 예산(`LENGTH`) · 처리량 창(`RECENT`) · 회차 기록 보존 기간(`KEEP`) · 회차 이름 꼴(`NAME`)과 끝난 뭉치 뒤 회차를 끝낼 까닭의 판정(`endAfter` — `BatchEnd` 를 default 없는 망라 `switch` 로 분기)(platform-R131 · R134)
+- `RoundRun` — 끝난 회차 하나의 기록
+- `RoundRunRepository` — 회차 기록을 쓰고 · 최근 합을 읽고 · 지우는 저장 인터페이스(§6)
 - 그 밖의 값: `EventResubmissionPolicy.Decision` · `RegistryRows.RegistryRow` · `ClockJumps.Jump`
-- 저장 단위: 측정용 시계의 시계 행과 넘긴 기록(§6). 그 밖의 자기 테이블은 없다
+- 저장 단위: 측정용 시계의 시계 행과 넘긴 기록, 회차 기록(§6). 그 밖의 자기 테이블은 없다
 
 ### 나가는 쪽
 
@@ -1019,6 +1078,7 @@ stateDiagram-v2
 | `RegistryRows` | `JdbcRegistryRows` | 이벤트 발행 레지스트리 행 |
 | `DatabaseExtensions` | `JdbcDatabaseExtensions` | 시스템 카탈로그의 설치된 확장 |
 | `MeasurementClockRows` | `JdbcMeasurementClockRows` | 측정용 시계의 표 |
+| `RoundRunRepository` | `JdbcRoundRunRepository` | 회차 기록. 최근 합과 마지막 회차를 한 문장으로 읽는다 |
 
 신뢰할 수 없는 입력과 그 방어 규칙:
 
@@ -1413,6 +1473,25 @@ stateDiagram-v2
 - **platform-R125** — 평문은 `reveal` 로만 나온다. 문자열 표현은 값을 숨기고(`SecretValue[숨김]`), 값 비교 · 해시를 내놓지 않는다
 - **platform-R126** — 직렬화하면 실패한다. Java 직렬화를 구현하지 않고, JSON 으로 쓰려 하면(Jackson 2 · 3) 예외가 나며 그 문구에 값이 없다. 속성을 조용히 빼지 않는다
 
+### 반복 회차
+
+판단의 이유는 [ADR-0347](../adr/0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md) · [ADR-0348](../adr/0348-each-round-leaves-a-round-record-in-platform-and-the-operator-screen-shows-backlog-and-recent-throughput-per-round.md)에 있다.
+
+- **platform-R130** — 회차는 뭉치를 마친 뒤 가져올 대기가 남았으면 같은 크기의 뭉치를 다시 가져온다. 상한만큼 가져와 멈춤 · 일시 실패 없이 마친 뭉치(`FULL`) 뒤에만 이어 가고, 끝 조건(platform-R131)이 끝내라 하면 끝낸다. 뭉치 크기 · 점유 기간 · 대기 수는 회차를 가진 모듈의 것이다 — 점유는 뭉치마다 그 뭉치의 지금으로 쓴다. 실행기는 트랜잭션을 열지 않는다
+- **platform-R131** — 끝 조건은 아래다. 경과는 회차를 시작한 뒤의 앱 시계의 경과다(platform-R28 — 측정용 시계가 넘긴 시간을 뺀다)
+
+  | 끝난 뭉치 | 회차 |
+  |---|---|
+  | `FULL` 이고 경과가 시간 예산(5분) 미만 | 다음 뭉치를 가져온다 |
+  | `FULL` 이고 경과가 시간 예산 이상 | 끝낸다 — `BUDGET` |
+  | `DRAINED`(상한보다 적게 가져왔다) | 끝낸다 — `DRAINED` |
+  | `BACKED_OFF`(일시 실패가 하나라도 났다) | 끝낸다 — `BACKED_OFF`. 외부 호출 한도에 거듭 부딪히지 않게 한다 |
+  | `STOPPED`(회차를 멈추는 경우) | 끝낸다 — `STOPPED` |
+
+- **platform-R132** — 회차가 끝나면 회차 기록 한 행을 남긴다 — 회차 이름 · 시작 · 끝 · 부른 뭉치 수 · 처리 수 · 끝난 까닭. 처리할 것이 없던 회차도 남긴다. 뭉치가 예외를 던지면 `FAILED` 로 남기고 그 예외를 다시 던진다(첫 뭉치가 던지면 뭉치 수 0). 기록을 만들거나 쓰지 못하면 오류 로그 `회차 기록을 남기지 못했다 — {이름} {까닭}, 뭉치 {n}개 · 처리 {n}건` 을 남기고 삼킨다 — 뭉치의 쓰기는 이미 커밋됐다. `FAILED` 의 기록을 쓰지 못한 까닭은 다시 던지는 예외에 덧붙인다. 최근 합은 지금에서 1시간 앞(포함)부터 끝난 회차를 합한다
+- **platform-R133** — 끝난 지 2일이 지난 회차 기록은 하루 한 번 반복 작업이 지운다(지금 − 2일보다 앞선 끝 시각)
+- **platform-R134** — 회차 이름은 소문자 낱말을 `-` 로 잇는다(`[a-z]+(-[a-z]+)*`). 코드의 정본은 `RoundRules.NAME` 이고 표의 CHECK 가 같은 꼴로 저장을 거부한다. 이름은 회차를 가진 모듈이 정해 넘기고, 이 모듈은 이름의 뜻을 모른다
+
 ### 폐지한 규칙
 
 - **platform-R10** — (폐지 — 운영자 접근 통제는 [account Spec](account.md#운영자-접근-통제) account-R1 · account-R4 가 정한다)
@@ -1421,12 +1500,13 @@ stateDiagram-v2
 
 ## 6. 데이터
 
-이 모듈의 테이블은 측정용 시계의 상태 둘이다(마이그레이션 `V66`). 운영 인스턴스에서는 비어 있다. 행이 있으면 측정 profile 없이 기동하지 않는다(platform-R73). 이벤트 발행 레지스트리와 작업 테이블은 프레임워크 테이블이라 [data-model.md](../data-model.md)에 있다.
+이 모듈의 테이블은 측정용 시계의 상태 둘(마이그레이션 `V66`)과 회차 기록(`V91`)이다. 측정용 시계의 표는 운영 인스턴스에서는 비어 있고, 행이 있으면 측정 profile 없이 기동하지 않는다(platform-R73). 이벤트 발행 레지스트리와 작업 테이블은 프레임워크 테이블이라 [data-model.md](../data-model.md)에 있다.
 
 | 테이블 | 주요 컬럼 | 뜻 · 제약 |
 |---|---|---|
 | `measurement_clock` | `id` · `started_at` · `anchored_at` | 시계 행 하나(`id = 1` 만). `started_at` 은 측정 시각의 출발점이고 운영자가 넣는다. `anchored_at` 은 그에 대응하는 실제 시각이고 처음 뜰 때 앱이 채운다. 비어 있을 수 있다(platform-R75) |
 | `measurement_clock_jumps` | `id` · `clock_id` · `from_at` · `to_at` | 넘긴 구간 하나(넘기기 전 · 넘긴 뒤 측정 시각, `to_at > from_at`). 시계 행을 가리킨다. 넘길 때마다 한 행을 더하고 지우지 않는다 |
+| `round_runs` | `id` · `round` · `started_at` · `ended_at` · `batches` · `handled` · `ended_by` | 끝난 회차 하나(platform-R132). `round` 는 이름 꼴 CHECK(platform-R134), `ended_at ≥ started_at`, `batches` · `handled` ≥ 0, `ended_by` 는 `DRAINED` · `BUDGET` · `BACKED_OFF` · `STOPPED` · `FAILED`. 인덱스 `(round, ended_at)`. 2일 보존(platform-R133). 사용자를 모른다 |
 
 남겨진 발행의 운영자 처리는 레지스트리 테이블 `event_publication` 을 직접 읽고 지운다(platform-R14 ~ R16). 쓰는 열은 `id` · `event_type` · `listener_id` · `publication_date` · `status` · `completion_attempts` · `last_resubmission_date` · `serialized_event` 다. 이벤트 내용(`serialized_event`)은 읽을 수 있는지의 판정에만 쓰고 응답 · 로그에 싣지 않는다(platform-R54). 행을 바꾸는 것은 조건부 삭제뿐이고, 상태 갱신은 Spring Modulith 가 한다.
 
@@ -1477,3 +1557,5 @@ stateDiagram-v2
 | [0252](../adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) | 진행 중 작업의 멈춤과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다 |
 | [0253](../adr/0253-the-measurement-clock-does-not-collect-feeds.md) | 측정용 시계에서는 수집하지 않는다 |
 | [0276](../adr/0276-platform-describes-reads-and-draws-llm-output-and-task-modules-keep-their-own-shape-and-value-mapping.md) | LLM 출력의 서술 · 읽기 · JSON Schema 그리기는 `platform` 이 맡고, 과제 모듈은 자기 서술과 값 옮기기만 한다 |
+| [0347](../adr/0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md) | 반복 회차는 뭉치를 마친 뒤 가져올 대기가 남았으면 시간 예산 안에서 같은 크기의 뭉치를 다시 가져온다 |
+| [0348](../adr/0348-each-round-leaves-a-round-record-in-platform-and-the-operator-screen-shows-backlog-and-recent-throughput-per-round.md) | 회차마다 회차 기록을 남기고, 운영자 화면 처리 현황이 회차마다 밀린 수와 최근 1시간 처리량을 보인다 |

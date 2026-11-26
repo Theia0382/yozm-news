@@ -34,13 +34,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 빠진 태그 채움 회차 하나 — docs/specs/tag.md §4.
  * <p>
- * 시작할 수 있는 채움을 점유해 커밋한 뒤, 덮는 범위의 평가를 평가 ID 순으로 {@link BackfillSchedule#BATCH} 건씩 뭉치마다 한 트랜잭션에서
+ * 시작할 수 있는 채움을 점유해 커밋한 뒤, 덮는 범위의 평가를 평가 ID 순으로 {@link BackfillSchedule#BATCH} 건씩 쪽마다 한 트랜잭션에서
  * 잠가 읽는다. 평가마다 {@code evaluation} 이 판정 원본을 그 버전의 태그 질문으로 다시 읽고(대조까지 한다), 읽히면 그 버전의 채울 저장
- * 기준으로 거른 태그 가운데 없는 행만 더한다. 뭉치 끝에
- * 커서 · 버전별 건수 · 점유를 토큰이 맞을 때만 쓴다 — 점유를 잃었으면 그 뭉치를 되돌리고 멈춘다. 다 돌면 끝낸다.
+ * 기준으로 거른 태그 가운데 없는 행만 더한다. 쪽 끝에
+ * 커서 · 버전별 건수 · 점유를 토큰이 맞을 때만 쓴다 — 점유를 잃었으면 그 쪽을 되돌리고 멈춘다. 다 돌면 끝낸다.
  * <p>
  * 다시 읽기의 예상 못한 예외는 그 평가를 읽을 수 없음으로 세고 이어 간다 — 저장된 행만 보는 결정적 계산이라 멈추면 같은 커서에서 다시 멈춘다.
- * 그 밖의 예외는 그 뭉치를 되돌리고 점유를 풀고 멈춘다 — 다음 회차가 커서부터 잇는다.
+ * 그 밖의 예외는 그 쪽을 되돌리고 점유를 풀고 멈춘다 — 다음 회차가 커서부터 잇는다.
  */
 @Service
 public class TagBackfillRound {
@@ -115,7 +115,7 @@ public class TagBackfillRound {
 		}
 	}
 
-	/** 뭉치 하나 — 한 트랜잭션에서 잠가 읽고 더하고 진행을 쓴다 */
+	/** 쪽 하나 — 한 트랜잭션에서 잠가 읽고 더하고 진행을 쓴다 */
 	private Batch batch(TagBackfill backfill, UUID token, long cursor, Map<TagSetId, Target> targets) {
 		return Objects.requireNonNull(this.transaction.execute(status -> {
 			List<BackfillTarget> responses = this.results.lockForBackfill(backfill.from(), backfill.to(), cursor,
@@ -183,10 +183,10 @@ public class TagBackfillRound {
 	private record Target(TagSetView tagSet, TagSetThresholds thresholds) {
 	}
 
-	/** 뭉치 하나의 결과 */
+	/** 쪽 하나의 결과 */
 	private sealed interface Batch {
 
-		/** 진행을 썼다 — 다음 뭉치는 이 평가 ID 뒤부터 */
+		/** 진행을 썼다 — 다음 쪽은 이 평가 ID 뒤부터 */
 		record Advanced(long cursor) implements Batch {
 		}
 
@@ -194,7 +194,7 @@ public class TagBackfillRound {
 		record Finished() implements Batch {
 		}
 
-		/** 점유를 다른 회차가 가져갔다 — 이 뭉치는 되돌렸다 */
+		/** 점유를 다른 회차가 가져갔다 — 이 쪽은 되돌렸다 */
 		record LeaseLost() implements Batch {
 		}
 

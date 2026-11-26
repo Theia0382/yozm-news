@@ -1,6 +1,6 @@
 # ADR-0059: 평가 작업은 대기 행의 DB 점유와 상태로 동시성 · 재시도를 제한하고, 정착 시간 뒤 평가하며, 결과가 체계와 어긋나거나 평가기가 예상 못한 예외를 던지면 회차를 멈춘다
 
-- 상태: 승인. 부분 대체 — 일시 실패의 시도 상한([ADR-0254](0254-evaluation-queue-defers-transient-failures-without-an-attempt-limit-and-counts-retrying-rows-for-the-operator.md))
+- 상태: 승인. 부분 대체 — 일시 실패의 시도 상한([ADR-0254](0254-evaluation-queue-defers-transient-failures-without-an-attempt-limit-and-counts-retrying-rows-for-the-operator.md)) · 회차의 처리량([ADR-0347](0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md))
 - 날짜: 2026-11-02
 - 근거: [이슈 #69](https://github.com/Theia0382/yozm-news/issues/69) — 평가 대기 · 평가 작업을 만들며 JobRunr OSS 의 재시도 · 반복 작업 규칙과 수집 작업의 점유(ADR-0033)를 대조하고, 프리셋의 피드 구성 · 기본 수집 주기를 확인. 구현 `320f143`(일정 · 판정 규칙) · `90aa870`(대기 · 결과 저장소) · `a62ae65`(회차 · 작업)
 - 관련: [ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)(작업 종류별 동시성 제한은 기능을 구현할 때 정한다 — 이 ADR 이 정한다), [ADR-0033](0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md)(수집의 DB 점유), [ADR-0058](0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md)(실패 세 갈래)
@@ -27,6 +27,7 @@
 
 - 평가기 결함 · 키 무효가 고쳐질 때까지 기사를 잃지 않는다. 결함을 고쳐 배포하면 대기가 그대로 이어진다.
 - 특정 기사만의 결함이면 그 기사가 매 회차 맨 앞에서 평가 전체를 막는다 — 오류 로그가 회차마다 기사 ID 와 함께 남아 드러난다.
+> 부분 대체(첫 문장의 "처리량은 한 회차에 50건") — [ADR-0347](0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md). 지금 상태: [tag Spec §5](../specs/tag.md#평가-대기와-평가-작업) tag-R19 · [platform Spec §5](../specs/platform.md#반복-회차) platform-R130
 - 처리량은 한 회차에 50건, 회차는 겹치지 않는다. 점유 기간(30분)은 묶음 × 요청 마감보다 길어야 하고, 넘으면 다른 회차가 같은 기사를 다시 평가할 수 있다(저장은 한 번).
 - 결과가 정착 시간만큼 늦다. 다이제스트는 하루 단위라 생성 직전 기사 일부가 다음 날로 밀린다.
 - 저장 단계의 DB 오류가 그 기사에서 계속 나면 점유 만료마다 다시 평가해 비용이 든다. 알려진 저장 거부(원본 응답의 문자)는 평가 결과 검사가 먼저 막는다.

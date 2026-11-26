@@ -1,6 +1,6 @@
 # ADR-0081: 사건 기준 · 저장 기준은 설정에 두고(기본값은 코드), 기준이 바뀌면 저장된 점수 · 확률 안에서 재판정한다
 
-- 상태: 승인. 부분 대체 — 재판정 범위([ADR-0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md))
+- 상태: 승인. 부분 대체 — 재판정 범위([ADR-0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md)) · 회차마다의 상한([ADR-0347](0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md))
 - 날짜: 2026-11-06
 - 근거: [이슈 #97](https://github.com/Theia0382/yozm-news/issues/97) — 사건 배정의 기준을 둘 곳과 재판정을 정하고 구현(`3f6dcd5` · `738c775`)
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결과 절 "운영자가 표본을 검수해 임계값을 조정한다"를 설정으로 구현한다, 후속 기록), [ADR-0055](0055-tag-and-store-thresholds-change-with-history-and-warn-instead-of-blocking.md)(태그 기준 · 저장 기준 — 저장 기준의 뜻이 같다), [ADR-0080](0080-event-centroids-and-key-terms-accumulated-with-article-counts-and-updated-incrementally.md)(옮길 때의 누적 갱신)
@@ -23,6 +23,7 @@
 
 - 모델을 바꾼 운영자가 재기동으로 기준을 맞출 수 있고, 바꾸면 지난 배정에도 반영된다. 배정마다 어떤 기준으로 판정했는지 남는다.
 - 재판정은 저장값 안이다 — 아래 기준을 판정 때의 저장 기준 아래로 내리면 그 사이 점수의 후보는 저장되지 않아 보이지 않고, 창을 줄여도 저장된 후보는 그대로다(감쇠는 판정 때 값). 판정 뒤에 생긴 사건으로는 옮기지 못한다. 처음부터 다시 묶는 장치는 없다.
+> 부분 대체(둘째 문장) — [ADR-0347](0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md). 지금 상태: [event Spec §5](../specs/event.md#5-규칙과-불변식) event-R18
 - 창이나 저장 기준만 바꿔도 모든 배정이 한 바퀴 다시 판정된다(결과는 그대로이고 기준 ID 만 바뀐다). 회차마다 상한이 있다.
 - 기준 이력 테이블과 재판정 회차가 생긴다. 바꾸기 전 미리보기는 없다.
 - 닫힌 사건 안의 배정을 재판정할지는 사건 닫기를 만드는 작업이 정한다.
