@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import io.swagger.v3.core.converter.ModelConverter;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
@@ -24,6 +25,7 @@ import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.PublicApis;
 import net.yozmnews.platform.RequestLimited;
 import net.yozmnews.platform.WebRole;
+import org.springdoc.core.customizers.OpenApiBuilderCustomizer;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -37,7 +39,8 @@ import org.springframework.web.util.pattern.PathPattern;
 import org.springframework.web.util.pattern.PathPatternParser;
 
 /**
- * 화면용 API 명세의 고정 값과 속성 규칙, 운영자 경로 · 세션 경로 연산의 거부 응답 — docs/specs/platform.md §4 · platform-R6
+ * 화면용 API 명세의 고정 값과 속성 규칙, 운영자 경로 · 세션 경로 연산의 거부 응답, 스키마 이름 겹침 검사 — docs/specs/platform.md §4 ·
+ * platform-R6
  */
 @WebRole
 @Configuration(proxyBeanMethods = false)
@@ -63,6 +66,27 @@ class OpenApiConfiguration {
 	OpenAPI screenApi() {
 		return new OpenAPI().info(new Info().title("요즘뉴스 화면용 API").version("0"))
 			.servers(List.of(new Server().url("/")));
+	}
+
+	/** 스키마 이름 겹침 검사의 변환기 — springdoc 이 변환기 사슬에 넣는다. docs/specs/platform.md §4 · platform-R128 */
+	@Bean
+	ModelConverter schemaNameCheck() {
+		return new SchemaNameCheck();
+	}
+
+	/** 명세 생성마다 스키마 이름 기록을 새로 시작한다 — platform-R128 */
+	@Bean
+	OpenApiBuilderCustomizer schemaNameRecording() {
+		return service -> SchemaNameCheck.start();
+	}
+
+	/**
+	 * 명세 생성 끝에서 스키마 이름 기록을 대조한다 — platform-R128
+	 * @throws IllegalStateException 같은 스키마 이름을 서로 다른 타입이 받았을 때, 변환기가 보지 못한 스키마가 있을 때
+	 */
+	@Bean
+	OpenApiCustomizer schemaNameCollisions() {
+		return openApi -> SchemaNameCheck.finish(openApi.getComponents());
 	}
 
 	@Bean
