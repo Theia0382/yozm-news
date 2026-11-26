@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import net.yozmnews.platform.ProbabilityRange;
 import net.yozmnews.tag.ProbabilityBucket;
 import net.yozmnews.tag.ProbabilityHistogram;
 import net.yozmnews.tag.StoredRange;
@@ -47,9 +48,7 @@ public final class ProbabilityBins {
 	 * @throws IllegalArgumentException 확률이 0 ~ 1 밖일 때
 	 */
 	static int index(double probability) {
-		if (!(probability >= 0 && probability <= 1)) {
-			throw new IllegalArgumentException("확률은 0 ~ 1 이다: " + probability);
-		}
+		ProbabilityRange.require(probability, "probability");
 		for (int i = COUNT - 1; i > 0; i--) {
 			if (Probabilities.atLeast(probability, lower(i))) {
 				return i;

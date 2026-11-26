@@ -4,11 +4,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.domain.evaluator.MembershipCandidate;
+import net.yozmnews.platform.ProbabilityRange;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -25,28 +26,17 @@ final class MembershipChecks {
 	}
 
 	/**
-	 * 요청 하나 — 후보가 1 ~ {@link MembershipQuery#MAX_CANDIDATES} 개, 후보 ID 가 겹치지 않고, 판정할 기사가 어느 후보의 서술 기사도
-	 * 아니다.
+	 * 요청 하나 — 후보가 1 ~ {@link MembershipQuery#MAX_CANDIDATES} 개, 후보 ID 가 겹치지 않고(정본
+	 * {@link MembershipCandidate#requireCandidates}), 판정할 기사가 어느 후보의 서술 기사도 아니다.
 	 * @throws IllegalArgumentException 어길 때
 	 */
 	static <T> void query(ArticleId articleId, List<T> candidates, ToLongFunction<T> id,
 			Function<T, List<ArticleId>> articles) {
 		Objects.requireNonNull(articleId, "articleId");
-		if (candidates.isEmpty()) {
-			throw new IllegalArgumentException("후보가 없다");
-		}
-		if (candidates.size() > MembershipQuery.MAX_CANDIDATES) {
-			throw new IllegalArgumentException(
-					"후보는 " + MembershipQuery.MAX_CANDIDATES + "개까지다: " + candidates.size());
-		}
-		Set<Long> ids = new HashSet<>();
+		MembershipCandidate.requireCandidates(candidates, id);
 		for (T candidate : candidates) {
-			long candidateId = id.applyAsLong(candidate);
-			if (!ids.add(candidateId)) {
-				throw new IllegalArgumentException("후보 ID 가 겹친다: " + candidateId);
-			}
 			if (articles.apply(candidate).contains(articleId)) {
-				throw new IllegalArgumentException("판정할 기사가 후보 " + candidateId + " 의 서술 기사다");
+				throw new IllegalArgumentException("판정할 기사가 후보 " + id.applyAsLong(candidate) + " 의 서술 기사다");
 			}
 		}
 	}
@@ -75,10 +65,12 @@ final class MembershipChecks {
 
 	/**
 	 * 판정한 결과 — 판정 원본은 확률이 있을 때만 있고, 후보 ID 는 1 이상, 확률은 0 ~ 1 의 유한값이다.
+	 * @param name 확률 맵의 이름 — 확률 범위 실패 문구에 싣는다
 	 * @return 복사한 확률
 	 * @throws IllegalArgumentException 어길 때
 	 */
-	static Map<Long, Double> judged(@Nullable Object judgement, Map<Long, Double> probabilities, String noun) {
+	static Map<Long, Double> judged(@Nullable Object judgement, Map<Long, Double> probabilities, String noun,
+			String name) {
 		Objects.requireNonNull(probabilities, "probabilities");
 		if ((judgement == null) != probabilities.isEmpty()) {
 			throw new IllegalArgumentException("판정 원본은 확률이 있을 때만 있다: 원본 " + judgement + ", 확률 " + probabilities);
@@ -89,9 +81,7 @@ final class MembershipChecks {
 			if (candidateId < 1) {
 				throw new IllegalArgumentException(noun + " ID 는 1 이상이다: " + candidateId);
 			}
-			if (!Double.isFinite(probability) || probability < 0 || probability > 1) {
-				throw new IllegalArgumentException("확률은 0 ~ 1 의 유한값이다: " + probability);
-			}
+			ProbabilityRange.require(probability, name);
 		});
 		return Map.copyOf(probabilities);
 	}

@@ -7,16 +7,16 @@ import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.evaluation.EvaluatorFailureKind;
-import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.Membership;
+import net.yozmnews.evaluation.domain.evaluator.MembershipCandidate;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import org.junit.jupiter.api.Test;
 
 /**
- * Jev 의 200 응답을 포트 결과로 — 답의 이름 · 종류 · 수준 위치, 읽을 수 없는 응답은 평가기 사용 불가. 사건 소속 판정의 응답.
+ * Jev 의 200 응답을 포트 결과로 — 답의 이름 · 종류 · 수준 위치, 읽을 수 없는 응답은 평가기 사용 불가. 소속 판정의 응답.
  * <p>
  * 지키는 규칙: evaluation-R38 · evaluation-R40 · evaluation-R41(포트는 분포만)
  */
@@ -35,7 +35,7 @@ class JevResponseTests {
 			"topic.removed":{"type":"noul","noul":0.5}},\
 			"usage":{"input_tokens":3245,"output_tokens":1077}}""";
 
-	/** 사건 소속 판정 응답 — 묻지 않은 후보(event.99)의 답을 함께 둔다 */
+	/** 소속 판정 응답 — 묻지 않은 후보(event.99)의 답을 함께 둔다 */
 	private static final String MEMBERSHIP_BODY = """
 			{"model":"jev-1.14.0","answers":{\
 			"event.12":{"type":"noul","noul":0.83},\
@@ -44,7 +44,7 @@ class JevResponseTests {
 			"usage":{"input_tokens":812,"output_tokens":40}}""";
 
 	private static final MembershipInput MEMBERSHIP = new MembershipInput("서울 시장 선거 결과", null,
-			List.of(new CandidateEvent(12, List.of("서울 시장 선거 개표")), new CandidateEvent(15, List.of("부산 항만 파업"))),
+			List.of(new MembershipCandidate(12, List.of("서울 시장 선거 개표")), new MembershipCandidate(15, List.of("부산 항만 파업"))),
 			new MembershipWording("w-test", "같은 사건인가"));
 
 	@Test

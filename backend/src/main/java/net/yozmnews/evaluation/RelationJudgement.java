@@ -4,6 +4,8 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.Objects;
 
+import net.yozmnews.platform.ProbabilityRange;
+
 /**
  * 관계 판정 한 번의 결과 — docs/specs/evaluation.md §3 · evaluation-R49
  */
@@ -30,17 +32,11 @@ public sealed interface RelationJudgement {
 			if (!probabilities.keySet().equals(EnumSet.allOf(RelationAnswer.class))) {
 				throw new IllegalArgumentException("모든 답의 확률이 있어야 한다: " + probabilities.keySet());
 			}
-			probabilities.values().forEach(Judged::requireProbability);
-			requireProbability(firstOneMatter);
-			requireProbability(secondOneMatter);
+			probabilities.values().forEach(probability -> ProbabilityRange.require(
+					Objects.requireNonNull(probability, "probability"), "RelationJudgement.Judged.probabilities"));
+			ProbabilityRange.require(firstOneMatter, "RelationJudgement.Judged.firstOneMatter");
+			ProbabilityRange.require(secondOneMatter, "RelationJudgement.Judged.secondOneMatter");
 			probabilities = Map.copyOf(probabilities);
-		}
-
-		private static void requireProbability(Double probability) {
-			Objects.requireNonNull(probability, "probability");
-			if (!Double.isFinite(probability) || probability < 0 || probability > 1) {
-				throw new IllegalArgumentException("확률은 0 ~ 1 의 유한값이다: " + probability);
-			}
 		}
 
 	}

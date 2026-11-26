@@ -3,6 +3,8 @@ package net.yozmnews.evaluation.domain.evaluator;
 import java.util.Map;
 import java.util.Objects;
 
+import net.yozmnews.platform.ProbabilityRange;
+
 /**
  * 소속을 판정했다 — 후보마다 확률 · docs/specs/evaluation.md §4.
  * <p>
@@ -22,12 +24,10 @@ public record Membership(Map<Long, Double> probabilities, String evaluator, Stri
 	 */
 	public Membership {
 		Objects.requireNonNull(probabilities, "probabilities");
-		probabilities.forEach((eventId, probability) -> {
-			Objects.requireNonNull(eventId, "eventId");
+		probabilities.forEach((candidateId, probability) -> {
+			Objects.requireNonNull(candidateId, "candidateId");
 			Objects.requireNonNull(probability, "probability");
-			if (!Double.isFinite(probability) || probability < 0 || probability > 1) {
-				throw new IllegalArgumentException("확률은 0 ~ 1 의 유한값이다: " + probability);
-			}
+			ProbabilityRange.require(probability, "Membership.probabilities");
 		});
 		probabilities = Map.copyOf(probabilities);
 		Objects.requireNonNull(evaluator, "evaluator");

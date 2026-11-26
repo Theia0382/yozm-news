@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import net.yozmnews.evaluation.RelationAnswer;
+import net.yozmnews.platform.ProbabilityRange;
 
 /**
  * 관계를 판정했다 — 답마다 확률과 스토리라인마다 한 사안일 확률 · docs/specs/evaluation.md §4.
@@ -29,10 +30,10 @@ public record Relation(Map<RelationAnswer, Double> probabilities, double firstOn
 		Objects.requireNonNull(probabilities, "probabilities");
 		probabilities.forEach((answer, probability) -> {
 			Objects.requireNonNull(answer, "answer");
-			requireProbability(probability);
+			ProbabilityRange.require(Objects.requireNonNull(probability, "probability"), "Relation.probabilities");
 		});
-		requireProbability(firstOneMatter);
-		requireProbability(secondOneMatter);
+		ProbabilityRange.require(firstOneMatter, "Relation.firstOneMatter");
+		ProbabilityRange.require(secondOneMatter, "Relation.secondOneMatter");
 		probabilities = Map.copyOf(probabilities);
 		Objects.requireNonNull(evaluator, "evaluator");
 		Objects.requireNonNull(modelVersion, "modelVersion");
@@ -42,13 +43,6 @@ public record Relation(Map<RelationAnswer, Double> probabilities, double firstOn
 		}
 		if (inputTokens < 0) {
 			throw new IllegalArgumentException("입력 토큰 수가 음수다: " + inputTokens);
-		}
-	}
-
-	private static void requireProbability(Double probability) {
-		Objects.requireNonNull(probability, "probability");
-		if (!Double.isFinite(probability) || probability < 0 || probability > 1) {
-			throw new IllegalArgumentException("확률은 0 ~ 1 의 유한값이다: " + probability);
 		}
 	}
 

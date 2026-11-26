@@ -22,7 +22,8 @@ public sealed interface MembershipJudgement {
 		 * 있거나 원본이 있는데 확률이 없을 때
 		 */
 		public Judged {
-			probabilities = MembershipChecks.judged(judgement, probabilities, "사건");
+			probabilities = MembershipChecks.judged(judgement, probabilities, "사건",
+					"MembershipJudgement.Judged.probabilities");
 		}
 
 	}

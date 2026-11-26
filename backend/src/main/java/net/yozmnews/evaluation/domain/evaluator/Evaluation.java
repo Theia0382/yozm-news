@@ -3,6 +3,8 @@ package net.yozmnews.evaluation.domain.evaluator;
 import java.util.Map;
 import java.util.Objects;
 
+import net.yozmnews.platform.ProbabilityRange;
+
 /**
  * 평가했다 — 태그 종류마다 확률 · docs/specs/evaluation.md §4.
  * <p>
@@ -26,11 +28,13 @@ public record Evaluation(Map<String, Double> topics, Map<String, Double> regions
 	 * 음수일 때
 	 */
 	public Evaluation {
-		topics = probabilities(topics, "topics");
-		regions = probabilities(regions, "regions");
-		formats = probabilities(formats, "formats");
+		topics = probabilities(topics, "Evaluation.topics");
+		regions = probabilities(regions, "Evaluation.regions");
+		formats = probabilities(formats, "Evaluation.formats");
 		Objects.requireNonNull(importance, "importance");
-		importance.values().forEach(value -> checkProbability(value, "importance"));
+		importance.values()
+			.forEach(value -> ProbabilityRange.require(Objects.requireNonNull(value, "Evaluation.importance"),
+					"Evaluation.importance"));
 		importance = Map.copyOf(importance);
 		Objects.requireNonNull(evaluator, "evaluator");
 		Objects.requireNonNull(modelVersion, "modelVersion");
@@ -49,16 +53,9 @@ public record Evaluation(Map<String, Double> topics, Map<String, Double> regions
 			if (key.isBlank()) {
 				throw new IllegalArgumentException(name + " 의 키가 비었다");
 			}
-			checkProbability(value, name);
+			ProbabilityRange.require(Objects.requireNonNull(value, name), name);
 		});
 		return Map.copyOf(values);
-	}
-
-	private static void checkProbability(Double value, String name) {
-		Objects.requireNonNull(value, name);
-		if (!Double.isFinite(value) || value < 0 || value > 1) {
-			throw new IllegalArgumentException(name + " 의 확률은 0 ~ 1 의 유한값이다: " + value);
-		}
 	}
 
 }

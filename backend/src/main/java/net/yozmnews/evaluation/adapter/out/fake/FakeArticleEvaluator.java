@@ -23,7 +23,6 @@ import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
-import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
@@ -31,6 +30,7 @@ import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
 import net.yozmnews.evaluation.domain.evaluator.HappeningText;
 import net.yozmnews.evaluation.domain.evaluator.Membership;
+import net.yozmnews.evaluation.domain.evaluator.MembershipCandidate;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.Relation;
@@ -41,6 +41,7 @@ import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.evaluator.StorylineText;
+import net.yozmnews.platform.ProbabilityRange;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -69,12 +70,12 @@ import tools.jackson.databind.json.JsonMapper;
  * 2로 나눠 올린 값. 실제 토큰 수가 아니다</li>
  * <li>원본 응답 — 평가기 이름 · 버전과 태그 종류별 확률을 키 순으로 담은 JSON. 다시 읽기는 넘긴 질문 묶음의 키마다 그 확률을 읽고,
  * 입력 토큰은 원본에 없어 0 이다</li>
- * <li>사건 소속 판정 — 조각은 제목을 문자 · 숫자가 아닌 문자로 나눈 {@value #MIN_PIECE_CODE_POINTS} 코드 포인트 이상의 조각(중복
+ * <li>소속 판정(사건 소속 · 스토리라인 소속) — 조각은 제목을 문자 · 숫자가 아닌 문자로 나눈 {@value #MIN_PIECE_CODE_POINTS} 코드 포인트 이상의 조각(중복
  * 없음)이다. 판정할 기사 제목의 조각 집합 A 와 그 후보 서술 제목들의 조각 합집합 D 에 대해 확률은
  * {@code MEMBERSHIP_FLOOR + MEMBERSHIP_SPAN * |A ∩ D| / |A|} 를 이 순서(곱한 뒤 나누고 더한다)로 계산한 값이다
  * ({@value #MEMBERSHIP_FLOOR} · {@value #MEMBERSHIP_SPAN}). A 가 비면 {@value #MEMBERSHIP_FLOOR} 다</li>
  * <li>판정 입력 토큰 — 제목 · 요약과 후보마다 질문 문장의 코드 포인트 합을 2로 나눠 올린 값</li>
- * <li>판정 원본 응답 — 평가기 이름 · 버전과 사건 ID 순의 확률({@code events})을 담은 JSON</li>
+ * <li>판정 원본 응답 — 평가기 이름 · 버전과 후보 ID 순의 확률({@code events})을 담은 JSON</li>
  * <li>관계 판정 — 스토리라인의 조각은 그 스토리라인 서술 제목들의 조각 합집합이다. 두 스토리라인의 조각 집합 A · B 의 겹침은
  * {@code |A ∩ B| / min(|A|, |B|)} 이다(한쪽이 비면 0). 답은 넘긴 문구 판의 답이다. 겹침이 0 이면 해당 없음이
  * {@value #RELATION_NONE} 이고 나머지 답이 그 나머지를 똑같이 나눈다. 겹침이 있으면 서술 사건이 적은 스토리라인이 많은 스토리라인의 부분이라는
@@ -134,10 +135,10 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 	/** 고른 중요도 수준의 확률 */
 	static final double IMPORTANCE_CHOSEN = 0.6;
 
-	/** 사건 소속 판정에서 조각 겹침이 없을 때의 확률 */
+	/** 소속 판정에서 조각 겹침이 없을 때의 확률 */
 	static final double MEMBERSHIP_FLOOR = 0.05;
 
-	/** 사건 소속 판정에서 조각이 모두 겹칠 때 더하는 확률 */
+	/** 소속 판정에서 조각이 모두 겹칠 때 더하는 확률 */
 	static final double MEMBERSHIP_SPAN = 0.9;
 
 	/** 관계 판정에서 조각 겹침이 없을 때 해당 없음의 확률 */
@@ -237,10 +238,10 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		if (input.summary() != null) {
 			texts.add(input.summary());
 		}
-		for (CandidateEvent candidate : input.candidates()) {
+		for (MembershipCandidate candidate : input.candidates()) {
 			Set<String> described = new HashSet<>();
 			candidate.titles().forEach(title -> described.addAll(pieces(title)));
-			probabilities.put(candidate.eventId(), membership(asked, described));
+			probabilities.put(candidate.candidateId(), membership(asked, described));
 			texts.add(input.wording().question(candidate.titles()));
 		}
 		Map<String, Object> raw = new LinkedHashMap<>();
@@ -595,7 +596,7 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 			throw new Unreadable("확률이 없거나 숫자가 아니다 — " + where);
 		}
 		double probability = value.doubleValue();
-		if (!Double.isFinite(probability) || probability < 0 || probability > 1) {
+		if (!ProbabilityRange.contains(probability)) {
 			throw new Unreadable("확률이 0 ~ 1 이 아니다 — " + where);
 		}
 		return probability;

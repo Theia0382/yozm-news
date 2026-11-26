@@ -11,7 +11,7 @@ import java.util.Map;
 
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
+import net.yozmnews.evaluation.domain.evaluator.MembershipCandidate;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import org.jspecify.annotations.Nullable;
@@ -38,8 +38,8 @@ class MembershipPlanTests {
 		MembershipPlan.Plan.Ask ask = (MembershipPlan.Plan.Ask) MembershipPlan.of(query, JUDGED, found, WORDING);
 
 		assertThat(ask.input()).isEqualTo(new MembershipInput("서울 시장 선거 결과", "개표가 끝났다",
-				List.of(new CandidateEvent(15, List.of("부산 항만 파업")),
-						new CandidateEvent(12, List.of("서울 시장 선거 개표", "서울 시장 당선 확정"))),
+				List.of(new MembershipCandidate(15, List.of("부산 항만 파업")),
+						new MembershipCandidate(12, List.of("서울 시장 선거 개표", "서울 시장 당선 확정"))),
 				WORDING));
 		assertThat(ask.asked()).containsExactly(Map.entry(15L, List.of(new ArticleId(7))),
 				Map.entry(12L, List.of(new ArticleId(3), new ArticleId(4))));
@@ -53,7 +53,7 @@ class MembershipPlanTests {
 
 		MembershipPlan.Plan.Ask ask = (MembershipPlan.Plan.Ask) MembershipPlan.of(query, JUDGED, found, WORDING);
 
-		assertThat(ask.input().candidates()).containsExactly(new CandidateEvent(12, List.of("서울 시장 선거 개표")));
+		assertThat(ask.input().candidates()).containsExactly(new MembershipCandidate(12, List.of("서울 시장 선거 개표")));
 		assertThat(ask.asked()).containsExactly(Map.entry(12L, List.of(new ArticleId(3))));
 	}
 
@@ -66,7 +66,7 @@ class MembershipPlanTests {
 
 		MembershipPlan.Plan.Ask ask = (MembershipPlan.Plan.Ask) MembershipPlan.of(query, JUDGED, found, WORDING);
 
-		assertThat(ask.input().candidates()).containsExactly(new CandidateEvent(12, List.of("서울 시장 선거 개표")));
+		assertThat(ask.input().candidates()).containsExactly(new MembershipCandidate(12, List.of("서울 시장 선거 개표")));
 		assertThat(ask.asked()).containsExactly(Map.entry(12L, List.of(new ArticleId(3))));
 	}
 

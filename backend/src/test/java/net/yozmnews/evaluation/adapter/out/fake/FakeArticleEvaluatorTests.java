@@ -15,13 +15,13 @@ import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.ImportanceScale;
 import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TopicCategory;
-import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
 import net.yozmnews.evaluation.domain.evaluator.Membership;
+import net.yozmnews.evaluation.domain.evaluator.MembershipCandidate;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 고정 규칙 평가기 — 결정성 · 채움 · 이름 일치 · 실패 표지 · 입력 토큰 · 원본 응답과 그 다시 읽기, 사건 소속 판정의 조각 겹침. 해시로 고른
+ * 고정 규칙 평가기 — 결정성 · 채움 · 이름 일치 · 실패 표지 · 입력 토큰 · 원본 응답과 그 다시 읽기, 소속 판정의 조각 겹침. 해시로 고른
  * 위치는 단언하지 않고 개수와 규칙이 정한 값을 본다.
  */
 class FakeArticleEvaluatorTests {
@@ -319,8 +319,8 @@ class FakeArticleEvaluatorTests {
 
 	/** 후보 12(서술 "서울 시장 개표") · 15(서술 "부산 항만 파업"), 요약 없음 */
 	private static MembershipInput membership(String title) {
-		return new MembershipInput(title, null, List.of(new CandidateEvent(12, List.of("서울 시장 개표")),
-				new CandidateEvent(15, List.of("부산 항만 파업"))), new MembershipWording("w-test", "같은 사건인가"));
+		return new MembershipInput(title, null, List.of(new MembershipCandidate(12, List.of("서울 시장 개표")),
+				new MembershipCandidate(15, List.of("부산 항만 파업"))), new MembershipWording("w-test", "같은 사건인가"));
 	}
 
 	private Evaluation evaluate(EvaluationInput input) {

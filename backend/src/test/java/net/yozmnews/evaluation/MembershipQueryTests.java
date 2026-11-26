@@ -61,7 +61,11 @@ class MembershipQueryTests {
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(0L, 0.5)));
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(12L, 1.5)));
+			.isThrownBy(() -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(12L, 1.5)))
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — MembershipJudgement.Judged.probabilities: 1.5");
+		assertThat(new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(12L, 0.0, 13L, 1.0)).probabilities())
+			.containsEntry(12L, 0.0)
+			.containsEntry(13L, 1.0);
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new MembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, " "));
 	}

@@ -83,9 +83,13 @@ class RelationQueryTests {
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationJudgement.Judged(id, four, 0.5, 0.5))
 			.withMessageStartingWith("모든 답의 확률이 있어야 한다");
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationJudgement.Judged(id, all, 1.1, 0.5))
-			.withMessage("확률은 0 ~ 1 의 유한값이다: 1.1");
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — RelationJudgement.Judged.firstOneMatter: 1.1");
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationJudgement.Judged(id, all, 0.5, Double.NaN))
-			.withMessage("확률은 0 ~ 1 의 유한값이다: NaN");
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — RelationJudgement.Judged.secondOneMatter: NaN");
+		Map<RelationAnswer, Double> overOne = new EnumMap<>(all);
+		overOne.put(RelationAnswer.NONE, 1.2);
+		assertThatIllegalArgumentException().isThrownBy(() -> new RelationJudgement.Judged(id, overOne, 0.5, 0.5))
+			.withMessage("확률은 0 ~ 1 의 유한값이다 — RelationJudgement.Judged.probabilities: 1.2");
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationJudgementId(0))
 			.withMessage("판정 원본 ID 는 1 이상이다: 0");
 	}
