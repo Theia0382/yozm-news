@@ -39,6 +39,9 @@ class JdbcEventArticleRepository implements EventArticleRepository {
 			article_id, event_id, published_at, score, decided_by, opened, criteria_id, assigned_at, judgement_id
 			""";
 
+	/** 재판정할 배정 — 기준이 {@code :criteria} 가 아니다. 잠금과 건수가 함께 쓴다 */
+	private static final String REJUDGE_TARGET = "(criteria_id < :criteria or criteria_id > :criteria)";
+
 	private final JdbcClient jdbc;
 
 	JdbcEventArticleRepository(JdbcClient jdbc) {
@@ -91,7 +94,7 @@ class JdbcEventArticleRepository implements EventArticleRepository {
 	public List<RejudgeTarget> lockRejudgeTargets(long criteriaId, int limit) {
 		List<EventArticle> assignments = this.jdbc.sql("select " + COLUMNS + """
 				from event_articles
-				where criteria_id < :criteria or criteria_id > :criteria
+				where\s""" + REJUDGE_TARGET + """
 				order by article_id
 				limit :limit
 				for update skip locked
@@ -116,6 +119,14 @@ class JdbcEventArticleRepository implements EventArticleRepository {
 			.map(assignment -> new RejudgeTarget(assignment,
 					stored.getOrDefault(assignment.articleId().value(), List.of())))
 			.toList();
+	}
+
+	@Override
+	public long countRejudgeTargets(long criteriaId) {
+		return this.jdbc.sql("select count(*) from event_articles where " + REJUDGE_TARGET)
+			.param("criteria", criteriaId)
+			.query(Long.class)
+			.single();
 	}
 
 	@Override

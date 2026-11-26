@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.OptionalInt;
 import java.util.UUID;
 
+import net.yozmnews.storyline.domain.backlog.Backlog;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -68,5 +69,8 @@ public interface LinkingQueueRepository {
 
 	/** 대기 행을 지운다 */
 	void delete(long eventId);
+
+	/** 대기에 남은 사건 수와 그 가운데 판정 가능 시각이 {@code now} 뒤인 것 */
+	Backlog backlog(Instant now);
 
 }

@@ -1,6 +1,6 @@
 # ADR-0062: 태그 체계는 운영자 원문으로 새 버전을 만들어 앞으로만 켜고, 키 계보를 원문에 적으며, 켤 때 정한 일수 안에 처음 본 기사를 재평가 대기에 넣는다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 재평가 기간이 늦추는 새 기사([ADR-0347](0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md))
 - 날짜: 2026-11-02
 - 근거: [이슈 #71](https://github.com/Theia0382/yozm-news/issues/71) — 기점 `550bf48` 의 태그 체계 버전 저장(버전 1 만 만드는 팩터리 · 활성 표시를 바꾸는 쓰기 없음), 평가 회차(회차 앞에서 활성 버전을 한 번 읽고 토큰만 보고 대기 행을 지움), 결과 조회(가장 큰 버전 번호), 평가 대기의 넣기(`ON CONFLICT DO NOTHING`)를 확인. 구현 `f70f0d7`(태그 종류 공개) · `4f19256`(원문 계보 절 · 원문 쓰기) · `a9503d9`(버전 대조 · 계보 해석) · `b483cd9`(계보 테이블 · 다음 버전 저장) · `93f4b9e`(처음 본 시각 조회) · `4633031`(확인 · 활성화 · 재평가 · 회차의 활성 확인) · `c0d56c1`(운영자 HTTP)
 - 관련: [ADR-0002](0002-shared-evaluation-with-jev.md)(체계를 바꾸면 최근 기사만 재평가 — 그 방식을 이 ADR 이 정한다), [ADR-0010](0010-tag-taxonomy.md)(태그 체계 · 사용자 선호를 태그 키로 연결), [ADR-0054](0054-tag-set-seeded-from-default-yaml-on-first-start-with-immutable-versions-and-question-templates.md)(기본 체계 파일 · 버전 내용 불변 — 자기 체계는 체계 변경으로), [ADR-0055](0055-tag-and-store-thresholds-change-with-history-and-warn-instead-of-blocking.md)(태그 기준 · 저장 기준은 버전의 설정), [ADR-0029](0029-indefinite-summary-retention-with-optional-deletion.md)(재평가는 요약문이 남은 기사만), [ADR-0058](0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md) · [ADR-0059](0059-evaluation-job-limits-concurrency-and-retries-with-db-leases-on-queue-rows.md)(평가 대기 · 회차), [ADR-0045](0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)(운영자 HTTP 는 `admin`)
@@ -29,6 +29,7 @@
 
 - 운영자는 활성 버전의 원문을 받아 고치고, 확인으로 변경 목록 · 계보 없이 지운 키 · 재평가 건수를 본 뒤 켠다. 확인과 활성화 사이에 다른 활성화가 끼어도 활성화가 다시 대조하므로 틀린 버전이 켜지지 않는다.
 - 기본값 0 이라 아무것도 정하지 않은 전환은 비용이 들지 않는다. 이슈가 처음 적은 "기본 7일"과 다르다 — 문구만 고친 전환이 운영자도 모르게 재평가 비용과 새 기사 지연을 만들지 않게 했다.
+> 부분 대체(둘째 문장) — [ADR-0347](0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md). 지금 상태: [`operations/tag-sets.md`](../operations/tag-sets.md) 재평가 기간
 - 기간을 정하면 그 기간의 재평가 행이 새 기사보다 먼저 평가된다. 하루 기간마다 새 기사가 약 80분 늦어진다(하루 4,000건 · 회차당 50건 추정 — 측정 전). 새 기사를 먼저 평가하는 순서는 대기 행에 구별 열과 점유 순서 변경이 필요해 택하지 않았다 — 확인이 재평가 건수를 먼저 보인다.
 - 확인 · 활성화 결과를 결정하는 판정이 하나라 두 결과가 갈리지 않는다. 원문의 태그 기준 · 저장 기준만 고친 원문은 "같은 내용"으로 끝난다 — 그 변경은 태그 기준 · 저장 기준 운영(ADR-0055)으로 한다.
 - 결과 쓰기마다 표 잠금 하나가 는다. `SHARE` 끼리는 막지 않고 전환과만 충돌한다. 전환은 잠금을 잡은 채 재평가 행을 넣는다(30일이면 약 120,000행).

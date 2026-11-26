@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.OptionalInt;
 import java.util.UUID;
 
+import net.yozmnews.storyline.domain.backlog.Backlog;
+
 /**
  * 관계 대기 저장소 — docs/specs/storyline.md §4 · storyline-R26 · storyline-R31.
  */
@@ -46,5 +48,8 @@ public interface RelationQueueRepository {
 
 	/** 대기 행을 지운다 */
 	void delete(long storylineId);
+
+	/** 대기에 남은 스토리라인 수와 그 가운데 판정 가능 시각이 {@code now} 뒤인 것 */
+	Backlog backlog(Instant now);
 
 }

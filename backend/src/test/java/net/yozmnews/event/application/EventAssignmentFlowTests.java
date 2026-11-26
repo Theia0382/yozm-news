@@ -16,6 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
+import net.yozmnews.RoundRunRows;
 import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
@@ -41,10 +42,12 @@ import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
 import net.yozmnews.platform.AppClock;
+import net.yozmnews.platform.RoundRunner;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -75,6 +78,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 @ExtendWith(OutputCaptureExtension.class)
 class EventAssignmentFlowTests {
+
+	@Autowired
+	RoundRunner runner;
 
 	private static final Instant NOW = Instant.parse("2026-11-06T00:00:00Z");
 
@@ -470,6 +476,97 @@ class EventAssignmentFlowTests {
 		assertThat(assignment(banded)).containsEntry("decided_by", "FORMULA").containsEntry("judgement_id", null);
 	}
 
+	@Test
+	@Timeout(60)
+	void aRoundTakesAnotherBatchWhileTheQueueHasMore() {
+		for (int i = 0; i < AssignmentSchedule.BATCH_SIZE + 1; i++) {
+			queued("[1,0]");
+		}
+
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
+
+		assertThat(queueRows()).isZero();
+		assertThat(this.jdbc.sql("select count(*) from event_articles").query(Long.class).single()).isEqualTo(33);
+	}
+
+	@Test
+	@Timeout(60)
+	void aQueueOfExactlyTheLimitIsEmptiedByOneRound() {
+		for (int i = 0; i < 32; i++) {
+			queued("[1,0]");
+		}
+
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
+
+		assertThat(queueRows()).isZero();
+		assertThat(this.jdbc.sql("select count(*) from event_articles").query(Long.class).single()).isEqualTo(32);
+	}
+
+	@Test
+	@Timeout(60)
+	void aFullBatchIsFollowedByAnEmptyOneAndTheRoundIsRecorded() {
+		RoundRunRows.clear(this.jdbc);
+		for (int i = 0; i < 32; i++) {
+			queued("[1,0]");
+		}
+
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
+
+		assertThat(queueRows()).isZero();
+		assertThat(RoundRunRows.of(this.jdbc, "event-assignment")).containsExactly("2 · 32 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void aShortBatchEndsTheRound() {
+		RoundRunRows.clear(this.jdbc);
+		for (int i = 0; i < 31; i++) {
+			queued("[1,0]");
+		}
+
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
+
+		assertThat(queueRows()).isZero();
+		assertThat(RoundRunRows.of(this.jdbc, "event-assignment")).containsExactly("1 · 31 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void aTransientFailureEndsTheRoundAfterItsBatch() {
+		firstEvent();
+		RoundRunRows.clear(this.jdbc);
+		for (int i = 0; i < AssignmentSchedule.BATCH_SIZE + 1; i++) {
+			queued("[4,3]");
+		}
+
+		round(new Scripted(query -> new MembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "시간 초과"))).run();
+
+		// 첫 뭉치(32)는 일시 실패로 미뤄졌고, 다음 뭉치를 가져오지 않아 하나가 시도 없이 남는다
+		assertThat(this.jdbc.sql("select attempts, count(*) from event_assignment_queue group by attempts order by attempts")
+			.query((rs, row) -> rs.getInt(1) + ":" + rs.getLong(2))
+			.list()).containsExactly("0:1", "1:32");
+		assertThat(RoundRunRows.of(this.jdbc, "event-assignment")).containsExactly("1 · 32 · BACKED_OFF");
+	}
+
+	@Test
+	@Timeout(60)
+	void anUnavailableEvaluatorEndsTheRoundAfterItsBatch() {
+		firstEvent();
+		RoundRunRows.clear(this.jdbc);
+		for (int i = 0; i < AssignmentSchedule.BATCH_SIZE + 1; i++) {
+			queued("[4,3]");
+		}
+
+		round(new Scripted(query -> new MembershipJudgement.Failed(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, "키 무효")))
+			.run();
+
+		assertThat(queueRows()).isEqualTo(33);
+		assertThat(this.jdbc.sql("select count(*) from event_assignment_queue where lease_token is null")
+			.query(Long.class)
+			.single()).isEqualTo(33);
+		assertThat(RoundRunRows.of(this.jdbc, "event-assignment")).containsExactly("1 · 32 · STOPPED");
+	}
+
 	/** 핵심 말 없는 [1,0] 기사로 사건 하나를 연다 */
 	private long firstEvent() {
 		long first = queued("[1,0]");
@@ -487,7 +584,7 @@ class EventAssignmentFlowTests {
 
 	private AssignmentRound round(EventMembership membership, AppClock clock) {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments,
-				this.criteriaHistory, CRITERIA, this.articles, membership, MODEL_A, this.transaction, clock);
+				this.criteriaHistory, CRITERIA, this.articles, membership, MODEL_A, this.transaction, clock, this.runner);
 	}
 
 	private long queued(String vector, String... terms) {

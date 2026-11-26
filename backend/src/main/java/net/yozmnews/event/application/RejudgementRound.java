@@ -27,6 +27,9 @@ import net.yozmnews.event.domain.event.LockedEvent;
 import net.yozmnews.event.domain.event.RejudgeTarget;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
+import net.yozmnews.platform.BatchEnd;
+import net.yozmnews.platform.RoundBatch;
+import net.yozmnews.platform.RoundRunner;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,14 +45,18 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 배정 하나마다 짧은 트랜잭션에서 배정 행 → 사건(지금 사건 포함, ID 순)을 잠그고 결과를 적용한다 — 판정은 {@link AssignmentRule}, 적용
  * 방식은 {@link Reassignment} 가 정한다. 잠근 지금 사건이 열려 있지 않으면 기준만 새것으로 적는다. 그 기사가 사건을 열었는지는 배정의
  * 표지로 안다. 옮기거나 떼어 낼 때의 기사 벡터는 지금 임베더가 아니라 그 배정이 속한 사건의 모델 버전 표현이고, 없으면(보존 기간이
- * 지나 지움) 옮기지 못해 기준만 새것으로 적는다. 회차마다 닫힌 사건의 배정은 {@link AssignmentSchedule#CLOSED_KEEP_BATCH} 건,
- * 하나씩 다시 판정하는 배정은 {@link AssignmentSchedule#REJUDGE_BATCH} 건까지 한다. 기준 등록 뒤의 예외를 밖으로 던지지 않는다 — 기준
- * 등록의 예외는 회차 밖으로 나가고 다음 회차가 다시 돈다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
+ * 지나 지움) 옮기지 못해 기준만 새것으로 적는다. 뭉치 하나가 닫힌 사건의 배정은 {@link AssignmentSchedule#CLOSED_KEEP_BATCH} 건,
+ * 하나씩 다시 판정하는 배정은 {@link AssignmentSchedule#REJUDGE_BATCH} 건까지 하고, 회차는 {@link RoundRunner} 로 뭉치를 되풀이한다 —
+ * 기준 이력은 회차에 한 번 등록한다. 기준 등록 뒤의 예외를 밖으로 던지지 않는다 — 기준 등록의 예외는 회차 밖으로 나가고 다음 회차가 다시
+ * 돈다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
  */
 @Service
 public class RejudgementRound {
 
 	private static final Logger logger = LoggerFactory.getLogger(RejudgementRound.class);
+
+	/** 회차 이름 — 회차 기록 · 처리 현황의 키 */
+	static final String NAME = "event-rejudgement";
 
 	private final EventArticleRepository assignments;
 
@@ -67,17 +74,19 @@ public class RejudgementRound {
 
 	private final InstantSource clock;
 
+	private final RoundRunner runner;
+
 	@Autowired
 	RejudgementRound(EventArticleRepository assignments, EventRepository events, MatchFeaturesRepository features,
 			CriteriaRepository criteriaHistory, AssignmentSettings settings, EventShrinkWriter shrinks,
-			TransactionTemplate transaction, InstantSource clock) {
-		this(assignments, events, features, criteriaHistory, settings.criteria(), shrinks, transaction, clock);
+			TransactionTemplate transaction, InstantSource clock, RoundRunner runner) {
+		this(assignments, events, features, criteriaHistory, settings.criteria(), shrinks, transaction, clock, runner);
 	}
 
 	/** 시험이 기준을 넣는다 */
 	RejudgementRound(EventArticleRepository assignments, EventRepository events, MatchFeaturesRepository features,
 			CriteriaRepository criteriaHistory, AssignmentCriteria criteria, EventShrinkWriter shrinks,
-			TransactionTemplate transaction, InstantSource clock) {
+			TransactionTemplate transaction, InstantSource clock, RoundRunner runner) {
 		this.assignments = assignments;
 		this.events = events;
 		this.features = features;
@@ -86,16 +95,27 @@ public class RejudgementRound {
 		this.shrinks = shrinks;
 		this.transaction = transaction;
 		this.clock = clock;
+		this.runner = runner;
 	}
 
-	/** 회차 하나를 돈다 */
+	/** 회차 하나를 돈다 — 뭉치를 회차 규칙까지 되풀이한다(docs/specs/platform.md 반복 회차) */
 	public void run() {
-		long criteriaId = Objects.requireNonNull(
+		CriteriaOnce criteriaId = new CriteriaOnce();
+		this.runner.run(NAME, () -> batch(criteriaId));
+	}
+
+	/**
+	 * 뭉치 하나 — 기준 이력을 회차에 한 번 등록한다. 닫힌 사건의 배정 · 하나씩 다시 판정하는 배정 가운데 하나라도 상한까지 했으면 뭉치를 다 채운
+	 * 것이다.
+	 */
+	RoundBatch batch(CriteriaOnce criteria) {
+		long criteriaId = criteria.get(() -> Objects.requireNonNull(
 				this.transaction.execute(status -> this.criteriaHistory.register(this.criteria, this.clock.instant())),
-				"criteriaId");
+				"criteriaId"));
+		int kept = 0;
 		int rejudged = 0;
 		try {
-			int kept = Objects.requireNonNull(this.transaction.execute(
+			kept = Objects.requireNonNull(this.transaction.execute(
 					status -> this.assignments.keepClosed(criteriaId, AssignmentSchedule.CLOSED_KEEP_BATCH)), "kept");
 			if (kept > 0) {
 				logger.info("닫힌 사건의 배정 {}건은 기준만 새것으로 적었다", kept);
@@ -117,12 +137,14 @@ public class RejudgementRound {
 			}
 		}
 		catch (RuntimeException ex) {
-			logger.error("재판정 회차가 예상하지 못한 오류로 멈췄다 — 이번 회차에 다시 판정한 배정 {}건", rejudged, ex);
-			return;
+			logger.error("재판정 회차가 예상하지 못한 오류로 멈췄다 — 이번 뭉치에 다시 판정한 배정 {}건", rejudged, ex);
+			return RoundBatch.stopped(kept + rejudged);
 		}
 		if (rejudged > 0) {
 			logger.info("배정 {}건을 지금 기준으로 다시 판정했다", rejudged);
 		}
+		boolean full = rejudged >= AssignmentSchedule.REJUDGE_BATCH || kept >= AssignmentSchedule.CLOSED_KEEP_BATCH;
+		return new RoundBatch(kept + rejudged, full ? BatchEnd.FULL : BatchEnd.DRAINED);
 	}
 
 	/** 잠근 배정 하나를 다시 판정해 적용한다 — 트랜잭션 안 */

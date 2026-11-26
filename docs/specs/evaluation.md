@@ -1363,7 +1363,7 @@ evaluation-R54 · R58 · R59 는 태그 판정만이 아니라 모든 판정(태
 
 - **evaluation-R53** — 평가기 시간의 정본은 `EvaluatorTiming` 이다. 하위 규칙: evaluation-R98 · R99 · R100
 - **evaluation-R98** — 평가기 요청 하나의 마감은 15초(측정 전)이고, 상수는 `REQUEST_DEADLINE` 이다. 판정 한 번은 요청을 많아야 둘(본 요청 · 문맥 초과의 확인 요청) 보내고 다시 보내지 않으므로, 판정 한 번이 평가기를 기다리는 가장 긴 시간은 30초(측정 전)이고, 상수는 `LONGEST_JUDGEMENT` 다
-- **evaluation-R99** — 판정을 부르는 회차는 점유 기간을 `LONGEST_JUDGEMENT` × 묶음 크기 × 항목마다 판정 수 + 여유로 계산한다. 그런 회차는 아래다
+- **evaluation-R99** — 판정을 부르는 회차는 점유 기간을 `LONGEST_JUDGEMENT` × 뭉치 크기 × 항목마다 판정 수 + 여유로 계산한다. 점유는 뭉치마다다([platform-R130](platform.md#반복-회차)). 그런 회차는 아래다
   - 평가 대기: [tag-R19](tag.md#평가-대기와-평가-작업)
   - 사건 배정: [event-R16](event.md#사건-배정)
   - 스토리라인 잇기: [storyline-R3](storyline.md#잇기-대기와-회차)

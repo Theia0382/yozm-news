@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.domain.backlog.Backlog;
 
 /**
  * 배정 대기 저장소 — docs/specs/event.md §4
@@ -45,5 +46,8 @@ public interface AssignmentQueueRepository {
 
 	/** 기사들의 대기 행을 지운다 — 지운 기사 따르기 */
 	void delete(Collection<ArticleId> articleIds);
+
+	/** 대기에 남은 기사 수와 그 가운데 다시 시도할 시각이 {@code now} 뒤인 것 */
+	Backlog backlog(Instant now);
 
 }

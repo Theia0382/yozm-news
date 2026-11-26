@@ -14,7 +14,7 @@ import org.jspecify.annotations.Nullable;
  * @param orderAt 순서 키 — 사건의 첫 기사 시각, 지워졌거나 합쳐진 사건이면 null(맨 앞)
  * @param notifications 다시 알림 수 — 처리 중에 다시 온 알림을 가른다
  * @param failures 판정이 예상 못한 예외로 실패한 수 — 평가기 일시 실패는 세지 않는다
- * @param lease 회차의 점유 — 없으면 null
+ * @param lease 뭉치의 점유 — 없으면 null
  */
 public record PendingEvent(long eventId, @Nullable Instant orderAt, int notifications, int failures,
 		@Nullable LinkingLease lease) {

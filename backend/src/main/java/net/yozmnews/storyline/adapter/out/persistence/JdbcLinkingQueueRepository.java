@@ -12,6 +12,7 @@ import java.util.OptionalInt;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import net.yozmnews.storyline.domain.backlog.Backlog;
 import net.yozmnews.storyline.domain.queue.LinkingLease;
 import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
 import net.yozmnews.storyline.domain.queue.PendingEvent;
@@ -172,6 +173,17 @@ class JdbcLinkingQueueRepository implements LinkingQueueRepository {
 				(token != null)
 						? new LinkingLease(token, rs.getObject("lease_expires_at", OffsetDateTime.class).toInstant())
 						: null);
+	}
+
+	@Override
+	public Backlog backlog(Instant now) {
+		return this.jdbc.sql("""
+				select count(*) as waiting, count(*) filter (where retry_at > :now) as deferred
+				from storyline_linking_queue
+				""")
+			.param("now", timestamp(now))
+			.query((rs, row) -> new Backlog(rs.getLong("waiting"), rs.getLong("deferred")))
+			.single();
 	}
 
 	private static OffsetDateTime timestamp(Instant instant) {

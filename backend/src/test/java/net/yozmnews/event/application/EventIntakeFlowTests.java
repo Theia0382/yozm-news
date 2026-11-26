@@ -18,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import net.yozmnews.RoundRunRows;
 import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
@@ -38,13 +39,16 @@ import net.yozmnews.event.domain.feature.KeyTermExtractor;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
+import net.yozmnews.event.domain.intake.IntakeSchedule;
 import net.yozmnews.platform.AppClock;
+import net.yozmnews.platform.RoundRunner;
 import net.yozmnews.source.SourceDeleted;
 import net.yozmnews.source.SourceId;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -74,6 +78,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 @ExtendWith(OutputCaptureExtension.class)
 class EventIntakeFlowTests {
+
+	@Autowired
+	RoundRunner runner;
 
 	private static final Instant NOW = Instant.parse("2026-11-05T01:00:00Z");
 
@@ -517,6 +524,90 @@ class EventIntakeFlowTests {
 				+ System.lineSeparator());
 	}
 
+	@Test
+	@Timeout(60)
+	void aRoundTakesAnotherBatchWhileTheQueueHasMore() {
+		for (int i = 0; i < IntakeSchedule.BATCH_SIZE + 1; i++) {
+			enqueued("뭉치 시험 기사 " + i, null);
+		}
+
+		round(new Recording()).run();
+
+		assertThat(queueRows()).isZero();
+		assertThat(featureRows()).isEqualTo(65);
+	}
+
+	@Test
+	@Timeout(60)
+	void aQueueOfExactlyTheLimitIsEmptiedByOneRound() {
+		for (int i = 0; i < 64; i++) {
+			enqueued("뭉치 시험 기사 " + i, null);
+		}
+
+		round(new Recording()).run();
+
+		assertThat(queueRows()).isZero();
+		assertThat(featureRows()).isEqualTo(64);
+	}
+
+	@Test
+	@Timeout(60)
+	void aFullBatchIsFollowedByAnEmptyOneAndTheRoundIsRecorded() {
+		RoundRunRows.clear(this.jdbc);
+		for (int i = 0; i < 64; i++) {
+			enqueued("뭉치 시험 기사 " + i, null);
+		}
+
+		round(new Recording()).run();
+
+		assertThat(queueRows()).isZero();
+		assertThat(RoundRunRows.of(this.jdbc, "event-features")).containsExactly("2 · 64 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void aShortBatchEndsTheRound() {
+		RoundRunRows.clear(this.jdbc);
+		for (int i = 0; i < 63; i++) {
+			enqueued("뭉치 시험 기사 " + i, null);
+		}
+
+		round(new Recording()).run();
+
+		assertThat(queueRows()).isZero();
+		assertThat(RoundRunRows.of(this.jdbc, "event-features")).containsExactly("1 · 63 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void anUnavailableEmbedderEndsTheRoundAfterItsFirstBatch() {
+		RoundRunRows.clear(this.jdbc);
+		for (int i = 0; i < IntakeSchedule.BATCH_SIZE + 1; i++) {
+			enqueued("뭉치 시험 기사 " + i, null);
+		}
+		TextEmbedding unavailable = new TextEmbedding() {
+
+			@Override
+			public EmbedderInfo info() {
+				return EventEmbeddings.hashing().info();
+			}
+
+			@Override
+			public EmbeddingResult embed(List<String> texts) {
+				return new EmbeddingFailure(EmbedderFailureKind.EMBEDDER_UNAVAILABLE, "키가 틀렸다");
+			}
+
+		};
+
+		round(unavailable).run();
+
+		assertThat(queueRows()).isEqualTo(65);
+		assertThat(this.jdbc.sql("select count(*) from event_intake_queue where lease_token is null")
+			.query(Long.class)
+			.single()).isEqualTo(65);
+		assertThat(RoundRunRows.of(this.jdbc, "event-features")).containsExactly("1 · 64 · STOPPED");
+	}
+
 	private EventIntakeRound round(TextEmbedding embedding) {
 		return round(this.features, embedding);
 	}
@@ -527,7 +618,7 @@ class EventIntakeFlowTests {
 
 	private EventIntakeRound round(MatchFeaturesRepository repository, TextEmbedding embedding, AppClock clock) {
 		return new EventIntakeRound(this.queue, repository, this.assignmentQueue, this.articles, this.keyTerms,
-				embedding, this.transaction, clock);
+				embedding, this.transaction, clock, this.runner);
 	}
 
 	private EventIntakeListener listener() {

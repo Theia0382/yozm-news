@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.UUID;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.tag.EvaluationQueueCounts;
 
 /**
  * 평가 대기 저장소 — docs/specs/tag.md §4
@@ -49,7 +48,7 @@ public interface EvaluationQueueRepository {
 	/** 기사들의 대기 행을 지운다 — 지운 기사를 따른다 */
 	void delete(Collection<ArticleId> articleIds);
 
-	/** 대기 · 실패 건수 */
-	EvaluationQueueCounts counts();
+	/** 대기 · 실패 · 일시 실패 · 미룬 건수 — 미룬 것은 평가 가능 시각이 {@code now} 뒤인 대기다 */
+	EvaluationBacklog counts(Instant now);
 
 }

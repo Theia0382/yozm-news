@@ -11,7 +11,7 @@ import org.jspecify.annotations.Nullable;
  * 사건 묶기 대기 행 하나와 그 전이 — docs/specs/event.md §4 · event-R6.
  *
  * @param enqueuedAt 대기에 넣은 시각 — 회차가 이 순서로 점유한다
- * @param lease 회차의 점유 — 없으면 null
+ * @param lease 뭉치의 점유 — 없으면 null
  */
 public record PendingArticle(ArticleId articleId, Instant enqueuedAt, @Nullable IntakeLease lease) {
 

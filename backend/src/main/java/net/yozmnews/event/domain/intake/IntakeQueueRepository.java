@@ -7,6 +7,7 @@ import java.util.OptionalInt;
 import java.util.UUID;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.domain.backlog.Backlog;
 
 /**
  * 사건 묶기 대기 저장소 — docs/specs/event.md §4
@@ -52,5 +53,8 @@ public interface IntakeQueueRepository {
 
 	/** 기사들의 대기 행을 지운다 — 지운 기사 따르기 */
 	void delete(Collection<ArticleId> articleIds);
+
+	/** 대기에 남은 기사 수 — 점유 중 포함. 미루는 칸이 없어 미룬 수는 0 이다 */
+	Backlog backlog();
 
 }

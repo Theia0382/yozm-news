@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -16,6 +17,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import net.yozmnews.RoundRunRows;
 import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
@@ -32,16 +34,19 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventsChanged;
 import net.yozmnews.event.EventsRemoved;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
+import net.yozmnews.event.domain.assignment.AssignmentSchedule;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.event.RejudgeTarget;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
+import net.yozmnews.platform.RoundRunner;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -65,6 +70,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @RecordApplicationEvents
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class RejudgementFlowTests {
+
+	@Autowired
+	RoundRunner runner;
 
 	private static final Instant NOW = Instant.parse("2026-11-06T00:00:00Z");
 
@@ -320,7 +328,7 @@ class RejudgementFlowTests {
 		};
 		RejudgementRound round = new RejudgementRound(pausing, this.events, this.features, this.criteriaHistory,
 				new AssignmentCriteria(Duration.ofHours(72), 0.80, 0.55, 0.40, 0.80), this.shrinks, this.transaction,
-				(InstantSource) () -> LATER);
+				(InstantSource) () -> LATER, this.runner);
 		try {
 			CompletableFuture<Void> rejudging = CompletableFuture.runAsync(round::run);
 			assertThat(moved.await(10, TimeUnit.SECONDS)).isTrue();
@@ -482,6 +490,111 @@ class RejudgementFlowTests {
 		assertThat((Double) assignment(b).get("score")).isCloseTo(0.60, within(1e-9));
 	}
 
+	@Test
+	@Timeout(60)
+	void aRoundTakesAnotherBatchWhileAssignmentsAreLeft() {
+		assignedApart(AssignmentSchedule.REJUDGE_BATCH + 1);
+
+		rejudge(STORE_RAISED);
+
+		assertThat(notUnder(STORE_RAISED)).isZero();
+	}
+
+	@Test
+	@Timeout(60)
+	void exactlyTheLimitOfAssignmentsIsRejudgedByOneRound() {
+		assignedApart(200);
+
+		rejudge(STORE_RAISED);
+
+		assertThat(notUnder(STORE_RAISED)).isZero();
+	}
+
+	@Test
+	@Timeout(60)
+	void aFullBatchIsFollowedByAnEmptyOneAndTheRoundIsRecorded() {
+		assignedApart(200);
+		RoundRunRows.clear(this.jdbc);
+
+		rejudge(STORE_RAISED);
+
+		assertThat(notUnder(STORE_RAISED)).isZero();
+		assertThat(RoundRunRows.of(this.jdbc, "event-rejudgement")).containsExactly("2 · 200 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void aShortBatchEndsTheRound() {
+		assignedApart(199);
+		RoundRunRows.clear(this.jdbc);
+
+		rejudge(STORE_RAISED);
+
+		assertThat(notUnder(STORE_RAISED)).isZero();
+		assertThat(RoundRunRows.of(this.jdbc, "event-rejudgement")).containsExactly("1 · 199 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void anUnexpectedFailureEndsTheRoundAfterItsBatch() {
+		assignedApart(3);
+		RoundRunRows.clear(this.jdbc);
+		EventArticleRepository failing = new ForwardingEventArticleRepository(this.assignments) {
+
+			@Override
+			public List<RejudgeTarget> lockRejudgeTargets(long criteriaId, int limit) {
+				throw new IllegalStateException("잠금 실패");
+			}
+
+		};
+
+		rejudge(STORE_RAISED, LATER, failing);
+
+		assertThat(notUnder(STORE_RAISED)).isEqualTo(3);
+		assertThat(RoundRunRows.of(this.jdbc, "event-rejudgement")).containsExactly("1 · 0 · STOPPED");
+	}
+
+	/** 저장 기준만 올린 기준 — 후보가 없는 배정의 판정은 그대로이고 기준 ID 만 바뀐다 */
+	private static final AssignmentCriteria STORE_RAISED = new AssignmentCriteria(Duration.ofHours(72), 0.80, 0.55,
+			0.41, 0.50);
+
+	/**
+	 * 서로 떨어진 기사 {@code count} 개를 배정한다 — 기사마다 한 축만 1 인 벡터라 서로 후보가 아니어서 모두 산식으로 새 사건을 연다(묻지 않는다)
+	 */
+	private void assignedApart(int count) {
+		for (int i = 0; i < count; i++) {
+			long article = EventArticles.insert(this.jdbc, "재판정 뭉치 시험 기사", null);
+			float[] axis = new float[count];
+			axis[i] = 1;
+			this.jdbc.sql("""
+					insert into article_match_features (article_id, model_version, embedding, entities, created_at)
+					values (:article, 'model-a', cast(:vector as vector), '{}', :now)
+					""")
+				.param("article", article)
+				.param("vector", Arrays.toString(axis).replace(" ", ""))
+				.param("now", NOW.atOffset(ZoneOffset.UTC))
+				.update();
+			this.queue.enqueue(new ArticleId(article), NOW);
+		}
+		EventMembership neverAsked = query -> {
+			throw new AssertionError("묻지 않아야 한다: " + query);
+		};
+		new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments, this.criteriaHistory,
+				CRITERIA, this.articles, neverAsked, EventEmbeddings.modelOnly("model-a"), this.transaction,
+				TestClocks.fixed(NOW), this.runner)
+			.run();
+		assertThat(count("select count(*) from event_articles")).isEqualTo(count);
+	}
+
+	/** 기준이 {@code criteria} 가 아닌 배정 수 */
+	private long notUnder(AssignmentCriteria criteria) {
+		long id = this.criteriaHistory.find(criteria).orElse(EventArticleRepository.NO_CRITERIA);
+		return this.jdbc.sql("select count(*) from event_articles where criteria_id <> :id")
+			.param("id", id)
+			.query(Long.class)
+			.single();
+	}
+
 	/** 병합을 흉내 낸다 — 합쳐질 사건의 기사를 남는 사건으로 옮기고, 합쳐질 사건은 남는 사건을 가리킨다 */
 	private void mergeInto(long merged, long survivor, long article) {
 		this.jdbc.sql("update event_articles set event_id = :survivor where article_id = :article")
@@ -566,7 +679,7 @@ class RejudgementFlowTests {
 		};
 		new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments, this.criteriaHistory,
 				CRITERIA, this.articles, membership, EventEmbeddings.modelOnly("model-a"), this.transaction,
-				TestClocks.fixed(NOW))
+				TestClocks.fixed(NOW), this.runner)
 			.run();
 		return article;
 	}
@@ -581,7 +694,7 @@ class RejudgementFlowTests {
 
 	private void rejudge(AssignmentCriteria criteria, Instant now, EventArticleRepository assignments) {
 		new RejudgementRound(assignments, this.events, this.features, this.criteriaHistory, criteria, this.shrinks,
-				this.transaction, (InstantSource) () -> now)
+				this.transaction, (InstantSource) () -> now, this.runner)
 			.run();
 	}
 

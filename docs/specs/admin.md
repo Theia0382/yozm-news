@@ -16,6 +16,7 @@
 - **이벤트 발행** — 남겨진 이벤트 발행의 목록 · 다시 처리 · 폐기
 - **태그 체계** — 버전 목록과 버전 원문, 운영자 원문의 확인과 활성화(재평가 기간 포함)
 - **평가 현황** — 기간을 고른 주제별 보도량, 버전 하나의 평가 품질 지표, 지금의 평가 대기 · 일시 실패를 겪은 대기 · 실패 건수
+- **처리 현황** — 반복 작업의 회차마다 남은 수 · 미룬 수 · 최근 1시간 처리량 · 마지막 회차(admin-R69)
 - **평가 검수** — 버전 · 기간의 평가 목록(태그 · 주제 판정 거르기)과 표본, 평가 하나의 상세. 행과 상세에 기사 정보를 맞붙인다(admin-R6)
 - **태그 기준 · 저장 기준** — 지금 값 · 어긋난 상태 · 이력, 바꾸기 전 미리보기, 변경
 - **빠진 태그 채움** — 채울 기간(일)의 확인과 요청, 채움 목록과 진행 · 결과
@@ -102,6 +103,7 @@ HTTP 엔드포인트는 모두 운영자 경로다. `ADMIN` 계정 세션이나 
 | `GET /api/admin/topic-coverage` | 주제별 보도량 | [tag-R28](tag.md#평가-현황--주제별-보도량) · tag-R30 · admin-R5 · admin-R21 · admin-R22 |
 | `GET /api/admin/evaluation-overview` | 평가 현황 | [tag-R29](tag.md#평가-현황--주제별-보도량) · admin-R5 · admin-R13 · admin-R21 |
 | `GET /api/admin/evaluation-queue` | 지금의 평가 대기 · 그 가운데 일시 실패를 겪은 대기 · 실패 건수(`waiting` · `retrying` · `rejected`) | admin-R5 |
+| `GET /api/admin/processing` | 처리 현황 — 회차마다 남은 수 · 미룬 수 · 최근 1시간 처리 수 · 회차 수 · 마지막 회차(없으면 `null`) | admin-R69 |
 | `GET /api/admin/evaluations` | 평가 목록 | [tag-R33](tag.md#평가-검수--기준-미리보기) · admin-R6 · admin-R13 · admin-R21 ~ admin-R23 |
 | `GET /api/admin/evaluations/{id}` | 평가 하나의 상세 | admin-R6 · admin-R13 |
 | `GET /api/admin/evaluation-samples` | 표본(행 모양은 목록과 같다) | [tag-R34](tag.md#평가-검수--기준-미리보기) · admin-R6 · admin-R13 · admin-R21 · admin-R22 |
@@ -256,6 +258,7 @@ sequenceDiagram
 | 이벤트 발행 | `AdminEventPublicationController` | `GET /api/admin/event-publications` · `POST …/resubmission` · `POST …/discard` | 목록과 발행별 결과(admin-R1 · admin-R3) |
 | 태그 체계 | `AdminTagSetController` | `GET /api/admin/tag-sets` · `GET …/{id}/text` · `POST /api/admin/tag-set-reviews` · `POST /api/admin/tag-sets` | 버전 목록 · 원문 · 확인 · 활성화(admin-R1 ~ admin-R3) |
 | 평가 현황 | `AdminEvaluationController` | `GET /api/admin/topic-coverage` · `GET /api/admin/evaluation-overview` · `GET /api/admin/evaluation-queue` | 보도량 · 평가 현황 · 대기 건수(admin-R2 · admin-R3 · admin-R5) |
+| 처리 현황 | `AdminProcessingController` | `GET /api/admin/processing` | `event` · `storyline` · `tag` 의 처리 현황 조회를 이 순서로 이어 붙인다(admin-R69) |
 | 평가 검수 | `AdminEvaluationReviewController` | `GET /api/admin/evaluations` · `GET …/{id}` · `GET /api/admin/evaluation-samples` | 목록 · 표본 · 상세에 기사 정보를 맞붙인다(admin-R1 ~ admin-R3 · admin-R6) |
 | 태그 기준 · 저장 기준 | `AdminThresholdController` | `GET /api/admin/thresholds` · `POST /api/admin/threshold-previews` · `PUT /api/admin/thresholds/{kind}` | 상태 · 미리보기 · 변경(admin-R1 · admin-R3) |
 | 사건 조회 | `AdminEventController` | `GET /api/admin/events` · `GET /api/admin/events/{id}` | 사건 목록과 사건 상세(admin-R2 · admin-R3 · admin-R6 · admin-R7) |
@@ -545,6 +548,10 @@ sequenceDiagram
 
 - **admin-R5** — 평가 현황 · 주제별 보도량 · 대기 건수 응답은 `tag` 의 결과를 옮기기만 한다. 비율은 공개 결과의 값이라 다시 나누지 않고, 평가가 없으면 `null` 이다(tag-R29). ID 의 꼴은 admin-R28, 날짜 범위의 상한은 admin-R29, 트랜잭션은 admin-R30 이다
 
+### 처리 현황
+
+- **admin-R69** — 처리 현황 응답은 `event` · `storyline` · `tag` 의 처리 현황 조회(`EventProcessing` · `StorylineProcessing` · `TagProcessing`)를 이 순서로 이어 붙여 옮기기만 한다 — 화면 표의 행 순서다. 회차마다 이름 · 남은 수 · 미룬 수 · 최근 1시간 처리 수(`recentHandled`) · 회차 수(`recentRuns`) · 마지막 회차(시작 · 끝 · 뭉치 수 · 처리 수 · 끝난 까닭 `endedBy`)를 내고, 회차 기록이 없으면 마지막 회차는 `null` 이다. 트랜잭션을 열지 않는다 — 조회의 트랜잭션은 각 모듈이 연다([ADR-0348](../adr/0348-each-round-leaves-a-round-record-in-platform-and-the-operator-screen-shows-backlog-and-recent-throughput-per-round.md))
+
 ### 평가 검수
 
 - **admin-R6** — 운영자 응답이 모듈의 결과에 기사 정보를 맞붙이는 방식을 덮는다. 평가 · 버전 ID 의 꼴과 판정 · 분포의 값 레코드는 admin-R28 이다.
@@ -674,3 +681,4 @@ sequenceDiagram
 | [0251](../adr/0251-the-measurement-clock-starts-only-with-the-measurement-profile-and-a-clock-row-and-moves-forward-through-the-operator-api.md) | 측정용 시계는 profile `measurement` 와 운영자가 넣는 DB 시계 행이 함께 있을 때만 뜨고, 운영자 API 로 앞으로만 넘긴다 |
 | [0301](../adr/0301-the-operator-article-detail-is-one-page-and-one-detail-api-and-article-titles-on-operator-screens-link-to-it.md) | 운영자 기사 상세는 한 페이지 · 상세 API 하나로 기사 · 평가 · 사건 소속을 싣고, 운영자 화면의 기사 제목이 그리로 잇는다 |
 | [0302](../adr/0302-the-article-detail-shows-clustering-evidence-from-the-assignment-its-criteria-stored-candidates-applied-judgement-and-remaining-key-terms.md) | 기사 상세의 사건 묶기 근거는 배정 · 판정에 쓴 기준 · 저장 후보 · 반영한 판정 원본과 남아 있는 표현의 핵심 말이다 |
+| [0348](../adr/0348-each-round-leaves-a-round-record-in-platform-and-the-operator-screen-shows-backlog-and-recent-throughput-per-round.md) | 회차마다 회차 기록을 남기고, 운영자 화면 처리 현황이 회차마다 밀린 수와 최근 1시간 처리량을 보인다 |

@@ -4,15 +4,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import net.yozmnews.RoundRunRows;
 import net.yozmnews.TestClocks;
+import net.yozmnews.TestClocks.MovableClock;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
@@ -25,6 +29,7 @@ import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventTermCounts;
+import net.yozmnews.platform.RoundRunner;
 import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.storyline.domain.linking.LinkingAskedRepository;
 import net.yozmnews.storyline.domain.linking.LinkingCriteria;
@@ -36,6 +41,7 @@ import net.yozmnews.storyline.domain.storyline.StorylineRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -69,6 +75,9 @@ class LinkingBandFlowTests {
 	private static final LinkingCriteria BANDED = new LinkingCriteria(Duration.ofDays(14), 0.80, 0.95, 0.50);
 
 	private static final Map<String, Integer> TERMS = Map.of("금리", 1, "물가", 1);
+
+	@Autowired
+	RoundRunner runner;
 
 	@Autowired
 	EventDirectory directory;
@@ -386,6 +395,85 @@ class LinkingBandFlowTests {
 		assertThat(this.storylines.storylinesOf(story.e3())).isEmpty();
 	}
 
+	@Test
+	@Timeout(60)
+	void aTransientFailureEndsTheRoundAfterItsBatch() {
+		storyWithBandEvent();
+		long last = fillersAfterTheStory(30);
+		RoundRunRows.clear(this.jdbc);
+
+		round(new Asking(query -> new StorylineMembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "시험"))).run();
+
+		// 첫 뭉치(사건 셋 · 채움 스물아홉)는 띠 사건의 일시 실패로 끝났다 — 마지막 채움은 손대지 않은 채 남는다
+		assertThat(queued(last)).hasValueSatisfying(row -> assertThat(row).containsEntry("transient_failures", 0)
+			.containsEntry("lease_token", null));
+		assertThat(RoundRunRows.of(this.jdbc, "storyline-linking")).containsExactly("1 · 32 · BACKED_OFF");
+	}
+
+	@Test
+	@Timeout(60)
+	void anUnavailableEvaluatorEndsTheRoundAfterItsBatch() {
+		storyWithBandEvent();
+		long last = fillersAfterTheStory(30);
+		RoundRunRows.clear(this.jdbc);
+		Asking asking = new Asking(
+				query -> new StorylineMembershipJudgement.Failed(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, "시험"));
+
+		round(asking).run();
+
+		assertThat(asking.queries).hasSize(1);
+		assertThat(queued(last)).hasValueSatisfying(row -> assertThat(row).containsEntry("lease_token", null));
+		assertThat(RoundRunRows.of(this.jdbc, "storyline-linking")).containsExactly("1 · 32 · STOPPED");
+	}
+
+	/** 뭉치마다 그 뭉치의 지금으로 점유한다 — 둘째 뭉치(1분 뒤)의 점유 만료는 그 시각 + 50분이다 */
+	@Test
+	@Timeout(60)
+	void eachBatchLeasesFromItsOwnTime() {
+		fillersBeforeTheStory(30);
+		Story story = storyWithBandEvent();
+		MovableClock clock = TestClocks.movable(NOW);
+		AtomicReference<Instant> leasedUntil = new AtomicReference<>();
+		Asking asking = new Asking(query -> {
+			leasedUntil.set(this.jdbc.sql("select lease_expires_at from storyline_linking_queue where event_id = :id")
+				.param("id", story.e3())
+				.query(OffsetDateTime.class)
+				.single()
+				.toInstant());
+			return judged(81, query, 0.3);
+		});
+		LinkingRound round = new LinkingRound(this.queue, this.criteria, BANDED, linker(), asking, this.transaction, clock,
+				this.runner);
+		CriteriaOnce criteria = new CriteriaOnce();
+
+		round.batch(criteria);
+		clock.advance(Duration.ofMinutes(1));
+		round.batch(criteria);
+
+		assertThat(asking.queries).hasSize(1);
+		assertThat(leasedUntil.get()).isEqualTo(Instant.parse("2026-11-10T00:51:00Z"));
+	}
+
+	/** 띠 사건보다 뒤의 채움 사건 {@code count} 개 — 서로 · 이야기와 15일 넘게 떨어져 홀로 남는다. 마지막 사건의 ID 를 낸다 */
+	private long fillersAfterTheStory(int count) {
+		return fillers(Instant.parse("2026-11-21T00:00:00Z"), count);
+	}
+
+	/** 이야기보다 앞의 채움 사건 {@code count} 개 — 서로 · 이야기와 15일 넘게 떨어져 홀로 남는다 */
+	private void fillersBeforeTheStory(int count) {
+		fillers(Instant.parse("2025-06-01T00:00:00Z"), count);
+	}
+
+	private long fillers(Instant first, int count) {
+		long last = 0;
+		for (int i = 0; i < count; i++) {
+			String at = first.plus(Duration.ofDays(15L * i)).toString();
+			last = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[0,1]", 1, at, at, TERMS);
+			this.queue.enqueue(last, Instant.parse(at), NOW);
+		}
+		return last;
+	}
+
 	/** 짝으로 열릴 [1,0] 둘과 그 스토리라인의 띠 안에 드는 [4,3] 하나 — 모두 대기에 넣는다 */
 	private Story storyWithBandEvent() {
 		long a1 = article("서울 시장 선거 개표");
@@ -415,7 +503,7 @@ class LinkingBandFlowTests {
 
 	private LinkingRound round(StorylineMembership membership, Instant at) {
 		return new LinkingRound(this.queue, this.criteria, BANDED, linker(), membership, this.transaction,
-				TestClocks.fixed(at));
+				TestClocks.fixed(at), this.runner);
 	}
 
 	/** 말의 무게를 모두 같게 하고 대표 기사를 시험이 정한 사건 조회로 만든 판정 */

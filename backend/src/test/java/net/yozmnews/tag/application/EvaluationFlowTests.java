@@ -2,6 +2,7 @@ package net.yozmnews.tag.application;
 
 import static net.yozmnews.Latches.awaitQuietly;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.awaitility.Awaitility.await;
 
 import java.math.BigDecimal;
@@ -20,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import net.yozmnews.RoundRunRows;
 import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
@@ -35,17 +37,22 @@ import net.yozmnews.evaluation.TaggingJudgement;
 import net.yozmnews.evaluation.TaggingQuery;
 import net.yozmnews.platform.AppClock;
 import net.yozmnews.platform.ChangeActor;
+import net.yozmnews.platform.RoundBatch;
+import net.yozmnews.platform.RoundQueue;
+import net.yozmnews.platform.RoundRunner;
 import net.yozmnews.tag.ArticleEvaluationView;
 import net.yozmnews.tag.ArticleEvaluations;
 import net.yozmnews.tag.EvaluationAdministration;
 import net.yozmnews.tag.EvaluationQueueCounts;
 import net.yozmnews.tag.MultiTagKind;
 import net.yozmnews.tag.TagProbability;
+import net.yozmnews.tag.TagProcessing;
 import net.yozmnews.tag.TagSetAdministration;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TopicStatus;
 import net.yozmnews.tag.domain.queue.EvaluationQueueRepository;
+import net.yozmnews.tag.domain.queue.EvaluationSchedule;
 import net.yozmnews.tag.domain.result.EvaluationRecord;
 import net.yozmnews.tag.domain.result.EvaluationResultRepository;
 import net.yozmnews.tag.domain.result.StoredEvaluation;
@@ -55,6 +62,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -88,6 +96,12 @@ class EvaluationFlowTests {
 
 	/** 넣은 지 정착 시간(30분)이 지난 시각 */
 	private static final Instant DUE = Instant.parse("2026-11-02T00:30:00Z");
+
+	@Autowired
+	RoundRunner runner;
+
+	@Autowired
+	TagProcessing processing;
 
 	@Autowired
 	PendingEvaluations pending;
@@ -411,10 +425,12 @@ class EvaluationFlowTests {
 	}
 
 	@Test
-	void theJudgementIsCalledOutsideATransactionWithTheActiveQuestionsAndARoundTakesFiftyArticles() {
-		for (int i = 0; i < 51; i++) {
+	@Timeout(60)
+	void theJudgementIsCalledOutsideATransactionWithTheActiveQuestionsAndARoundTakesBatchesOfFifty() {
+		for (int i = 0; i < EvaluationSchedule.BATCH_SIZE + 1; i++) {
 			enqueued("기사 " + i);
 		}
+		RoundRunRows.clear(this.jdbc);
 		ScriptedTagging recording = scripted();
 		TagQuestions active = this.directory.activeTagSet().questions();
 		// 오라클 실현성 — 같은 대역을 트랜잭션 안에서 부르면 트랜잭션 있음으로 기록한다
@@ -424,14 +440,113 @@ class EvaluationFlowTests {
 		round(recording).run();
 
 		assertThat(probe.calls()).extracting(ScriptedTagging.Call::inTransaction).containsExactly(true);
-		assertThat(recording.calls()).hasSize(50)
+		assertThat(recording.calls()).hasSize(51)
 			.extracting(ScriptedTagging.Call::inTransaction)
 			.containsOnly(false);
 		assertThat(recording.calls()).extracting(call -> call.query().questions()).containsOnly(active);
+		// 회차 하나가 쉰 건 뭉치를 거듭 가져와 대기를 비운다
+		assertThat(evaluationRows()).isEqualTo(51);
+		assertThat(queueRows()).isZero();
+		assertThat(RoundRunRows.of(this.jdbc, "tag-evaluation")).containsExactly("2 · 51 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void aFullQueueIsEmptiedInOneRound() {
+		for (int i = 0; i < 50; i++) {
+			enqueued("기사 " + i);
+		}
+
+		round(scripted()).run();
+
+		assertThat(queueRows()).isZero();
 		assertThat(evaluationRows()).isEqualTo(50);
-		assertThat(this.jdbc.sql("select count(*) from evaluation_queue where lease_token is null")
+	}
+
+	@Test
+	@Timeout(60)
+	void aFullBatchIsFollowedByAnEmptyOneAndTheRoundIsRecorded() {
+		for (int i = 0; i < 50; i++) {
+			enqueued("기사 " + i);
+		}
+		RoundRunRows.clear(this.jdbc);
+
+		round(scripted()).run();
+
+		assertThat(RoundRunRows.of(this.jdbc, "tag-evaluation")).containsExactly("2 · 50 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void aShortBatchEndsTheRound() {
+		for (int i = 0; i < 49; i++) {
+			enqueued("기사 " + i);
+		}
+		RoundRunRows.clear(this.jdbc);
+
+		round(scripted()).run();
+
+		assertThat(queueRows()).isZero();
+		assertThat(RoundRunRows.of(this.jdbc, "tag-evaluation")).containsExactly("1 · 49 · DRAINED");
+	}
+
+	@Test
+	@Timeout(60)
+	void aTransientFailureEndsTheRoundAfterItsBatch() {
+		long transientArticle = enqueued("일시 실패");
+		for (int i = 0; i < EvaluationSchedule.BATCH_SIZE - 1; i++) {
+			enqueued("기사 " + i);
+		}
+		long last = enqueued("마지막 기사");
+		RoundRunRows.clear(this.jdbc);
+
+		round(failing(Map.of(transientArticle, EvaluatorFailureKind.TRANSIENT))).run();
+
+		assertThat(evaluationRows()).isEqualTo(49);
+		assertThat(untouched(last)).isTrue();
+		assertThat(RoundRunRows.of(this.jdbc, "tag-evaluation")).containsExactly("1 · 50 · BACKED_OFF");
+	}
+
+	@Test
+	@Timeout(60)
+	void anUnavailableEvaluatorEndsTheRoundAfterItsBatch() {
+		long unavailable = enqueued("키 무효");
+		for (int i = 0; i < EvaluationSchedule.BATCH_SIZE; i++) {
+			enqueued("기사 " + i);
+		}
+		RoundRunRows.clear(this.jdbc);
+
+		round(failing(Map.of(unavailable, EvaluatorFailureKind.EVALUATOR_UNAVAILABLE))).run();
+
+		assertThat(evaluationRows()).isZero();
+		assertThat(this.jdbc.sql("select count(*) from evaluation_queue where lease_token is null and attempts = 0")
 			.query(Long.class)
-			.single()).isEqualTo(1);
+			.single()).isEqualTo(51);
+		assertThat(RoundRunRows.of(this.jdbc, "tag-evaluation")).containsExactly("1 · 50 · STOPPED");
+	}
+
+	@Test
+	@Timeout(60)
+	void theProcessingCountsTheWaitingAndTheNotYetDueAndLeavesTheQueueCountsAsTheyWere() {
+		enqueued("대기 하나");
+		long later = enqueued("대기 둘");
+		long rejected = enqueued("거부");
+		this.jdbc.sql("update evaluation_queue set eligible_at = now() + interval '1 day' where article_id = :a")
+			.param("a", later)
+			.update();
+		this.jdbc.sql("update evaluation_queue set failure = 'ARTICLE_REJECTED', attempts = 1 where article_id = :a")
+			.param("a", rejected)
+			.update();
+		RoundRunRows.clear(this.jdbc);
+		this.runner.run("tag-evaluation", () -> RoundBatch.finished(7, 50));
+
+		List<RoundQueue> rounds = this.processing.rounds();
+
+		assertThat(rounds).extracting(RoundQueue::round, RoundQueue::waiting, RoundQueue::deferred)
+			.containsExactly(tuple("tag-evaluation", 2L, 1L));
+		assertThat(rounds.get(0).recent().handled()).isEqualTo(7);
+		assertThat(rounds.get(0).recent().runs()).isEqualTo(1);
+		assertThat(this.administration.queueCounts()).isEqualTo(new EvaluationQueueCounts(2, 1, 0));
 	}
 
 	@Test
@@ -639,7 +754,7 @@ class EvaluationFlowTests {
 
 	private Runnable round(ArticleTagging tagging, EvaluationResultRepository results, AppClock clock) {
 		EvaluationRound round = new EvaluationRound(this.pending, this.directory, this.thresholds, tagging, results,
-				this.queue, this.tagSets, this.transaction, clock);
+				this.queue, this.tagSets, this.transaction, clock, this.runner);
 		return round::run;
 	}
 

@@ -12,6 +12,7 @@ import java.util.OptionalInt;
 import java.util.UUID;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.domain.backlog.Backlog;
 import net.yozmnews.event.domain.intake.IntakeLease;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
 import net.yozmnews.event.domain.intake.PendingArticle;
@@ -124,6 +125,11 @@ class JdbcIntakeQueueRepository implements IntakeQueueRepository {
 		this.jdbc.sql("delete from event_intake_queue where article_id = any(:ids)")
 			.param("ids", articleIds.stream().map(ArticleId::value).toArray(Long[]::new))
 			.update();
+	}
+
+	@Override
+	public Backlog backlog() {
+		return new Backlog(this.jdbc.sql("select count(*) from event_intake_queue").query(Long.class).single(), 0);
 	}
 
 	private static PendingArticle row(ResultSet rs, int row) throws SQLException {

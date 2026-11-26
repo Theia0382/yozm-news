@@ -23,6 +23,8 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import net.yozmnews.platform.AppClock;
+import net.yozmnews.platform.RoundBatch;
+import net.yozmnews.platform.RoundRunner;
 import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.RetiredStoryline;
 import net.yozmnews.storyline.StorylinesRetired;
@@ -56,19 +58,23 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 관계 회차 하나 — docs/specs/storyline.md §4 · storyline-R17 · storyline-R27 ~ storyline-R31.
  * <p>
- * 지금 기준을 관계 기준 이력에 등록하고 관계 대기를 스토리라인 ID 순으로 점유해 커밋한 뒤, 스토리라인마다 후보 쌍을 골라 순서대로 묻는다.
+ * 회차는 {@link RoundRunner} 로 뭉치를 되풀이하고, 지금 기준을 관계 기준 이력에 회차에 한 번 등록한다. 뭉치 하나는 관계 대기를 스토리라인 ID
+ * 순으로 점유해 커밋한 뒤, 스토리라인마다 후보 쌍을 골라 순서대로 묻는다.
  * 관계 판정은 트랜잭션 밖이고, 결과는 쌍마다 모듈 잠금을 잡은 짧은 트랜잭션에서 두 스토리라인을 다시 읽어 반영한다. 후보를 모두 물었고 대기
  * 행이 그대로면 지우고, 아니면 점유만 푼다. 일시 실패면 그 스토리라인의 실패 수를 올려 판정 가능 시각을 미루고 다음 스토리라인으로 간다 —
- * 대기에서 빼지 않는다. 평가기를 쓸 수 없으면 회차를 멈추고, 예상 못한 예외는 밖으로 나간다 — 점유는 만료로 풀린다. 판단은
+ * 대기에서 빼지 않고, 회차는 그 뭉치 뒤에 끝낸다. 평가기를 쓸 수 없으면 회차를 멈추고, 예상 못한 예외는 밖으로 나간다 — 점유는 만료로 풀린다. 판단은
  * {@code domain/relation} 이 한다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
  * <p>
  * 답이 같은 사안의 조각이면 확률이 합치기 확률 기준 이상일 때 두 스토리라인을 하나로 합치고({@link FragmentMerge} ·
- * {@link StorylineMerger}), 미만이면 관계를 맺지 않고 둘로 둔다. 합치면 그 스토리라인의 남은 쌍은 이 회차에 묻지 않는다.
+ * {@link StorylineMerger}), 미만이면 관계를 맺지 않고 둘로 둔다. 합치면 그 스토리라인의 남은 쌍은 이 뭉치에서 묻지 않는다.
  */
 @Service
 public class RelationRound {
 
 	private static final Logger logger = LoggerFactory.getLogger(RelationRound.class);
+
+	/** 회차 이름 — 회차 기록 · 처리 현황의 키 */
+	static final String NAME = "storyline-relation";
 
 	private final RelationQueueRepository queue;
 
@@ -90,9 +96,11 @@ public class RelationRound {
 
 	private final AppClock clock;
 
+	private final RoundRunner runner;
+
 	RelationRound(RelationQueueRepository queue, RelationRepository relations, StorylineRepository storylines,
 			EventDirectory events, StorylineRelation judge, RelationCriteria criteria, StorylineMerger merger,
-			ApplicationEventPublisher publisher, TransactionTemplate transaction, AppClock clock) {
+			ApplicationEventPublisher publisher, TransactionTemplate transaction, AppClock clock, RoundRunner runner) {
 		this.queue = queue;
 		this.relations = relations;
 		this.storylines = storylines;
@@ -103,19 +111,38 @@ public class RelationRound {
 		this.publisher = publisher;
 		this.transaction = transaction;
 		this.clock = clock;
+		this.runner = runner;
 	}
 
-	/** 회차 하나를 돈다 */
+	/** 회차 하나를 돈다 — 뭉치를 회차 규칙까지 되풀이한다(docs/specs/platform.md 반복 회차) */
 	public void run() {
+		CriteriaOnce criteriaId = new CriteriaOnce();
+		this.runner.run(NAME, () -> batch(criteriaId));
+	}
+
+	/**
+	 * 뭉치 하나 — 기준 이력은 회차에 한 번 등록하고, 말의 무게는 뭉치마다 새로 읽는다. 판정 일시 실패로 미룬 스토리라인이 있으면 뭉치를 마친 뒤
+	 * 회차를 끝내게 한다. 평가기를 쓸 수 없으면 남은 점유를 풀지 않고 멈춘다 — 점유는 만료로 풀린다
+	 */
+	RoundBatch batch(CriteriaOnce criteria) {
 		Instant now = this.clock.instant();
-		long criteriaId = Objects
-			.requireNonNull(this.transaction.execute(status -> this.relations.registerCriteria(this.criteria, now)));
+		long criteriaId = criteria.get(() -> Objects
+			.requireNonNull(this.transaction.execute(status -> this.relations.registerCriteria(this.criteria, now))));
 		Map<Long, TermWeights> weights = new HashMap<>();
-		for (PendingStoryline claim : claim(now)) {
-			if (relate(claim, criteriaId, weights) == Next.STOP) {
-				return;
+		List<PendingStoryline> claimed = claim(now);
+		boolean deferred = false;
+		for (PendingStoryline claim : claimed) {
+			switch (relate(claim, criteriaId, weights)) {
+				case STOP -> {
+					return RoundBatch.stopped(claimed.size());
+				}
+				case DEFERRED -> deferred = true;
+				case PAIR, STORYLINE -> {
+				}
 			}
 		}
+		return deferred ? RoundBatch.backedOff(claimed.size())
+				: RoundBatch.finished(claimed.size(), RelationSchedule.BATCH_SIZE);
 	}
 
 	private List<PendingStoryline> claim(Instant now) {
@@ -154,7 +181,7 @@ public class RelationRound {
 					}
 					case TRANSIENT -> {
 						defer(storylineId, token);
-						yield Next.STORYLINE;
+						yield Next.DEFERRED;
 					}
 					case EVALUATOR_UNAVAILABLE -> {
 						logger.error("스토리라인 관계 판정을 멈췄다 — 평가기를 쓸 수 없다: {}", failed.message());
@@ -169,7 +196,7 @@ public class RelationRound {
 		boolean all = pairs.size() <= RelationSchedule.MAX_PAIRS;
 		this.transaction.executeWithoutResult(status -> {
 			if (!all || !this.queue.deleteIfUnchanged(storylineId, token, claim.notifications())) {
-				// 후보가 남았거나 처리 중에 다시 들어왔다 — 다음 회차가 잇는다(storyline-R31)
+				// 후보가 남았거나 처리 중에 다시 들어왔다 — 다음 뭉치가 잇는다(storyline-R31)
 				this.queue.releaseIfLeased(storylineId, token);
 			}
 		});
@@ -180,7 +207,7 @@ public class RelationRound {
 	 * 후보 쌍(storyline-R27) — 사건을 함께 가진 스토리라인과 점수 후보에서 {@link RelationCandidates#partners} 가 고른 순서대로. 점수는
 	 * 물을 수 있는 상대({@link RelationCandidates#askable})에만 매긴다 — 코사인 하한을 넘는 스토리라인이 많아도 말 수를 묻는 것은 그
 	 * 상대뿐이다. 트랜잭션 안에서 부른다
-	 * @param weights 이 회차에서 읽은 말의 무게 — 판정할 쪽 스토리라인마다 한 번만 읽는다
+	 * @param weights 이 뭉치에서 읽은 말의 무게 — 판정할 쪽 스토리라인마다 한 번만 읽는다
 	 */
 	private List<Pair> pairs(long storylineId, Map<Long, TermWeights> weights) {
 		Optional<StorylineProfile> found = this.storylines.profile(storylineId, LinkingScoring.KEY_TERMS);
@@ -300,7 +327,7 @@ public class RelationRound {
 
 	/**
 	 * 두 스토리라인이 합쳐졌다 — 이 스토리라인의 남은 쌍은 합치기 전의 구성 사건으로 고른 것이라 묻지 않는다. 점유를 풀고 다음
-	 * 스토리라인으로 간다. 남는 스토리라인은 관계 대기에 들어 있어 다음 회차가 지금 구성으로 후보를 다시 고른다
+	 * 스토리라인으로 간다. 남는 스토리라인은 관계 대기에 들어 있어 다음 뭉치가 지금 구성으로 후보를 다시 고른다
 	 */
 	private Next merged(long storylineId, UUID token) {
 		this.transaction.executeWithoutResult(status -> this.queue.releaseIfLeased(storylineId, token));
@@ -389,6 +416,9 @@ public class RelationRound {
 
 		/** 다음 스토리라인 */
 		STORYLINE,
+
+		/** 판정 일시 실패로 미뤘다 — 다음 스토리라인으로 가고, 회차는 이 뭉치 뒤에 끝낸다 */
+		DEFERRED,
 
 		/** 회차를 멈춘다 */
 		STOP
