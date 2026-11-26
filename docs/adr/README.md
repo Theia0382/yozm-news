@@ -348,6 +348,9 @@
 | [0344](0344-privacy-notice-items-are-owned-by-the-notice-screen-file-and-collected-items-cover-the-user-data-of-the-retention-table.md) | 개인정보 고지의 수집 · 외부 전송 항목은 고지 화면 파일이 정본이고, 수집 항목은 보존 정책 표의 사용자 데이터를 덮는다 | 승인 |
 | [0345](0345-screen-api-schema-names-stay-simple-and-a-name-shared-by-two-types-fails-spec-generation.md) | 화면용 API 명세의 스키마 이름은 생성기가 정한 단순 이름을 그대로 쓰고, 서로 다른 타입이 같은 이름을 받으면 명세 생성이 실패한다 | 승인 |
 | [0346](0346-screen-api-operation-ids-are-handler-method-names-and-a-duplicate-fails-spec-generation-instead-of-a-suffix.md) | 화면용 API 명세의 연산 ID 는 처리기 메서드 이름이고, 겹치면 접미사를 붙이지 않고 명세 생성이 실패한다 | 승인 |
+| [0349](0349-test-jvm-heap-cap-stays-at-least-twice-the-measured-live-heap.md) | 테스트 JVM 의 힙 상한은 잰 살아 있는 힙 최대의 두 배 이상으로 둔다 | 승인 |
+| [0350](0350-test-jvm-exits-on-out-of-memory-without-a-default-heap-dump.md) | 테스트 JVM 은 메모리가 모자라면 바로 끝나고, 힙 덤프는 기본으로 남기지 않는다 | 승인 |
+| [0351](0351-non-web-test-contexts-are-generic-application-contexts.md) | 웹이 아닌 시험 컨텍스트는 GenericApplicationContext 로 만든다 | 승인 |
 
 ## 운영 규칙
 
