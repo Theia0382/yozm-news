@@ -51,7 +51,7 @@
 > 부분 대체(첫 문장) — [ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md). 지금 상태: [evaluation Spec §5](../specs/evaluation.md#5-규칙과-불변식) evaluation-R43
 - 셀프 호스팅 운영자는 Google, Cloudflare, 상용 메일 서비스, Jev 키 없이도 서비스를 띄울 수 있다. Jev가 없으면 평가 품질은 떨어지고, 이 경우 대체 평가기를 써야 한다.
 - 새 개발자는 `docker compose --profile dev up`과 IDE 실행만으로 로그인부터 다이제스트 생성까지 전체 흐름을 볼 수 있다.
-> 부분 대체 — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [`data-model` "사용자"](../data-model.md#사용자)
+> 부분 대체 — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [account Spec §6](../specs/account.md#6-데이터)
 - 공급자 이름("Google")이 도메인 코드나 DB 스키마에 하드코딩되지 않는다. `user_identities.provider`는 설정의 registration ID를 저장한다.
 > 부분 대체 — [ADR-0057](0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md). 지금 상태: [platform Spec §5](../specs/platform.md#5-규칙과-불변식) platform-R18
 - Fake 구현은 운영 프로필에서 활성화되지 않도록 기동 시 검사한다.

@@ -404,5 +404,5 @@ Jev 비용:
 
 ## 데이터 보존
 
-- 보존 기간의 정본은 [data-model.md 보존 정책](../data-model.md#보존-정책-초안)이다
+- 보존 기간의 정본은 [data-model.md 보존 정책](../data-model.md#보존-정책)이다
 - **(미구현)** RSS 요약문은 기본으로 지우지 않는다. 운영자는 보존 일수를 정해 그보다 오래된 요약문을 저절로 지우게 할 수 있다(기본 꺼짐). 설정 이름은 이 지우기 기능을 만들 때 정한다([ADR-0029](../adr/0029-indefinite-summary-retention-with-optional-deletion.md))

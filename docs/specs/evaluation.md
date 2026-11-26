@@ -1257,7 +1257,7 @@ evaluation-R54 · R58 · R59 는 태그 판정만이 아니라 모든 판정(태
   - 입력 토큰 · 판정 시각
 - **evaluation-R80** — 사건 소속 판정 원본을 ID 로 찾는 조회는 원본 하나를 목록과 같은 값으로 낸다. 운영자 화면이 배정이 가리키는 원본(event-R22)을 찾는다
   - 지운 원본(evaluation-R67)은 목록에 나오지 않고, ID 로 찾으면 빈 값이다
-  - 판정 원본의 보존 기간은 [data-model 보존 정책](../data-model.md#보존-정책-초안)에 있다
+  - 판정 원본의 보존 기간은 [data-model 보존 정책](../data-model.md#보존-정책)에 있다
 
 ### 스토리라인 소속 판정
 
@@ -1334,7 +1334,7 @@ evaluation-R54 · R58 · R59 는 태그 판정만이 아니라 모든 판정(태
   - 제목 · 요약문 텍스트는 남기지 않는다
   - 같은 쌍의 판정이 여러 번이면 행도 여러 개다
   - 그 판정을 반영했는지는 부르는 쪽이 원본 ID 로 기록한다([storyline-R29 · R30](storyline.md#스토리라인-사이-관계))
-- **evaluation-R94** — 관계 판정 원본은 판정할 기사가 없어 지운 기사를 따르지 않는다. 원본에는 서술 기사의 ID 만 있다(evaluation-R67 의 서술 기사와 같다). 보존 기간은 [data-model 보존 정책](../data-model.md#보존-정책-초안)에 있다
+- **evaluation-R94** — 관계 판정 원본은 판정할 기사가 없어 지운 기사를 따르지 않는다. 원본에는 서술 기사의 ID 만 있다(evaluation-R67 의 서술 기사와 같다). 보존 기간은 [data-model 보존 정책](../data-model.md#보존-정책)에 있다
 
 ### 관계 판정 원본 조회
 
@@ -1473,7 +1473,7 @@ evaluation-R54 · R58 · R59 는 태그 판정만이 아니라 모든 판정(태
 - `storyline_membership_judgements` 의 행은 `storyline` 의 소속(`storyline_members.judgement_id`) · 잇기 물은 기록이 ID 로 가리킨다
 - `storyline_relation_judgements` 의 스토리라인 ID 는 `storyline` 의 스토리라인을 가리킨다. 반영한 관계 · 물은 기록은 `storyline` 이 갖는다
 
-기사 임베딩은 테이블이 없다. 결과를 기록하지 않는다(evaluation-R106). 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
+기사 임베딩은 테이블이 없다. 결과를 기록하지 않는다(evaluation-R106). 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책)에 있다.
 
 ## 7. 설정
 

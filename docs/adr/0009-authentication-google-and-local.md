@@ -28,7 +28,7 @@
 > 부분 대체(아래 두 항목) — [ADR-0011](0011-no-email-in-v1.md). 지금 상태: [`security` "자체 로그인"](../security.md#자체-로그인)
 - 비밀번호 저장, 이메일 인증, 재설정, 무차별 대입 방어가 새로 필요하다. 상세는 [security.md](../security.md).
 - 외부 의존성으로 이메일 발송 서비스가 추가된다. 도메인에 SPF, DKIM, DMARC 설정이 필요하다.
-> 부분 대체(아래 두 항목) — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [`security` "인증"](../security.md#인증) · [`data-model` "사용자"](../data-model.md#사용자)
+> 부분 대체(아래 두 항목) — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [`security` "인증"](../security.md#인증) · [account Spec §6](../specs/account.md#6-데이터)
 - 같은 이메일로 Google과 자체 계정이 각각 생길 수 있다. 자동으로 합치지 않고, 로그인한 상태에서 명시적으로 연결하게 한다.
 - 비밀번호 해시는 `user_identities`와 분리된 테이블에 둔다. Google만 쓰는 사용자는 비밀번호 행이 없다.
 

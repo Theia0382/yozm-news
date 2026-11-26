@@ -1274,7 +1274,7 @@ sequenceDiagram
 - `V68__storyline_relation_queue_retry.sql` — 관계 대기의 판정 가능 시각(storyline-R130)
 - `V69__storyline_linking_queue_transient_failures.sql` — 잇기 대기의 일시 실패 수(storyline-R43)
 
-`event_id` · `representative_event_id` 는 `event` 의 사건을 가리키지만 FK 를 두지 않는다. 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
+`event_id` · `representative_event_id` 는 `event` 의 사건을 가리키지만 FK 를 두지 않는다. 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책)에 있다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
