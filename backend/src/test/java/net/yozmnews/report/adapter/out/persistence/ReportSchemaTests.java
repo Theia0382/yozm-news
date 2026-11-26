@@ -16,7 +16,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
 
 /**
- * 리포트 테이블의 제약 — 섹션 종류는 개요와 갈래 셋, 인용은 스토리라인 · 사건 가운데 하나, 시작한 행은 스냅숏이 있다, 생성을 기다림 밖의
+ * 리포트 테이블의 제약 — 섹션 종류는 앱이 쓰는 갈래 둘과 지우지 않고 남긴 옛 종류(개요 · 구독 주제 보도량), 인용은 스토리라인 · 사건 가운데 하나, 시작한 행은 스냅숏이 있다, 생성을 기다림 밖의
  * 행은 시간대가 있다, 생성 중 · 내용 있음 · 재료 없음은 시작했고 실패는 시작하지 않고 끝날 수 있다, 사용자 · 종류 · 기간마다 리포트 하나,
  * 직전 리포트는 다른 행이고 지워지면 칸이 빈다.
  * <p>
@@ -55,10 +55,10 @@ class ReportSchemaTests {
 	}
 
 	@Test
-	void aSectionKindIsTheOverviewOrOneOfTheThreeMaterialKinds() {
+	void aSectionKindIsOneOfTheTwoKindsOrAnOldKindWhoseRowsAreKept() {
 		long report = scheduled();
 
-		// 대조 — 개요와 갈래 셋은 넣어진다
+		// 대조 — 갈래 둘과 옛 종류(개요 · 구독 주제 보도량)는 넣어진다
 		section(report, "OVERVIEW", 0);
 		section(report, "STORYLINES", 1);
 		section(report, "COVERAGE", 2);

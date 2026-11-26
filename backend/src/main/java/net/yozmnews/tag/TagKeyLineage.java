@@ -1,8 +1,7 @@
 package net.yozmnews.tag;
 
 /**
- * 태그 키 계보 조회 — 옛 버전의 키를 활성 버전의 키로 푼다. 후보 선별 · 주제별 시계열 · 사용자 선호와 변화 리포트의 직전 스냅숏 대조가
- * 쓴다 — docs/specs/tag.md §3 · tag-R26.
+ * 태그 키 계보 조회 — 옛 버전의 키를 활성 버전의 키로 푼다. 후보 선별 · 주제별 시계열 · 사용자 선호가 쓴다 — docs/specs/tag.md §3 · tag-R26.
  * <p>
  * 구현은 {@code application} 의 {@code TagKeyLineageService} 다. 트랜잭션을 열지 않는다.
  */

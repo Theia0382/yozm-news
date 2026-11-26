@@ -382,7 +382,7 @@ HTTP 엔드포인트는 아래 표와 같다. 모든 경로에 공통인 것:
 
 ### 변화 리포트
 
-판단의 이유는 [ADR-0316](../adr/0316-a-change-report-view-carries-each-visible-sections-numbers-as-typed-values-and-resolves-flow-lines-like-citations.md) · [ADR-0317](../adr/0317-a-change-report-row-points-to-the-previous-report-it-took-the-previous-values-from.md) · [ADR-0319](../adr/0319-the-change-report-screen-has-a-list-per-kind-and-a-report-page-with-four-states-and-the-failure-cause-only.md)에 있다. 비교 · 풀기 · 숨기기 · 기간 날짜의 판단은 `report` 의 것이다([report Spec](report.md#리포트-조회) report-R11 · R12 · R25 · R26).
+판단의 이유는 [ADR-0316](../adr/0316-a-change-report-view-carries-each-visible-sections-numbers-as-typed-values-and-resolves-flow-lines-like-citations.md) · [ADR-0317](../adr/0317-a-change-report-row-points-to-the-previous-report-it-took-the-previous-values-from.md) · [ADR-0319](../adr/0319-the-change-report-screen-has-a-list-per-kind-and-a-report-page-with-four-states-and-the-failure-cause-only.md) · [ADR-0338](../adr/0338-a-change-report-writes-only-kind-sections-without-an-overview.md) · [ADR-0339](../adr/0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md) · [ADR-0341](../adr/0341-a-monthly-report-does-not-compare-flow-coverage-with-the-previous-monthly-and-shows-the-flow-state-kept-at-generation.md)에 있다. 비교 · 풀기 · 숨기기 · 기간 날짜의 판단은 `report` 의 것이다([report Spec](report.md#리포트-조회) report-R11 · R12 · R25 · R26).
 
 - **reader-R15** — 리포트 목록(`GET /api/reports`)의 질의와 한 쪽을 덮는다. 화면 동작은 [web-R16](web.md#변화-리포트)이다.
   - reader-R57 — 질의의 검사
@@ -422,8 +422,8 @@ HTTP 엔드포인트는 아래 표와 같다. 모든 경로에 공통인 것:
   | `regenerationsLeft` | 남은 다시 만들기 수. `FAILED` 일 때만 싣고 아니면 null 이다([report-R32](report.md#다시-만들기)) |
 
 - **reader-R61** — 섹션마다 아래를 싣는다. 스토리라인 인용과 사용자 스토리라인 줄은 가리키는 스토리라인의 표시(reader-R62)를 칸 `storyline` 에 싣는다.
-  - 종류 · 제목 · 본문 · 인용
-  - 그 섹션 종류의 숫자. 칸은 사용자 스토리라인 보도량 `userStorylines` · 주제 보도량 `topics` · 관심 `interests` 셋이고, 그 섹션 종류의 칸이 아니거나 숫자가 없으면 null 이다
+  - 종류 · 제목 · 본문 · 인용. 제목은 언제나 있고, 모델이 쓴 그 섹션 종류의 요지다
+  - 그 섹션 종류의 숫자. 칸은 사용자 스토리라인 보도량과 생성 때 상태 `userStorylines` · 관심 `interests` 둘이고, 그 섹션 종류의 칸이 아니거나 숫자가 없으면 null 이다. 응답은 수를 그대로 싣고, 화면이 수를 보이는 꼴은 [web-R26](web.md#변화-리포트)이다
 - **reader-R62** — 스토리라인의 표시는 `ReportNames` 가 붙이고, 정리된 사용자 스토리라인 모두(ID · 제목)와 그 스토리라인의 대표 사건 대표 기사를 싣는다.
   - 정리는 그 스토리라인의 지금 꼭대기(`StorylineDirectory.topsOfStorylines`, `MAX_TOP_STORYLINES` 씩)를 `UserStorylineSummaries.ofTops`(`MAX_TOPS` 씩)에 물어 얻는다
   - 대표 기사는 `findAll` 로 읽은 대표 사건의 것이다(reader-R3)
@@ -485,3 +485,6 @@ HTTP 엔드포인트는 아래 표와 같다. 모든 경로에 공통인 것:
 | [0323](../adr/0323-report-generation-jobs-and-stalled-report-recovery-follow-the-digest-and-a-report-ending-without-a-start-records-the-zone.md) | 리포트의 생성 작업 · 거두기는 다이제스트를 따르고, 시작하지 않고 끝난 리포트도 그때의 시간대를 적는다 |
 | [0325](../adr/0325-a-failed-report-is-regenerated-from-the-screen-on-the-same-row-up-to-three-times.md) | 실패한 리포트는 화면에서 같은 행을 다시 생성을 기다리게 해 리포트마다 세 번까지 다시 만든다 |
 | [0326](../adr/0326-development-names-call-a-shared-storyline-storyline-a-user-storyline-user-storyline-and-a-judgement-candidate-of-unknown-kind-candidate.md) | 개발 이름은 공유 스토리라인을 `Storyline`, 사용자 스토리라인을 `UserStoryline` 으로 부르고, 종류를 모르는 판정 후보는 `Candidate` 로 부른다 |
+| [0338](../adr/0338-a-change-report-writes-only-kind-sections-without-an-overview.md) | 변화 리포트는 개요 없이 종류 섹션만 쓴다 — 섹션의 제목은 언제나 있다 |
+| [0339](../adr/0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md) | 변화 리포트의 섹션 종류는 추적한 사용자 스토리라인 · 관심 변화 둘이다 — 주제 보도량 칸이 없다 |
+| [0341](../adr/0341-a-monthly-report-does-not-compare-flow-coverage-with-the-previous-monthly-and-shows-the-flow-state-kept-at-generation.md) | 월간 리포트는 사용자 스토리라인 보도량을 견주지 않고 생성 때의 헤드 상태를 보인다 — 숫자 줄이 상태를 싣는다 |

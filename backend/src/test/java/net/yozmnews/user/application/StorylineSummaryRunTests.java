@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +60,9 @@ class StorylineSummaryRunTests {
 	private static final Instant NOW = Instant.parse("2026-11-23T00:00:00Z");
 
 	private static final Instant REACTED = NOW.minus(Duration.ofHours(1));
+
+	/** 따로 정하지 않은 사건의 첫 기사 시각 — 모든 실행의 지금(고정 {@link #NOW} 와 실제 시각)보다 앞선다 */
+	private static final Instant EARLIER = Instant.parse("2026-11-01T00:00:00Z");
 
 	private static final LlmModel MODEL = new LlmModel(Provider.ANTHROPIC, "claude-sonnet-5-5", 200_000, true);
 
@@ -135,6 +139,47 @@ class StorylineSummaryRunTests {
 		assertThat(this.summaries.attempts(this.user)).singleElement()
 			.satisfies(attempt -> assertThat(List.of(attempt.calls(), attempt.failures())).containsExactly(1, 0));
 		assertThat(storylineRows()).isEqualTo(storylinesBefore);
+	}
+
+	@Test
+	void anEventStartingAfterTheRunsNowIsLeftOutUntilTheClockPassesIt() {
+		long storyline = UserStorylineFixtures.storyline(this.jdbc, NOW);
+		long earlier = this.rows.article("앞 사건", "politics.legislature");
+		long later = this.rows.article("뒤 사건", "politics.legislature");
+		link(storyline, earlier, NOW.minus(Duration.ofDays(1)));
+		link(storyline, later, NOW.plus(Duration.ofHours(1)));
+		UserStorylineFixtures.reaction(this.jdbc, this.user, eventOf(earlier), "LIKE", REACTED);
+
+		SummaryRunResult first = run(followed(storyline), NOW).run(this.user);
+
+		assertThat(first).isEqualTo(new SummaryRunResult(1, 0, 0, 0));
+		assertThat(this.script.requests.getLast().input().tops().get(storyline)).extracting(event -> event.articleId())
+			.containsExactly(earlier);
+		assertThat(summaryOf(storyline).events()).isEqualTo(Map.of(eventOf(earlier), earlier));
+
+		SummaryRunResult second = run(followed(storyline), NOW.plus(Duration.ofHours(2))).run(this.user);
+
+		assertThat(second).isEqualTo(new SummaryRunResult(1, 0, 0, 0));
+		assertThat(this.script.calls).isEqualTo(2);
+		assertThat(this.script.requests.getLast().input().tops().get(storyline)).extracting(event -> event.articleId())
+			.containsExactly(later);
+		assertThat(summaryOf(storyline).events())
+			.isEqualTo(Map.of(eventOf(earlier), earlier, eventOf(later), later));
+	}
+
+	@Test
+	void anEventStartingExactlyAtTheRunsNowIsIncluded() {
+		long storyline = UserStorylineFixtures.storyline(this.jdbc, NOW);
+		long article = this.rows.article("지금 사건", "politics.legislature");
+		link(storyline, article, NOW);
+		UserStorylineFixtures.reaction(this.jdbc, this.user, eventOf(article), "LIKE", REACTED);
+
+		run(followed(storyline), NOW).run(this.user);
+
+		assertThat(this.script.requests).singleElement()
+			.satisfies(request -> assertThat(request.input().tops().get(storyline))
+				.extracting(event -> event.articleId())
+				.containsExactly(article));
 	}
 
 	@Test
@@ -417,7 +462,20 @@ class StorylineSummaryRunTests {
 		return storyline;
 	}
 
+	/** 기사의 사건을 스토리라인에 잇는다 — 사건의 첫 기사 시각은 모든 실행의 지금보다 앞선 {@link #EARLIER} */
 	private void link(long storyline, long article) {
+		link(storyline, article, EARLIER);
+	}
+
+	/**
+	 * 기사의 사건을 스토리라인에 잇고 사건의 첫 기사 시각을 정한다 — 사건 픽스처는 DB 의 실제 시각을 쓰는데, 정리 재료는 첫 기사 시각이 실행의
+	 * 지금보다 늦은 사건을 싣지 않는다
+	 */
+	private void link(long storyline, long article, Instant firstArticleAt) {
+		this.jdbc.sql("update events set first_article_at = :at where id = :event")
+			.param("at", firstArticleAt.atOffset(ZoneOffset.UTC))
+			.param("event", eventOf(article))
+			.update();
 		this.jdbc.sql("""
 				insert into storyline_members (storyline_id, event_id, linked_by, linked_at)
 				values (:storyline, :event, 'MERGE', now())

@@ -1,6 +1,6 @@
 # ADR-0274: 변화 리포트는 스토리라인 · 사건만 인용하고, 주제는 통계 스냅숏으로 둔다
 
-- 상태: 승인. 부분 대체 — 리포트가 `article` 에 의존하지 않는다는 결과([ADR-0305](0305-a-change-report-describes-flows-by-the-user-storyline-summary-and-events-by-the-representative-article-title-and-cites-a-flow-by-its-head.md))
+- 상태: 승인. 부분 대체 — 리포트가 `article` 에 의존하지 않는다는 결과([ADR-0305](0305-a-change-report-describes-flows-by-the-user-storyline-summary-and-events-by-the-representative-article-title-and-cites-a-flow-by-its-head.md)) · 스냅숏의 주제 보도량([ADR-0339](0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md))
 - 날짜: 2026-11-22
 - 근거: [이슈 #237](https://github.com/Theia0382/yozm-news/issues/237) — 기점 `d25590c` 의 데이터 모델 초안(스토리라인 · 기사 인용)과 사건 단위로 바뀐 다이제스트 · 반응을 대조하고, 스토리라인 · 사건 인용을 골랐다
 - 관련: [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(변화 리포트 입력에 원문이 없다), [ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) · [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md)(다이제스트 · 반응의 단위는 사건)
@@ -16,6 +16,8 @@
 ## 결정
 
 - **리포트 섹션은 스토리라인 또는 사건을 인용한다.** 인용 행 하나가 둘 가운데 하나를 ID 로 가리킨다. 화면은 사건의 대표 기사로 링크를 그린다.
+> 부분 대체(둘째 문장의 주제 보도량) — [ADR-0339](0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md). 지금 상태: [report Spec](../specs/report.md#직전-리포트와-스냅숏) report-R19
+
 - **주제는 인용으로 두지 않는다.** 주제 보도량 · 관심의 값은 생성에 쓴 통계 스냅숏에 담고, 화면은 스냅숏에 실린 이름으로 그린다.
 
 규칙은 [report Spec](../specs/report.md#출력-대조) report-R7 에 있다.

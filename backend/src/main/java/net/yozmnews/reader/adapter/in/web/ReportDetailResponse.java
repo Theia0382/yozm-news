@@ -9,7 +9,7 @@ import org.jspecify.annotations.Nullable;
 /**
  * 변화 리포트 한 편 — 요약 · 비교한 직전 리포트 · 숨긴 섹션 수 · 사용량 · 보이는 섹션 · 남은 다시 만들기 수. docs/specs/reader.md §5 reader-R16.
  *
- * @param previous 생성 때 숫자를 이은 직전 리포트 — 없었거나 그새 없어졌으면 null
+ * @param previous 생성 때 이은 직전 리포트(같은 종류) — 주간은 그 스냅숏에서 직전 값을 이었다. 없었거나 그새 없어졌으면 null
  * @param hiddenSections 인용한 스토리라인 · 사건이 사라져 숨긴 갈래 섹션 수
  * @param usage 공급자 · 모델 · 토큰 — 시작 전이면 null
  * @param sections 보이는 섹션 — 위치 순. {@code READY} 가 아니면 빈 목록

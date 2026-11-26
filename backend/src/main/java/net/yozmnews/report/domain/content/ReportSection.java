@@ -32,7 +32,7 @@ public final class ReportSection {
 
 	private final int position;
 
-	private final @Nullable String title;
+	private final String title;
 
 	private final String body;
 
@@ -40,26 +40,24 @@ public final class ReportSection {
 	private final List<ReportItem> items;
 
 	@PersistenceCreator
-	ReportSection(@Nullable Long id, long reportId, ReportSectionKind kind, int position, @Nullable String title,
+	ReportSection(@Nullable Long id, long reportId, ReportSectionKind kind, int position, String title,
 			String body, List<ReportItem> items) {
 		this.id = id;
 		this.reportId = reportId;
 		this.kind = Objects.requireNonNull(kind, "kind");
 		this.position = position;
-		this.title = title;
+		this.title = Objects.requireNonNull(title, "title");
 		this.body = Objects.requireNonNull(body, "body");
 		this.items = List.copyOf(items);
 	}
 
 	/**
-	 * 대조한 출력을 섹션으로 나눈다 — 개요(0, 제목 · 인용 없음), 대조를 지난 갈래 섹션마다(1 …, 입력 순서 — 제목 · 본문 · 인용)
+	 * 대조한 출력을 섹션으로 나눈다 — 대조를 지난 갈래 섹션마다(0 …, 입력 순서 — 제목 · 본문 · 인용)
 	 */
 	public static List<ReportSection> of(ReportId report, CitedReport cited) {
 		Objects.requireNonNull(report, "report");
 		Objects.requireNonNull(cited, "cited");
 		List<ReportSection> sections = new ArrayList<>();
-		sections.add(new ReportSection(null, report.value(), ReportSectionKind.OVERVIEW, 0, null, cited.overview(),
-				List.of()));
 		for (CitedSection section : cited.sections()) {
 			sections.add(new ReportSection(null, report.value(), section.kind(), sections.size(), section.title(),
 					section.body(), section.citations().stream().map(ReportItem::of).toList()));
@@ -87,18 +85,16 @@ public final class ReportSection {
 		return this.position;
 	}
 
-	/**
-	 * @return 갈래 섹션의 제목 — 개요면 빈 값
-	 */
-	public Optional<String> title() {
-		return Optional.ofNullable(this.title);
+	/** 갈래 섹션의 제목 */
+	public String title() {
+		return this.title;
 	}
 
 	public String body() {
 		return this.body;
 	}
 
-	/** 인용 — 순서대로. 개요는 비었다 */
+	/** 인용 — 순서대로 */
 	public List<ReportItem> items() {
 		return this.items;
 	}

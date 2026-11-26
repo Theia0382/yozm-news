@@ -1,6 +1,5 @@
 package net.yozmnews.report.domain.prompt;
 
-import static net.yozmnews.report.ReportFixtures.coverage;
 import static net.yozmnews.report.ReportFixtures.interests;
 import static net.yozmnews.report.ReportFixtures.userStoryline;
 import static net.yozmnews.report.ReportFixtures.userStorylines;
@@ -54,23 +53,26 @@ class ReportInputBudgetTests {
 	}
 
 	/**
-	 * 지시 몫이 실제 지시를 덮는다 — 갈래 셋 · 월간(가장 긴 길이 기준) · 구조화 출력이 아니면 지시에 붙는 스키마 · 다시 묻는 문장과 가장 긴 진단.
-	 * 구조화 출력이어도 스키마는 공급자가 입력으로 셀 수 있어 함께 센다
+	 * 지시 몫이 실제 지시를 덮는다 — 갈래 둘 · 주간(보도의 변화 설명)과 월간(가장 긴 길이 기준) · 구조화 출력이 아니면 지시에 붙는 스키마 · 다시
+	 * 묻는 문장과 가장 긴 진단. 구조화 출력이어도 스키마는 공급자가 입력으로 셀 수 있어 함께 센다
 	 */
 	@Test
 	void instructionReserveCoversTheLongestInstructions() {
 		ReportPeriod month = new ReportPeriod(ReportPeriodKind.MONTH, ReportFixtures.PERIOD.start(),
 				ReportFixtures.PERIOD.start().plusSeconds(31L * 24 * 3600));
-		ReportInput input = new ReportInput(ReportFixtures.USER, month, ReportFixtures.ZONE,
-				List.of(userStorylines(userStoryline(31, 902)), coverage(), interests(31)), List.of(), ReportFixtures.SNAPSHOT, null);
 		String diagnosis = "가".repeat(ReportPromptRules.MAX_DIAGNOSIS);
-		for (boolean structured : new boolean[] { true, false }) {
-			ReportPrompt first = ReportPrompts.compose(input, ReportAliases.of(input), model(120_000, structured));
-			ReportPrompt retry = ReportPrompts.retry(first, diagnosis);
-			int schema = structured ? codePoints(retry.outputSchema()) : 0;
-			assertThat(retry.instructions()).contains(diagnosis);
-			assertThat(TokenEstimate.tokens(codePoints(retry.instructions()) + schema)).as("구조화 출력 %s", structured)
-				.isLessThanOrEqualTo(ReportInputBudget.INSTRUCTION_RESERVE);
+		for (ReportPeriod period : List.of(ReportFixtures.PERIOD, month)) {
+			ReportInput input = new ReportInput(ReportFixtures.USER, period, ReportFixtures.ZONE,
+					List.of(userStorylines(userStoryline(31, 902)), interests(31)), List.of(), ReportFixtures.SNAPSHOT, null);
+			for (boolean structured : new boolean[] { true, false }) {
+				ReportPrompt first = ReportPrompts.compose(input, ReportAliases.of(input), model(120_000, structured));
+				ReportPrompt retry = ReportPrompts.retry(first, diagnosis);
+				int schema = structured ? codePoints(retry.outputSchema()) : 0;
+				assertThat(retry.instructions()).contains(diagnosis);
+				assertThat(TokenEstimate.tokens(codePoints(retry.instructions()) + schema))
+					.as("%s · 구조화 출력 %s", period.kind(), structured)
+					.isLessThanOrEqualTo(ReportInputBudget.INSTRUCTION_RESERVE);
+			}
 		}
 	}
 

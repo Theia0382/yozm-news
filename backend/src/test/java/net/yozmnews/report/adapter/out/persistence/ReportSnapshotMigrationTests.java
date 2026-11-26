@@ -104,13 +104,13 @@ class ReportSnapshotMigrationTests {
 				   {"key": "economy.finance", "name": "금융", "articles": 120, "previous": 100, "trend": "STEADY"}]},
 				 "interests": {"topics": [{"key": "economy.finance", "name": "금융", "start": 0.31, "end": 0.52, "shift": "ENTERED"}],
 				   "userStorylines": [{"head": 12, "start": 0.4, "end": 0.6, "shift": "NONE"}]}}"""));
-		// 옮긴 스냅숏을 읽기가 넣은 숫자 그대로 낸다
+		// 옮긴 스냅숏을 읽기가 넣은 숫자 그대로 낸다 — 2판은 읽는 옛 판이라 흐름 줄의 상태가 없다
 		SnapshotStats stats = ReportSnapshot.stats(snapshot(all)).orElseThrow();
 		assertThat(stats.userStorylines().userStorylines()).containsExactly(
 				new UserStorylineStat(new StorylineId(12), Set.of(new StorylineId(12), new StorylineId(15)), 30, 20L,
-						ReportTrend.ROSE, false),
+						ReportTrend.ROSE, false, null),
 				new UserStorylineStat(new StorylineId(40), Set.of(new StorylineId(40)), 7, null, ReportTrend.NO_COMPARISON,
-						true));
+						true, null));
 		assertThat(stats.interests().userStorylines())
 			.containsExactly(new UserStorylineLevelStat(new StorylineId(12), 0.4, 0.6, InterestShift.NONE));
 		// 추적 갈래가 없던 스냅숏은 판만 오른다

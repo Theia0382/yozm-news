@@ -9,16 +9,10 @@ import net.yozmnews.report.ReportSectionKind;
  */
 public record PriorSection(ReportSectionKind kind, String title, String body) {
 
-	/**
-	 * @throws IllegalArgumentException 개요일 때 — 개요는 {@link PriorReport#overview()} 다
-	 */
 	public PriorSection {
 		Objects.requireNonNull(kind, "kind");
 		Objects.requireNonNull(title, "title");
 		Objects.requireNonNull(body, "body");
-		if (kind == ReportSectionKind.OVERVIEW) {
-			throw new IllegalArgumentException("개요는 갈래 섹션이 아니다");
-		}
 	}
 
 }

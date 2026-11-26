@@ -36,6 +36,7 @@ import {
   unitLabels,
 } from "@/features/interestHistory/interestHistoryTexts";
 import { userStorylinePath } from "@/features/storylines/storylineTexts";
+import { cellColor, cellOpacity } from "@/shared/lib/interestLevel";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 function readSpan(value: string | null): InterestSpan | null {
@@ -316,22 +317,6 @@ function UserStorylineRow({
       <LevelCells levels={userStoryline.levels} periods={periods} />
     </tr>
   );
-}
-
-/** 칸의 색 — 관심 쪽은 주 색, 싫어요 쪽은 경고 색, 신호 없음 · 0 은 바탕 */
-function cellColor(level: number | null): string {
-  if (level === null || level === 0) {
-    return "bg-muted";
-  }
-  return level > 0 ? "bg-primary" : "bg-destructive";
-}
-
-/** 칸의 진하기 — 관심의 크기. 작은 값도 보이게 바닥을 둔다 */
-function cellOpacity(level: number | null): number {
-  if (level === null || level === 0) {
-    return 1;
-  }
-  return Math.max(0.2, Math.abs(level));
 }
 
 function Changes({ data }: { data: InterestHistory }) {

@@ -33,8 +33,8 @@ import org.jspecify.annotations.Nullable;
  * 리포트 조회의 풀기 · 숨기기 · 숫자 · 쪽 나누기 — 정본 · docs/specs/report.md §5 · report-R11 · report-R12 · report-R25
  * <p>
  * 저장한 인용을 풀기 결과(지금 사건 · 지금 스토리라인)로 바꾸고 결과에 없는 것(지운 것)은 뺀다. 인용이 하나 이상 있었는데 하나도 남지 않은 갈래 섹션은
- * 숨기고 그 수를 세며, 갈래 섹션이 하나 이상 있었고 모두 숨었으면 개요도 숨긴다. 보이는 갈래 섹션에는 스냅숏의 그 갈래 칸을 숫자로 붙이고, 사용자 스토리라인 줄의
- * 생성 때 헤드는 인용과 같은 스토리라인 풀기 결과로 바꾼다 — 지운 헤드의 줄은 빼고, 풀린 뒤 같은 스토리라인이 된 줄은 첫 줄만 둔다. 행을 고치지
+ * 숨기고 그 수를 센다. 보이는 갈래 섹션에는 스냅숏의 그 갈래 칸을 숫자로 붙이고, 사용자 스토리라인 줄의 생성 때 헤드는
+ * 인용과 같은 스토리라인 풀기 결과로 바꾼다 — 지운 헤드의 줄은 빼고, 풀린 뒤 같은 스토리라인이 된 줄은 첫 줄만 둔다. 행을 고치지
  * 않는다.
  */
 public final class ReportViews {
@@ -114,15 +114,8 @@ public final class ReportViews {
 	private static Visible visible(List<StoredSection> stored, Map<EventId, EventId> events,
 			Map<StorylineId, StorylineId> storylines, @Nullable SnapshotStats snapshot) {
 		List<ReportSectionView> shown = new ArrayList<>();
-		StoredSection overview = null;
-		int kindSections = 0;
 		int hidden = 0;
 		for (StoredSection section : stored) {
-			if (section.kind() == ReportSectionKind.OVERVIEW) {
-				overview = section;
-				continue;
-			}
-			kindSections++;
 			List<ReportCitation> resolved = resolve(section.citations(), events, storylines);
 			if (!section.citations().isEmpty() && resolved.isEmpty()) {
 				hidden++;
@@ -131,10 +124,6 @@ public final class ReportViews {
 			shown.add(new ReportSectionView(section.kind(), section.title(), section.body(), resolved,
 					(snapshot == null) ? null : stats(section.kind(), snapshot, storylines)));
 		}
-		boolean everyKindSectionHidden = kindSections > 0 && hidden == kindSections;
-		if (overview != null && !everyKindSectionHidden) {
-			shown.addFirst(new ReportSectionView(ReportSectionKind.OVERVIEW, null, overview.body(), List.of(), null));
-		}
 		return new Visible(List.copyOf(shown), hidden);
 	}
 
@@ -142,18 +131,10 @@ public final class ReportViews {
 	private static @Nullable ReportSectionStats stats(ReportSectionKind kind, SnapshotStats snapshot,
 			Map<StorylineId, StorylineId> storylines) {
 		return switch (kind) {
-			case OVERVIEW -> null;
 			case STORYLINES -> (snapshot.userStorylines() == null) ? null
 					: new ReportSectionStats.UserStorylines(resolveUserStorylines(snapshot.userStorylines().userStorylines(), UserStorylineStat::head, storylines,
 							(userStoryline, current) -> new ReportSectionStats.UserStorylineCount(current, userStoryline.articles(), userStoryline.previous(),
-									userStoryline.trend(), userStoryline.trackedInPeriod())));
-			case COVERAGE -> (snapshot.coverage() == null) ? null
-					: new ReportSectionStats.Coverage(snapshot.coverage()
-						.topics()
-						.stream()
-						.map(topic -> new ReportSectionStats.TopicCount(topic.name(), topic.articles(), topic.previous(),
-								topic.trend()))
-						.toList());
+									userStoryline.trend(), userStoryline.trackedInPeriod(), userStoryline.state())));
 			case INTERESTS -> (snapshot.interests() == null) ? null
 					: new ReportSectionStats.Interests(snapshot.interests()
 						.topics()

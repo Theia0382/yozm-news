@@ -1,6 +1,5 @@
 package net.yozmnews.report.domain.alias;
 
-import static net.yozmnews.report.ReportFixtures.coverage;
 import static net.yozmnews.report.ReportFixtures.event;
 import static net.yozmnews.report.ReportFixtures.userStoryline;
 import static net.yozmnews.report.ReportFixtures.userStorylines;
@@ -56,9 +55,9 @@ class ReportAliasesTests {
 	@Test
 	void hasNoSectionsOnlyWhenTheInputHasNoSection() {
 		assertThat(ReportAliases.of(input()).hasNoSections()).isTrue();
-		ReportAliases statsOnly = ReportAliases.of(input(coverage()));
-		assertThat(statsOnly.hasNoSections()).isFalse();
-		assertThat(statsOnly.sections()).containsExactly(new AliasedSection(ReportSectionKind.COVERAGE, List.of()));
+		ReportAliases topicsOnly = ReportAliases.of(input(interests()));
+		assertThat(topicsOnly.hasNoSections()).isFalse();
+		assertThat(topicsOnly.sections()).containsExactly(new AliasedSection(ReportSectionKind.INTERESTS, List.of()));
 	}
 
 	@Test
@@ -68,15 +67,15 @@ class ReportAliasesTests {
 				storyline(44));
 		assertThatIllegalArgumentException().isThrownBy(() -> new StorylinesSection(List.of()))
 			.withMessage("추적한 사용자 스토리라인의 갈래에 사용자 스토리라인이 없다");
-		InputSection coverage = coverage();
-		assertThatIllegalArgumentException().isThrownBy(() -> input(coverage, coverage()))
-			.withMessage("갈래 종류가 겹친다: COVERAGE");
+		InputSection topics = interests();
+		assertThatIllegalArgumentException().isThrownBy(() -> input(topics, interests()))
+			.withMessage("갈래 종류가 겹친다: INTERESTS");
 		for (String snapshot : List.of("[]", "1", "{} {}", "", "{")) {
 			assertThatIllegalArgumentException().as(snapshot)
-				.isThrownBy(() -> new ReportInput(USER, PERIOD, ZONE, List.of(coverage), List.of(), snapshot, null))
+				.isThrownBy(() -> new ReportInput(USER, PERIOD, ZONE, List.of(topics), List.of(), snapshot, null))
 				.withMessage("스냅숏이 JSON 객체 하나가 아니다");
 		}
-		assertThat(new ReportInput(USER, PERIOD, ZONE, List.of(coverage), List.of(), "{}", null).statsSnapshot())
+		assertThat(new ReportInput(USER, PERIOD, ZONE, List.of(topics), List.of(), "{}", null).statsSnapshot())
 			.isEqualTo("{}");
 	}
 

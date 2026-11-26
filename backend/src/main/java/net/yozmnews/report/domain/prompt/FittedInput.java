@@ -27,24 +27,23 @@ public record FittedInput(ReportInput input, Trimmed trimmed, boolean overBudget
 	 * 단계마다 덜어 낸 수
 	 *
 	 * @param priorsCut 1 단계 — 본문을 자른 직전 리포트 글의 편 수
-	 * @param userStorylineSummariesDropped 2 · 6 단계 — 사용자 스토리라인 관심 줄에서 뺀 정리의 수
-	 * @param userStorylineInterestLinesDropped 3 단계 — 뺀 사용자 스토리라인 관심 줄의 수
-	 * @param eventLinesDropped 4 단계 — 뺀 사건 줄의 수
-	 * @param userStorylineOverviewsDropped 5 단계 — 흐름 요약을 비운 사용자 스토리라인의 수
-	 * @param userStorylinesDropped 6 단계 — 뺀 추적한 사용자 스토리라인의 수
+	 * @param userStorylineSummariesDropped 2 · 5 단계 — 사용자 스토리라인 관심 줄에서 뺀 정리의 수
+	 * @param eventLinesDropped 3 단계 — 뺀 사건 줄의 수
+	 * @param userStorylineOverviewsDropped 4 단계 — 흐름 요약을 비운 사용자 스토리라인의 수
+	 * @param userStorylinesDropped 5 단계 — 뺀 추적한 사용자 스토리라인의 수
 	 */
-	public record Trimmed(int priorsCut, int userStorylineSummariesDropped, int userStorylineInterestLinesDropped, int eventLinesDropped,
-			int userStorylineOverviewsDropped, int userStorylinesDropped) {
+	public record Trimmed(int priorsCut, int userStorylineSummariesDropped, int eventLinesDropped, int userStorylineOverviewsDropped,
+			int userStorylinesDropped) {
 
 		/** 덜어 낸 것이 없다 */
-		public static final Trimmed NONE = new Trimmed(0, 0, 0, 0, 0, 0);
+		public static final Trimmed NONE = new Trimmed(0, 0, 0, 0, 0);
 
 		/**
 		 * @throws IllegalArgumentException 수가 음수일 때
 		 */
 		public Trimmed {
-			if (priorsCut < 0 || userStorylineSummariesDropped < 0 || userStorylineInterestLinesDropped < 0 || eventLinesDropped < 0
-					|| userStorylineOverviewsDropped < 0 || userStorylinesDropped < 0) {
+			if (priorsCut < 0 || userStorylineSummariesDropped < 0 || eventLinesDropped < 0 || userStorylineOverviewsDropped < 0
+					|| userStorylinesDropped < 0) {
 				throw new IllegalArgumentException("덜어 낸 수가 음수다");
 			}
 		}

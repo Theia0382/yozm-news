@@ -204,21 +204,42 @@
 
 ### 변화 리포트
 
-판단의 이유는 [ADR-0319](../adr/0319-the-change-report-screen-has-a-list-per-kind-and-a-report-page-with-four-states-and-the-failure-cause-only.md) · [ADR-0325](../adr/0325-a-failed-report-is-regenerated-from-the-screen-on-the-same-row-up-to-three-times.md)에 있다.
+판단의 이유는 [ADR-0319](../adr/0319-the-change-report-screen-has-a-list-per-kind-and-a-report-page-with-four-states-and-the-failure-cause-only.md) · [ADR-0325](../adr/0325-a-failed-report-is-regenerated-from-the-screen-on-the-same-row-up-to-three-times.md) · [ADR-0337](../adr/0337-the-change-report-screen-shows-no-numbers-in-text-interest-as-history-cells-and-judgements-as-coloured-words.md) · [ADR-0338](../adr/0338-a-change-report-writes-only-kind-sections-without-an-overview.md) · [ADR-0339](../adr/0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md) · [ADR-0341](../adr/0341-a-monthly-report-does-not-compare-flow-coverage-with-the-previous-monthly-and-shows-the-flow-state-kept-at-generation.md)에 있다.
 
 - **web-R16** — 목록 화면(`/reports`, [reader-R15](reader.md#변화-리포트))은 종류 탭 둘(주간 · 월간)을 둔다. 탭은 주소의 `kind` 이고, 없거나 모르는 값이면 주간이다.
+  - 머리의 설명은 리포트가 추적한 흐름과 관심의 변화를 다룬다고 말한다
   - 탭마다 최근 순으로 줄마다 기간 링크와 상태를 그린다. 상태는 만드는 중 · 보일 변화 없음 · 만들지 못함이고, 내용 있음은 적지 않는다
   - 리포트가 없으면 관심 설정에서 켜면 만들어진다고 안내한다
 - **web-R17** — 한 편 화면(`/reports/:id`, [reader-R16](reader.md#변화-리포트))은 상태 넷을 가른다.
-  - 만드는 중(`SCHEDULED` · `RUNNING`)과 비어 있음(`EMPTY`, 담을 변화가 없었다)
+  - 만드는 중(`SCHEDULED` · `RUNNING`)과 비어 있음(`EMPTY`, 담을 변화가 없었다). 비어 있음의 안내는 추적한 흐름도, 새로 생기거나 사라진 관심 · 바꾼 구독도 없었다고 말한다
   - 실패(`FAILED`)는 실패 코드마다 무슨 일 문구를 보이고 메시지는 보이지 않는다. 남은 다시 만들기 수가 있으면 그 수와 다시 만들기 버튼을 둔다. 다 썼으면 버튼 없이 다 썼다고 안내한다
   - 다시 만들기 버튼은 요청하는 동안 막는다. 받으면 리포트를 다시 읽어 만드는 중이 되고, 받지 않으면 까닭을 보인다. 까닭은 다시 읽은 리포트가 실패가 아니어도(다른 곳에서 먼저 다시 만들었다) 한 편 화면에 남는다
-  - 내용(`READY`)은 개요와 종류 섹션마다 제목 · 본문 · 숫자 표 · 인용 목록(접힘)을 그린다. 숫자 표는 직전 값이 없으면 `—`, 관심 값이 없으면 "신호 없음"이다. 숨긴 섹션이 있으면 그 수를 보이고, 섹션이 하나도 없으면(종류 섹션이 모두 숨음) 글 대신 안내를 보인다
+  - 내용(`READY`)은 종류 섹션마다 섹션 종류의 고정 제목(추적한 흐름 · 관심의 변화)을 머리로 두고, 그 아래 모델이 쓴 제목을 요지 한 줄로 둔다. 이어 본문 · 표(web-R26 ~ R29) · 인용 목록(접힘)을 그린다. 고정 제목의 정본은 `reportTexts.ts` 의 `sectionHeadings` 다
+  - 숨긴 섹션이 있으면 그 수를 보이고, 섹션이 하나도 없으면(종류 섹션이 모두 숨음) 글 대신 안내를 보인다
   - 스토리라인의 이름은 정리된 사용자 스토리라인의 제목(개인 흐름 화면 링크)이고, 없으면 대표 기사 제목(공용 타임라인 링크), 그것도 없으면 이름 없는 스토리라인(공용 타임라인 링크)이다
   - 사건은 원문 링크(새 창) · 출처 · 발행 시각이고, 대표 기사가 없으면 링크 없는 안내다
-  - 비교한 직전 리포트 줄은 직전 값과 견준 리포트에만 그린다. 견준 리포트는 내용 리포트와 시작한 실패 리포트(사용량이 있다)다. 직전 리포트가 있으면 그 기간의 링크를, 없으면 비교가 빈 까닭의 안내를 둔다
+  - 직전 리포트 줄은 생성 때 직전 리포트를 이은 리포트에만 그린다. 그런 리포트는 내용 리포트와 시작한 실패 리포트(사용량이 있다)다. 문구는 리포트 종류마다 다르고, 정본은 `reportTexts.ts` 의 `previousLink` · `noPreviousTexts` 다
+    - 주간은 직전 리포트가 있으면 "비교한 직전 주간 리포트 · 기간" 링크를, 없으면 비교가 빈 까닭의 안내를 둔다
+    - 월간은 직전 값과 견주지 않아([report-R174](report.md#직전-리포트와-스냅숏)) "비교한" 없이 "직전 월간 리포트 · 기간" 링크를, 없으면 직전 월간 리포트가 없다는 안내를 둔다
   - 맨 아래에 모델 · 토큰 · 끝낸 시각을 적는다
   - 진입은 머리줄의 "변화 리포트"와 관심 설정 리포트 절의 링크다
+- **web-R26** — 한 편 화면의 표는 수를 글자로 보이지 않는다. 수는 아래 칸의 `title` 과 화면 낭독에만 둔다. 응답은 수를 그대로 싣는다([reader-R61](reader.md#변화-리포트))
+  - 주간 흐름 표의 판정 칸 — "이번 기간 N건 · 직전 기간 M건". 직전이 없으면 "없음"이다
+  - 월간 흐름 표의 상태 칸 — "이번 기간 N건"
+  - 관심 표의 기간 시작 · 끝 칸 — 관심 값(소수 둘째 자리). 값이 없으면 "신호 없음"이다
+- **web-R27** — 흐름 표(`STORYLINES` 의 숫자, [report-R74](report.md#리포트-조회))의 이름과 칸은 리포트 종류로 고른다
+  - 주간 — 표 이름은 "보도"이고 칸은 흐름 · 판정이다
+  - 월간 — 표 이름은 "상태"이고 칸은 흐름 · 상태다. 상태는 생성 때 헤드의 상태이고, 낱말은 다른 화면과 같다(`shared/lib/storylineState.ts` 의 `storylineStateLabels`). 상태를 남기지 않은 옛 리포트의 줄은 상태 칸이 비어 있다
+- **web-R28** — 관심 표는 "주제" · "흐름" 둘이다. 기간 시작 · 끝 칸은 관심사 히스토리(web-R15)의 칸과 같은 색 네모이고, 색 판단의 정본은 `shared/lib/interestLevel.ts` 다
+  - 관심 쪽은 주 색, 싫어요 쪽은 경고 색, 신호 없음과 0 은 바탕이다
+  - 진하기는 관심의 크기다
+- **web-R29** — 판정 · 상태 · 변화 칸은 색 낱말이다. 색의 정본은 `reportTexts.ts` 의 `trendTones` · `stateTones` · `shiftTones` 다
+
+  | 칸 | 주 색 | 경고 색 | 바탕 |
+  |---|---|---|---|
+  | 판정 | 늘었음 · 새로 생김 | 줄었음 | 비슷함 · 비교 없음 |
+  | 상태 | 진행 | — | 잠잠 · 끝남 |
+  | 변화 | 새로 생긴 관심 | 사라진 관심 | 변화 없음 |
 
 ### 알림
 
@@ -290,3 +311,7 @@
 | [0320](../adr/0320-operator-screens-operations-docs-and-the-evaluation-tool-also-call-a-storyline-an-event-flow-and-a-big-one-a-big-topic.md) | 운영자 화면도 사건 흐름 · 흐름 · 큰 화제로 부른다 |
 | [0325](../adr/0325-a-failed-report-is-regenerated-from-the-screen-on-the-same-row-up-to-three-times.md) | 실패한 리포트는 화면에서 세 번까지 다시 만든다 |
 | [0328](../adr/0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md) | 프론트엔드는 화면 Spec 하나를 갖고 화면 이름 · 경로 · 동작을 담는다 |
+| [0337](../adr/0337-the-change-report-screen-shows-no-numbers-in-text-interest-as-history-cells-and-judgements-as-coloured-words.md) | 변화 리포트 화면은 표의 수를 글자로 보이지 않고, 관심은 색 칸, 판정 · 상태 · 변화는 색 낱말로 보인다 |
+| [0338](../adr/0338-a-change-report-writes-only-kind-sections-without-an-overview.md) | 변화 리포트는 개요 없이 종류 섹션만 쓴다 |
+| [0339](../adr/0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md) | 변화 리포트는 구독 주제 보도량을 다루지 않는다 |
+| [0341](../adr/0341-a-monthly-report-does-not-compare-flow-coverage-with-the-previous-monthly-and-shows-the-flow-state-kept-at-generation.md) | 월간 리포트는 흐름 보도량을 견주지 않고 생성 때의 흐름 상태를 보인다 |

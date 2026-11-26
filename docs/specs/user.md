@@ -42,7 +42,7 @@
 - **다이제스트 일정과 쓸 모델** — 쓰지 않는 공개 조회 둘을 낸다(user-R61)
   - `DigestScheduleDirectory`: 다이제스트의 일정 회차가 읽는 일정 목록(쓰는 계정의 시간대 · 생성 시각)
   - `DigestModelDirectory`: 일정 · 생성 작업 · 수동 생성 · 수동 생성 상태가 읽는 쓸 모델(`ModelChoice`)
-- **리포트 일정과 쓸 모델** — 쓰지 않는 공개 조회 둘을 낸다(user-R76). 리포트의 재료는 구독 주제를 `DigestInterestsDirectory` 로 읽는다
+- **리포트 일정과 쓸 모델** — 쓰지 않는 공개 조회 둘을 낸다(user-R76). 리포트의 재료는 시간대 · 태그 체계 버전을 `DigestInterestsDirectory` 로 읽는다
   - `ReportScheduleDirectory`: 변화 리포트의 일정 회차가 읽는 일정 목록
   - `ReportModelDirectory`: 일정 회차 · 생성 작업 · 다시 만들기가 읽는 쓸 모델과 추론 강도(`ModelChoice`)
 
@@ -236,7 +236,7 @@ public interface InterestSignalWindow {
 
 ### DigestInterestsDirectory
 
-다이제스트가 읽는 관심 설정 — 다이제스트 후보 선별과 변화 리포트의 재료 조립(구독 주제 · 시간대)이 읽는다. 구현은 `application` 의 `DigestInterestsDirectoryService` 다.
+다이제스트가 읽는 관심 설정 — 다이제스트 후보 선별과 변화 리포트의 재료 조립(시간대 · 태그 체계 버전)이 읽는다. 구현은 `application` 의 `DigestInterestsDirectoryService` 다.
 
 ```java
 public interface DigestInterestsDirectory {
@@ -983,7 +983,7 @@ sequenceDiagram
 - `StorylineSubscriptionDirectoryService` — 공개 조회 `StorylineSubscriptionDirectory` 의 구현. 읽기 전용이다(user-R55)
 - `StorylineSubscriptionHistory` — 화면의 구독 이력 유스케이스. 세션 사용자의 원인 `USER` 행 한 쪽과 다음 쪽 커서를 낸다. 값 `HistoryPage` · `HistoryEntry`. 읽기 전용이다(user-R111 ~ R113)
 - `StorylineSummaryRun` — 사용자 하나의 정리 실행(user-R128). 결과 `SummaryRunResult`(저장 · 지움 · 실패 · 버림의 수). 역할 애너테이션이 없다
-- `SummaryMaterials` — 정리의 재료 읽기. 추적 대상 꼭대기의 사건(`storyline` 의 타임라인, 하위 스토리라인의 사건까지)과 대표 기사(`event`)의 제목 · 요약문(`article`)을 읽는다. 대표 기사가 없거나 그새 지운 사건은 뺀다. 트랜잭션 없이 조회를 차례로 부른다(user-R132)
+- `SummaryMaterials` — 정리의 재료 읽기. 추적 대상 꼭대기의 사건(`storyline` 의 타임라인, 하위 스토리라인의 사건까지)과 대표 기사(`event`)의 제목 · 요약문(`article`)을 읽는다. 사건은 첫 기사 시각이 실행의 지금 이하인 것만 싣고(user-R142), 대표 기사가 없거나 그새 지운 사건은 뺀다. 트랜잭션 없이 조회를 차례로 부른다(user-R132)
 - `DigestCompletedListener` — `DigestCompleted` 리스너(들어오는 쪽). 역할 애너테이션이 없다(user-R127)
 - `SummaryArticleRemoval` · `SummaryArticleRemovalListener` — 지운 기사 따르기와 `ArticlesRemoved` 리스너(user-R72)
 - `UserStorylineSummariesService` — 공개 조회 `UserStorylineSummaries` 의 구현. 읽기 전용이다(user-R73)
@@ -1496,11 +1496,11 @@ public interface SummaryJobQueue {
 
 ### 사용자 스토리라인의 정리
 
-판단의 이유는 [ADR-0287](../adr/0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md) · [ADR-0288](../adr/0288-summaries-are-made-after-a-digest-ends-only-for-changed-flows-and-extended-with-new-events.md) · [ADR-0289](../adr/0289-shown-flows-are-user-storylines-with-a-summary-which-the-summary-job-creates-and-removes.md) · [ADR-0291](../adr/0291-tokens-spent-on-a-summary-are-shown-on-the-personal-flow-screen-as-the-last-summary-and-the-running-total.md)에 있다.
+판단의 이유는 [ADR-0287](../adr/0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md) · [ADR-0288](../adr/0288-summaries-are-made-after-a-digest-ends-only-for-changed-flows-and-extended-with-new-events.md) · [ADR-0289](../adr/0289-shown-flows-are-user-storylines-with-a-summary-which-the-summary-job-creates-and-removes.md) · [ADR-0291](../adr/0291-tokens-spent-on-a-summary-are-shown-on-the-personal-flow-screen-as-the-last-summary-and-the-running-total.md) · [ADR-0327](../adr/0327-summary-materials-take-only-events-that-started-by-the-runs-now.md)에 있다.
 
 - **user-R68** — 정리 작업의 등록과 실행 차례를 정한다. 하위 규칙: user-R127 · user-R128
 - **user-R69** — 처분과, 한 실행 · 한 호출의 상한을 정한다. 하위 규칙: user-R129 · user-R130 · user-R131
-- **user-R70** — 정리 호출의 입력과 출력, 저장, 로컬 대체물과 로그를 정한다. 하위 규칙: user-R132 ~ R137
+- **user-R70** — 정리 호출의 입력과 출력, 저장, 로컬 대체물과 로그를 정한다. 하위 규칙: user-R132 ~ R137 · user-R142
 - **user-R71** — 시도 기록과 실패, 쉼을 정한다. 하위 규칙: user-R138 ~ R141
 - **user-R72** — 지운 기사 따르기: `article` 의 `ArticlesRemoved` 를 받으면 그 기사 가운데 하나라도 넣은 사건의 대표 기사로 가진 정리를 모두 지운다. 그 까닭은 [ADR-0287](../adr/0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md)에 있다
   - 여러 사용자에 걸치므로 백그라운드 전용이다
@@ -1564,6 +1564,10 @@ public interface SummaryJobQueue {
   - 그 밖: `PROVIDER_UNAVAILABLE` · `UNEXPECTED` · `UNREADABLE_OUTPUT` · `OUTPUT_TRUNCATED` · `OUTPUT_REFUSED`
 - **user-R140** — 연속 실패가 n 번이면 마지막 실패 시각부터 min(n, 7)일 동안 쉬고, 그동안 그 사용자 스토리라인을 부르지 않는다. 7 은 `SummaryRules.MAX_REST_DAYS` 이고, 쉬는 끝의 정본은 `SummaryRules.restUntil` 이다
 - **user-R141** — 정리를 지워도 시도 기록은 남는다. 사용자 스토리라인이 사라지면 함께 지워진다
+- **user-R142** — 재료의 사건은 추적 대상 꼭대기의 타임라인 가운데 첫 기사 시각이 그 실행의 지금 이하인 사건이다. 지금은 그 실행이 처분에 쓰는 지금과 같은 값이고, 재료 읽기가 시계를 따로 읽지 않는다
+  - 측정용 시계로 지난 날짜를 돌 때 복원한 데이터의 뒷날 사건을 싣지 않는다
+  - 실제 시간에서는 첫 기사 시각이 1시간 안의 미래인 사건만 그 시각이 지난 뒤의 실행으로 미뤄진다(발행 시각 해석, [source Spec](source.md#5-규칙과-불변식) source-R40)
+  - 사건의 대표 기사와 스토리라인 구조(소속 · 관계 · 사용자 스토리라인 묶음)는 시각으로 자르지 않는다
 
 ### 폐지한 규칙
 
@@ -1717,3 +1721,4 @@ public interface SummaryJobQueue {
 | [0321](../adr/0321-change-report-periods-end-at-the-digest-time-of-the-chosen-weekday-or-day-are-made-within-two-hours-and-a-changed-setting-makes-a-whole-new-period.md) | 변화 리포트는 고른 요일 · 날짜의 다이제스트 생성 시각에서 기간을 끊고, 그 시각 뒤 2시간 안에 만들며, 설정을 바꾸면 새 설정의 온전한 기간을 만든다 |
 | [0324](../adr/0324-report-failures-become-notices-through-an-event-declared-by-the-receiving-user-module-like-digest-failures.md) | 리포트 실패는 받는 쪽 user 가 선언한 이벤트로 다이제스트와 같은 꼴의 알림이 되고, 실패 원인 타입을 함께 쓴다 |
 | [0326](../adr/0326-development-names-call-a-shared-storyline-storyline-a-user-storyline-user-storyline-and-a-judgement-candidate-of-unknown-kind-candidate.md) | 개발 이름은 공유 스토리라인을 `Storyline`, 사용자 스토리라인을 `UserStoryline` 으로 부르고, 종류를 모르는 판정 후보는 `Candidate` 로 부른다 |
+| [0327](../adr/0327-summary-materials-take-only-events-that-started-by-the-runs-now.md) | 정리 재료는 실행의 지금까지 첫 기사가 난 사건만 싣고, 사건의 대표 기사와 스토리라인 구조는 자르지 않는다 |

@@ -275,8 +275,8 @@
 | [0270](0270-an-item-missing-from-the-output-is-asked-once-more-and-then-kept-as-a-headline-and-the-counts-are-recorded.md) | 출력에 빠진 항목은 한 번 다시 묻고, 그래도 빠지면 첫 인용 기사 제목의 헤드라인으로 남기며, 그 수를 다이제스트 행에 기록한다 | 승인 |
 | [0271](0271-when-the-input-token-budget-cuts-candidates-the-big-slot-keeps-at-most-half-of-what-is-left-and-uses-what-subscribed-events-leave.md) | 입력 토큰 예산으로 자를 때 큰 슬롯 사건은 남는 사건의 절반을 넘지 않고, 구독 사건이 모자라면 남는 예산을 쓴다 | 승인 |
 | [0272](0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md) | 입력 토큰 예산은 안전 상한이고, 다이제스트 분량은 최대 후보 수 단계가 정한다 | 승인 |
-| [0273](0273-change-reports-are-written-in-fixed-sections-per-material-kind-keyed-as-required-fields.md) | 변화 리포트는 갈래마다 고정 섹션으로 쓰고, 출력은 갈래를 키로 한 필수 칸이다 | 승인 (부분 대체: 0303) |
-| [0274](0274-change-reports-cite-only-storylines-and-events-and-keep-topics-in-the-stats-snapshot.md) | 변화 리포트는 스토리라인 · 사건만 인용하고, 주제는 통계 스냅숏으로 둔다 | 승인 (부분 대체: 0305) |
+| [0273](0273-change-reports-are-written-in-fixed-sections-per-material-kind-keyed-as-required-fields.md) | 변화 리포트는 갈래마다 고정 섹션으로 쓰고, 출력은 갈래를 키로 한 필수 칸이다 | 승인 (부분 대체: 0303 · 0338 · 0339) |
+| [0274](0274-change-reports-cite-only-storylines-and-events-and-keep-topics-in-the-stats-snapshot.md) | 변화 리포트는 스토리라인 · 사건만 인용하고, 주제는 통계 스냅숏으로 둔다 | 승인 (부분 대체: 0305 · 0339) |
 | [0275](0275-report-citations-resolve-removed-and-merged-events-and-storylines-when-read-and-a-section-that-lost-every-citation-is-hidden.md) | 리포트 인용은 지운 · 합친 사건과 스토리라인을 읽을 때 풀고, 인용을 모두 잃은 섹션은 보이지 않는다 | 승인 |
 | [0276](0276-platform-describes-reads-and-draws-llm-output-and-task-modules-keep-their-own-shape-and-value-mapping.md) | LLM 출력의 서술 · 읽기 · JSON Schema 그리기는 `platform` 이 맡고, 과제 모듈은 자기 서술과 값 옮기기만 한다 | 승인 |
 | [0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md) | 스토리라인 관심은 포함 나무의 꼭대기마다 주제와 같은 산식으로 세고, 7일 안에 다시 본 흐름의 반응 · 노출과 스토리라인 구독은 스토리라인에만 든다 | 승인 (부분 대체: 0283 · 0295 · 0298) |
@@ -304,20 +304,20 @@
 | [0299](0299-the-big-judgement-criterion-first-value-is-fourteen-to-keep-its-strictness-on-the-four-level-importance-scale.md) | 큰 판정 기준의 처음 값은 네 단계 중요도 척도에서 같은 엄격함을 지키도록 14.00 으로 둔다 | 승인 |
 | [0301](0301-the-operator-article-detail-is-one-page-and-one-detail-api-and-article-titles-on-operator-screens-link-to-it.md) | 운영자 기사 상세는 한 페이지 · 상세 API 하나로 기사 · 평가 · 사건 소속을 싣고, 운영자 화면의 기사 제목이 그리로 잇는다 | 승인 |
 | [0302](0302-the-article-detail-shows-clustering-evidence-from-the-assignment-its-criteria-stored-candidates-applied-judgement-and-remaining-key-terms.md) | 기사 상세의 사건 묶기 근거는 배정 · 판정에 쓴 기준 · 저장 후보 · 반영한 판정 원본과 남아 있는 표현의 핵심 말이다 | 승인 |
-| [0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md) | 변화 리포트는 그 사용자와 관계된 것만 다루고, 갈래는 추적한 흐름 · 구독 주제 보도량 · 관심 변화 셋이다 | 승인 |
-| [0304](0304-a-change-report-takes-previous-values-from-the-previous-reports-snapshot-matched-one-to-one-and-keeps-them-in-its-own-snapshot.md) | 변화 리포트의 직전 기간 비교는 직전 리포트의 스냅숏에서 1:1 로 이은 값으로 하고, 이은 값을 자기 스냅숏에 함께 남긴다 | 승인 |
+| [0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md) | 변화 리포트는 그 사용자와 관계된 것만 다루고, 갈래는 추적한 흐름 · 구독 주제 보도량 · 관심 변화 셋이다 | 승인 (부분 대체: 0336 · 0339) |
+| [0304](0304-a-change-report-takes-previous-values-from-the-previous-reports-snapshot-matched-one-to-one-and-keeps-them-in-its-own-snapshot.md) | 변화 리포트의 직전 기간 비교는 직전 리포트의 스냅숏에서 1:1 로 이은 값으로 하고, 이은 값을 자기 스냅숏에 함께 남긴다 | 승인 (부분 대체: 0339 · 0341) |
 | [0305](0305-a-change-report-describes-flows-by-the-user-storyline-summary-and-events-by-the-representative-article-title-and-cites-a-flow-by-its-head.md) | 변화 리포트는 흐름을 사용자 스토리라인의 정리로, 사건을 대표 기사 제목으로 설명하고, 흐름은 헤드의 스토리라인 ID 로 인용한다 | 승인 |
-| [0306](0306-a-change-report-compares-subscribed-topic-coverage-and-flow-coverage-each-only-with-its-own-previous-value.md) | 변화 리포트는 구독 주제 보도량과 흐름 보도량을 서로 견주지 않고 각자 자기 직전 값과만 견준다 | 승인 |
+| [0306](0306-a-change-report-compares-subscribed-topic-coverage-and-flow-coverage-each-only-with-its-own-previous-value.md) | 변화 리포트는 구독 주제 보도량과 흐름 보도량을 서로 견주지 않고 각자 자기 직전 값과만 견준다 | 승인 (부분 대체: 0334 · 0339) |
 | [0307](0307-the-tag-set-screen-edits-the-whole-text-activates-only-what-was-reviewed-and-reports-interference-by-comparing-results.md) | 태그 체계 화면은 원문 전체를 고치는 한 페이지이고, 확인한 원문 · 재평가 기간 그대로만 확인 대화상자를 거쳐 활성화하며, 끼어든 활성화는 활성화 결과를 확인 결과와 견줘 알린다 | 승인 |
 | [0308](0308-account-authentication-and-security-live-in-the-account-module-while-interests-and-notices-stay-in-user.md) | 계정 · 인증 · 보안은 `account` 모듈이 갖고, 관심 · 화면 내 알림은 `user` 에 남는다 | 승인 |
 | [0309](0309-account-facts-are-published-after-commit-and-user-writes-interest-defaults-and-password-notices-from-them.md) | 계정 생김 · 비밀번호 바뀜은 `account` 가 커밋 뒤 이벤트로 알리고, 관심 설정 기본값 · 비밀번호 알림은 받는 `user` 가 쓴다 | 승인 |
-| [0310](0310-a-change-report-follows-the-digest-verdict-and-asks-once-more-for-an-unreadable-answer-or-a-missing-section.md) | 변화 리포트의 생성 판정은 다이제스트를 따라 읽지 못한 응답과 빠진 갈래를 한 번 다시 묻는다 | 승인 |
-| [0311](0311-a-change-report-input-fits-the-smaller-of-the-model-budget-and-the-weekly-or-monthly-cap-by-a-share-for-earlier-reports-and-a-fixed-trimming-order.md) | 변화 리포트의 입력은 모델 예산과 주간 · 월간 리포트 상한 가운데 작은 값 안으로, 직전 글의 몫과 정한 순서의 덜어 내기로 맞춘다 | 승인 |
-| [0312](0312-the-reasoning-effort-setting-is-shared-by-digests-and-change-reports-and-report-lengths-are-constants.md) | 추론 강도 설정은 다이제스트와 변화 리포트가 함께 쓰고, 리포트의 글 길이 기준은 상수다 | 승인 |
+| [0310](0310-a-change-report-follows-the-digest-verdict-and-asks-once-more-for-an-unreadable-answer-or-a-missing-section.md) | 변화 리포트의 생성 판정은 다이제스트를 따라 읽지 못한 응답과 빠진 갈래를 한 번 다시 묻는다 | 승인 (부분 대체: 0335) |
+| [0311](0311-a-change-report-input-fits-the-smaller-of-the-model-budget-and-the-weekly-or-monthly-cap-by-a-share-for-earlier-reports-and-a-fixed-trimming-order.md) | 변화 리포트의 입력은 모델 예산과 주간 · 월간 리포트 상한 가운데 작은 값 안으로, 직전 글의 몫과 정한 순서의 덜어 내기로 맞춘다 | 승인 (부분 대체: 0336 · 0338) |
+| [0312](0312-the-reasoning-effort-setting-is-shared-by-digests-and-change-reports-and-report-lengths-are-constants.md) | 추론 강도 설정은 다이제스트와 변화 리포트가 함께 쓰고, 리포트의 글 길이 기준은 상수다 | 승인 (부분 대체: 0338) |
 | [0313](0313-the-input-token-estimate-is-an-llm-public-type.md) | 입력 토큰 어림은 `llm` 의 공개 타입이 정본이다 | 승인 |
 | [0314](0314-the-free-text-interest-setting-is-removed-and-its-stored-values-are-dropped-by-migration.md) | 자유 텍스트 관심사 설정을 없애고 저장된 값은 마이그레이션에서 지운다 | 승인 |
 | [0315](0315-a-settings-column-of-a-removed-feature-may-be-dropped-by-a-migration-with-the-adr-that-removed-it.md) | 기능을 없애 앱이 읽지 않고 사용자에게 보이지 않는 설정 칸은 그 결정을 기록한 ADR 과 함께 마이그레이션이 지울 수 있다 | 승인 |
-| [0316](0316-a-change-report-view-carries-each-visible-sections-numbers-as-typed-values-and-resolves-flow-lines-like-citations.md) | 변화 리포트 조회는 보이는 갈래 섹션마다 스냅숏의 숫자를 타입 있는 값으로 싣고, 흐름 줄은 인용과 같은 규칙으로 풀며, 숨긴 섹션 수를 낸다 | 승인 |
+| [0316](0316-a-change-report-view-carries-each-visible-sections-numbers-as-typed-values-and-resolves-flow-lines-like-citations.md) | 변화 리포트 조회는 보이는 갈래 섹션마다 스냅숏의 숫자를 타입 있는 값으로 싣고, 흐름 줄은 인용과 같은 규칙으로 풀며, 숨긴 섹션 수를 낸다 | 승인 (부분 대체: 0338 · 0339) |
 | [0317](0317-a-change-report-row-points-to-the-previous-report-it-took-the-previous-values-from.md) | 변화 리포트 행은 생성 때 직전 값을 꺼낸 직전 리포트를 가리킨다 | 승인 |
 | [0318](0318-change-report-period-days-are-written-in-the-users-zone-at-start-and-the-row-keeps-that-zone.md) | 변화 리포트 기간의 날짜는 생성을 시작할 때의 사용자 시간대로 적고, 그 시간대를 리포트 행에 남긴다 | 승인 |
 | [0319](0319-the-change-report-screen-has-a-list-per-kind-and-a-report-page-with-four-states-and-the-failure-cause-only.md) | 변화 리포트 화면은 종류마다 목록과 한 편 화면으로 보이고, 상태는 넷, 실패는 코드의 무슨 일 문구만 보인다 | 승인 (부분 대체: 0323 · 0325) |
@@ -328,12 +328,21 @@
 | [0324](0324-report-failures-become-notices-through-an-event-declared-by-the-receiving-user-module-like-digest-failures.md) | 리포트 실패는 받는 쪽 user 가 선언한 이벤트로 다이제스트와 같은 꼴의 알림이 되고, 실패 갈래 타입을 함께 쓴다 | 승인 |
 | [0325](0325-a-failed-report-is-regenerated-from-the-screen-on-the-same-row-up-to-three-times.md) | 실패한 리포트는 화면에서 같은 행을 다시 생성을 기다리게 해 리포트마다 세 번까지 다시 만든다 | 승인 |
 | [0326](0326-development-names-call-a-shared-storyline-storyline-a-user-storyline-user-storyline-and-a-judgement-candidate-of-unknown-kind-candidate.md) | 개발 이름은 공유 스토리라인을 `Storyline`, 사용자 스토리라인을 `UserStoryline` 으로 부르고, 종류를 모르는 판정 후보는 `Candidate` 로 부른다 | 승인 (부분 대체: 0328) |
+| [0327](0327-summary-materials-take-only-events-that-started-by-the-runs-now.md) | 정리 재료는 실행의 지금까지 첫 기사가 난 사건만 싣고, 사건의 대표 기사와 스토리라인 구조는 자르지 않는다 | 승인 |
 | [0328](0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md) | 프론트엔드도 화면 Spec 하나(`web`)를 갖고, 화면 이름 · 화면 경로 · 화면 동작을 그 Spec 이 갖는다 | 승인 |
 | [0329](0329-a-large-rule-is-split-into-one-judgement-each-and-its-identifier-stays-as-a-group-head-covering-the-sub-rules.md) | 큰 규칙은 판단 하나씩 쪼개고, 원래 규칙 식별자는 하위 규칙을 덮는 묶음 머리로 남긴다 | 승인 |
 | [0330](0330-spec-rules-sit-in-number-order-within-topic-subsections-retired-rules-go-to-a-last-subsection-and-rules-get-no-anchors.md) | Spec §5 의 규칙은 주제별 하위 절 안에서 번호순으로 두고, 폐지한 규칙은 끝 절에 모으며, 규칙마다 앵커를 두지 않는다 | 승인 |
 | [0331](0331-a-development-term-has-only-the-meaning-of-one-code-name-and-words-with-several-meanings-are-renamed-per-meaning.md) | 개발 용어는 코드 이름 하나의 뜻만 갖고, 여러 뜻으로 쓰이던 말은 뜻마다 다른 말로 바꾼다 | 승인 |
 | [0332](0332-reasons-and-measurements-belong-to-the-deciding-adr-are-dropped-without-one-and-unmeasured-values-are-marked.md) | 판단의 이유와 실측은 그 판단의 ADR 이 갖고, 그 ADR 이 없으면 문서에 남기지 않으며, 재지 않은 잠정값은 `(측정 전)` 으로 표시한다 | 승인 |
 | [0333](0333-a-term-is-defined-in-the-spec-of-the-module-owning-the-concept-and-only-cross-cutting-terms-go-to-the-overview.md) | 용어의 정의는 그 개념을 소유한 모듈의 Spec 이 갖고, 주인을 한 모듈로 정할 수 없는 횡단 용어만 `overview` 가 갖는다 | 승인 |
+| [0334](0334-change-report-llm-input-carries-judgements-in-words-without-article-counts-or-interest-values.md) | 변화 리포트의 LLM 입력은 기사 수 · 관심 값 없이 판정 · 변화 · 상태 · 기간 종류를 낱말로 싣는다 | 승인 |
+| [0335](0335-a-change-report-asks-once-more-when-its-writing-keeps-an-alias-of-the-request.md) | 변화 리포트의 글에 그 요청의 별칭이 남으면 한 번 다시 묻는다 | 승인 |
+| [0336](0336-change-report-interest-lines-are-only-the-changed-ones-and-without-a-change-there-is-no-interest-section.md) | 변화 리포트의 관심 줄은 새로 생기거나 사라진 것만 고르고, 관심 변화 · 구독 변경이 없으면 관심 변화 섹션이 없다 | 승인 |
+| [0337](0337-the-change-report-screen-shows-no-numbers-in-text-interest-as-history-cells-and-judgements-as-coloured-words.md) | 변화 리포트 화면은 표의 수를 글자로 보이지 않고, 관심은 관심사 히스토리의 칸처럼 색으로, 판정 · 변화는 색 낱말로 보인다 | 승인 |
+| [0338](0338-a-change-report-writes-only-kind-sections-without-an-overview.md) | 변화 리포트는 개요 없이 종류 섹션만 쓴다 | 승인 |
+| [0339](0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md) | 변화 리포트의 섹션 종류는 추적한 흐름 · 관심 변화 둘이고, 구독 주제 보도량을 다루지 않는다 | 승인 |
+| [0340](0340-sections-and-snapshot-fields-of-removed-report-kinds-are-kept-unread-and-snapshot-version-three-reads-version-two.md) | 없앤 섹션 종류의 저장된 섹션과 스냅숏 칸은 지우지 않고 읽지 않으며, 스냅숏 버전 3 은 버전 2 를 읽는 길을 둔다 | 승인 |
+| [0341](0341-a-monthly-report-does-not-compare-flow-coverage-with-the-previous-monthly-and-shows-the-flow-state-kept-at-generation.md) | 월간 리포트는 흐름 보도량을 직전 월간과 견주지 않고, 생성 때의 흐름 상태를 스냅숏에 남겨 보인다 | 승인 |
 
 ## 운영 규칙
 

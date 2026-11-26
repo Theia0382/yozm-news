@@ -1,7 +1,6 @@
 package net.yozmnews.report.domain.output;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * 대조를 지난 출력 · docs/specs/report.md §5 · report-R7
@@ -10,10 +9,9 @@ import java.util.Objects;
  * @param missingSections 출력에 칸이 없던 입력 갈래의 수
  * @param unknownRefs 버린 별칭(입력에 없는 별칭 · 빈 별칭)의 수
  */
-public record CitedReport(String overview, List<CitedSection> sections, int missingSections, int unknownRefs) {
+public record CitedReport(List<CitedSection> sections, int missingSections, int unknownRefs) {
 
 	public CitedReport {
-		Objects.requireNonNull(overview, "overview");
 		sections = List.copyOf(sections);
 		if (missingSections < 0 || unknownRefs < 0) {
 			throw new IllegalArgumentException("수가 음수다: " + missingSections + ", " + unknownRefs);

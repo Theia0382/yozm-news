@@ -122,10 +122,9 @@ public class ReportGeneration {
 		if (fitted.trimmedAnything() || fitted.overBudget()) {
 			Trimmed trimmed = fitted.trimmed();
 			logger.info(
-					"리포트 입력을 예산에 맞춰 덜어 냈다 — 리포트 {}, 예산 {}, 직전 글 자름 {}, 관심 줄의 정리 뺌 {}, 관심 줄 뺌 {}, 사건 줄 뺌 {}, 흐름 요약 뺌 {}, 사용자 스토리라인 뺌 {}, 예산을 넘긴 채 {}",
-					id.value(), budget, trimmed.priorsCut(), trimmed.userStorylineSummariesDropped(),
-					trimmed.userStorylineInterestLinesDropped(), trimmed.eventLinesDropped(), trimmed.userStorylineOverviewsDropped(),
-					trimmed.userStorylinesDropped(), fitted.overBudget());
+					"리포트 입력을 예산에 맞춰 덜어 냈다 — 리포트 {}, 예산 {}, 직전 글 자름 {}, 관심 줄의 정리 뺌 {}, 사건 줄 뺌 {}, 흐름 요약 뺌 {}, 사용자 스토리라인 뺌 {}, 예산을 넘긴 채 {}",
+					id.value(), budget, trimmed.priorsCut(), trimmed.userStorylineSummariesDropped(), trimmed.eventLinesDropped(),
+					trimmed.userStorylineOverviewsDropped(), trimmed.userStorylinesDropped(), fitted.overBudget());
 		}
 		ReportPrompt prompt = ReportPrompts.compose(sent, aliases, model);
 		Instant asked = this.clock.instant();
@@ -139,8 +138,9 @@ public class ReportGeneration {
 						ReportPrompts.retry(prompt, retry.diagnosis())));
 				yield ReportVerdict.settle(second, root);
 			}
-			case ReportVerdict.RetryMissing retry -> {
-				logger.info("리포트 생성을 다시 물었다 — 리포트 {}, 까닭 빠진 갈래 {}", id.value(), retry.missing());
+			case ReportVerdict.RetryRewrite retry -> {
+				logger.info("리포트 생성을 다시 물었다 — 리포트 {}, 까닭 빠진 갈래 {} · 남은 별칭 {}", id.value(), retry.shortfall().missing(),
+						retry.shortfall().leftAliases());
 				second = this.generator.generate(new ReportRequest(started.user(), model, effort, aliases,
 						ReportPrompts.retry(prompt, retry.diagnosis())));
 				yield ReportVerdict.settle(second, root, aliases, retry.first());
@@ -202,9 +202,14 @@ public class ReportGeneration {
 				case ReportVerdict.Fail fail -> new Completion.Failed(fail.failure(), fail.message(), usage, took);
 				case ReportVerdict.Read read -> {
 					CitedReport cited = ReportCitationCheck.check(read.output().draft(), aliases);
-					if (cited.missingSections() > 0 || cited.unknownRefs() > 0 || read.output().overLimit() > 0) {
-						logger.info("리포트 출력에서 버린 것이 있다 — 리포트 {}, 빠진 섹션 {}, 모르는 별칭 {}, 상한으로 버린 수 {}", id.value(),
-								cited.missingSections(), cited.unknownRefs(), read.output().overLimit());
+					int leftAliases = ReportCitationCheck.leftAliases(read.output().draft(), aliases).size();
+					if (cited.missingSections() > 0 || cited.unknownRefs() > 0 || read.output().overLimit() > 0 || leftAliases > 0) {
+						logger.info("리포트 출력에서 버리거나 남은 것이 있다 — 리포트 {}, 빠진 섹션 {}, 모르는 별칭 {}, 상한으로 버린 수 {}, 글에 남은 별칭 {}",
+								id.value(), cited.missingSections(), cited.unknownRefs(), read.output().overLimit(), leftAliases);
+					}
+					Optional<ReportVerdict.Fail> empty = ReportVerdict.withoutSections(cited);
+					if (empty.isPresent()) {
+						yield new Completion.Failed(empty.get().failure(), empty.get().message(), usage, took);
 					}
 					this.sections.saveAll(ReportSection.of(id, cited));
 					yield new Completion.Ready(Objects.requireNonNull(usage, "읽은 응답은 공급자가 센 토큰이 있다"), took);

@@ -1,6 +1,6 @@
 # ADR-0310: 변화 리포트의 생성 판정은 다이제스트를 따라 읽지 못한 응답과 빠진 갈래를 한 번 다시 묻는다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 다시 묻는 계기와 두 읽기 고르기([ADR-0335](0335-a-change-report-asks-once-more-when-its-writing-keeps-an-alias-of-the-request.md))
 - 날짜: 2026-11-24
 - 근거: [이슈 #239](https://github.com/Theia0382/yozm-news/issues/239) — 수용 기준 "끝까지 쓴 응답을 읽지 못하거나 칸이 빠지면 다시 묻는다 — 다이제스트의 생성 판정을 따를지 정한다". 기점 `f07e122` 의 리포트 판정(`ReportVerdict` — 다시 묻지 않음)과 실패 코드(출력 쪽 셋과 `NO_GENERATOR`)를 다이제스트(digest-R27 · R28) · 사용자 스토리라인의 정리(user-R71)의 꼴과 대조함
 - 관련: [ADR-0221](0221-generator-results-are-success-or-failure-and-the-use-case-asks-once-more-only-for-a-complete-unreadable-answer.md)(보충 — 다이제스트의 결과 갈래와 다시 묻기를 리포트에 적용), [ADR-0270](0270-an-item-missing-from-the-output-is-asked-once-more-and-then-kept-as-a-headline-and-the-counts-are-recorded.md)(보충 — 빠진 항목의 다시 묻기를 리포트의 빠진 갈래에 적용, 대체 · 기록은 적용하지 않음), [ADR-0273](0273-change-reports-are-written-in-fixed-sections-per-material-kind-keyed-as-required-fields.md)(갈래를 키로 한 필수 칸)
@@ -14,6 +14,7 @@
 
 ## 결정
 
+> 부분 대체(아래 두 항목 — 다시 묻는 계기와 두 읽기 고르기) — [ADR-0335](0335-a-change-report-asks-once-more-when-its-writing-keeps-an-alias-of-the-request.md). 지금 상태: [report Spec](../specs/report.md#생성-판정과-다시-묻기) report-R8
 - **리포트의 생성 판정은 다이제스트를 따른다.** 끝까지 쓴 응답을 읽지 못하면 읽기의 진단을, 읽었는데 빠진 갈래가 있으면 빠진 갈래 키를 지시에 덧붙여 한 번 다시 묻는다. 한 생성에 다시 묻기는 한 번이다.
 - **빠진 갈래 때문에 다시 물은 호출은 실패로 끝내지 않는다.** 두 읽기 가운데 빠진 갈래가 적은 쪽(같으면 다시 물은 쪽)을 쓰고, 다시 물은 호출이 읽히지 않거나 잘림 · 거절 · 실패면 첫 읽기를 쓴다. 다시 물어도 빠진 갈래는 대체하지 않고 섹션이 없다.
 - **잘림 · 거절은 다시 묻지 않는다.** 토큰은 공급자가 답한 호출의 합이다. 다시 물은 사실은 리포트 행에 적지 않고 정보 로그로 남긴다.

@@ -1,6 +1,5 @@
 package net.yozmnews.report.domain.prompt;
 
-import static net.yozmnews.report.ReportFixtures.coverage;
 import static net.yozmnews.report.ReportFixtures.userStoryline;
 import static net.yozmnews.report.ReportFixtures.userStorylines;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,7 +27,6 @@ import net.yozmnews.report.domain.input.PriorReport;
 import net.yozmnews.report.domain.input.PriorSection;
 import net.yozmnews.report.domain.input.ReportInput;
 import net.yozmnews.report.domain.input.StorylinesSection;
-import net.yozmnews.report.domain.input.TopicInterestLine;
 import net.yozmnews.report.domain.input.UserStorylineInterestLine;
 import net.yozmnews.report.domain.input.UserStorylineMaterial;
 import net.yozmnews.report.domain.input.UserStorylineSummary;
@@ -49,7 +47,7 @@ class ReportInputFitTests {
 
 	@Test
 	void leavesAnInputWithinTheBudgetAsItIs() {
-		ReportInput input = ReportFixtures.input(userStorylines(userStoryline(31, 902)), coverage());
+		ReportInput input = ReportFixtures.input(userStorylines(userStoryline(31, 902)), ReportFixtures.interests());
 
 		FittedInput fitted = ReportInputFit.fit(input, 72_000);
 
@@ -60,18 +58,17 @@ class ReportInputFitTests {
 	}
 
 	@Test
-	void cutsTheBodiesOfEachPriorToItsShareAndKeepsOverviewsAndTitles() {
+	void cutsTheBodiesOfEachPriorToItsShareAndKeepsTitles() {
 		// 직전 글 두 편 — 본문 5,000 자씩. 예산 4,000 의 몫 1,200 을 두 편이 600 씩
 		PriorReport first = prior(1, "가".repeat(5_000));
 		PriorReport second = prior(2, "나".repeat(5_000));
-		ReportInput input = input(List.of(coverage()), List.of(first, second));
+		ReportInput input = input(List.of(ReportFixtures.interests()), List.of(first, second));
 
 		FittedInput fitted = ReportInputFit.fit(input, 4_000);
 
-		assertThat(fitted.trimmed()).isEqualTo(new Trimmed(2, 0, 0, 0, 0, 0));
+		assertThat(fitted.trimmed()).isEqualTo(new Trimmed(2, 0, 0, 0, 0));
 		assertThat(fitted.overBudget()).isFalse();
 		for (PriorReport prior : fitted.input().priors()) {
-			assertThat(prior.overview()).isEqualTo("지난 개요");
 			assertThat(prior.sections()).singleElement().satisfies(section -> {
 				assertThat(section.title()).isEqualTo("지난 제목");
 				assertThat(section.body().length()).isBetween(400, 600);
@@ -84,11 +81,11 @@ class ReportInputFitTests {
 		// 짧은 편이 몫 600 을 다 쓰지 않아도 긴 편은 자기 몫 600 까지만 — 남은 몫은 재료가 쓴다
 		PriorReport shortPrior = prior(1, "가".repeat(50));
 		PriorReport longPrior = prior(2, "나".repeat(5_000));
-		ReportInput input = input(List.of(coverage()), List.of(shortPrior, longPrior));
+		ReportInput input = input(List.of(ReportFixtures.interests()), List.of(shortPrior, longPrior));
 
 		FittedInput fitted = ReportInputFit.fit(input, 4_000);
 
-		assertThat(fitted.trimmed()).isEqualTo(new Trimmed(1, 0, 0, 0, 0, 0));
+		assertThat(fitted.trimmed()).isEqualTo(new Trimmed(1, 0, 0, 0, 0));
 		assertThat(fitted.input().priors().get(0)).isEqualTo(shortPrior);
 		assertThat(fitted.input().priors().get(1).sections()).singleElement()
 			.satisfies(section -> assertThat(section.body().length()).isBetween(400, 600));
@@ -106,37 +103,12 @@ class ReportInputFitTests {
 
 		FittedInput fitted = ReportInputFit.fit(input, 3_000);
 
-		assertThat(fitted.trimmed()).isEqualTo(new Trimmed(0, 3, 0, 0, 0, 0));
+		assertThat(fitted.trimmed()).isEqualTo(new Trimmed(0, 3, 0, 0, 0));
 		assertThat(fitted.overBudget()).isFalse();
 		List<UserStorylineInterestLine> after = interests(fitted.input()).userStorylines();
 		assertThat(after).hasSize(4);
 		assertThat(after.get(0).summary()).isNotNull();
 		assertThat(after.subList(1, 4)).allSatisfy(line -> assertThat(line.summary()).isNull());
-	}
-
-	@Test
-	void dropsSteadyUserStorylineInterestLinesFromTheLargestHead() {
-		// 변화 없는 사용자 스토리라인 관심 줄 200(헤드 100 ~ 299)과 새로 생긴 관심 하나(헤드 5), 주제 관심 줄 하나
-		List<UserStorylineInterestLine> lines = new ArrayList<>();
-		lines.add(new UserStorylineInterestLine(new StorylineId(5), null, null, 0.3, InterestShift.ENTERED));
-		LongStream.range(100, 300)
-			.forEach(head -> lines.add(new UserStorylineInterestLine(new StorylineId(head), null, 0.4, 0.6, InterestShift.NONE)));
-		InterestsSection interests = new InterestsSection(
-				List.of(new TopicInterestLine("economy.finance", "금융", 0.1, 0.3, InterestShift.ENTERED)), lines,
-				List.of());
-		ReportInput input = input(List.of(interests), List.of());
-
-		FittedInput fitted = ReportInputFit.fit(input, 3_000);
-
-		Trimmed trimmed = fitted.trimmed();
-		assertThat(trimmed.userStorylineInterestLinesDropped()).isBetween(1, 199);
-		assertThat(trimmed).isEqualTo(new Trimmed(0, 0, trimmed.userStorylineInterestLinesDropped(), 0, 0, 0));
-		assertThat(fitted.overBudget()).isFalse();
-		List<Long> heads = interests(fitted.input()).userStorylines().stream().map(line -> line.head().value()).toList();
-		int steadyLeft = 200 - trimmed.userStorylineInterestLinesDropped();
-		List<Long> expected = new ArrayList<>(List.of(5L));
-		LongStream.range(100, 100 + steadyLeft).forEach(expected::add);
-		assertThat(heads).containsExactlyElementsOf(expected);
 	}
 
 	@Test
@@ -152,7 +124,7 @@ class ReportInputFitTests {
 		assertThat(kept).isBetween(1, 9);
 		assertThat(after).allSatisfy(userStoryline -> assertThat(userStoryline.events()).hasSize(kept));
 		assertThat(after.get(2).events()).isEqualTo(userStorylines.get(2).events().subList(0, kept));
-		assertThat(fitted.trimmed()).isEqualTo(new Trimmed(0, 0, 0, 40 - 4 * kept, 0, 0));
+		assertThat(fitted.trimmed()).isEqualTo(new Trimmed(0, 0, 40 - 4 * kept, 0, 0));
 		assertThat(fitted.overBudget()).isFalse();
 	}
 
@@ -167,7 +139,7 @@ class ReportInputFitTests {
 
 		FittedInput fitted = ReportInputFit.fit(input, 2_000);
 
-		assertThat(fitted.trimmed()).isEqualTo(new Trimmed(0, 0, 0, 0, 10, 0));
+		assertThat(fitted.trimmed()).isEqualTo(new Trimmed(0, 0, 0, 10, 0));
 		assertThat(fitted.overBudget()).isFalse();
 		assertThat(storylines(fitted.input()).userStorylines()).allSatisfy(userStoryline -> {
 			assertThat(userStoryline.summary().summary()).isEmpty();
@@ -193,7 +165,7 @@ class ReportInputFitTests {
 
 		// 보도량이 적은 순, 같으면 헤드가 큰 것부터 — 4(10) · 2(10) · 3(30)
 		assertThat(storylines(fitted.input()).userStorylines()).extracting(userStoryline -> userStoryline.head().value()).containsExactly(1L, 5L);
-		assertThat(fitted.trimmed()).isEqualTo(new Trimmed(0, 1, 0, 0, 0, 3));
+		assertThat(fitted.trimmed()).isEqualTo(new Trimmed(0, 1, 0, 0, 3));
 		assertThat(interests(fitted.input()).userStorylines()).singleElement()
 			.satisfies(line -> assertThat(line.summary()).isNull());
 		assertThat(fitted.overBudget()).isFalse();
@@ -202,9 +174,9 @@ class ReportInputFitTests {
 	@Test
 	void keepsALineInEverySectionAndReportsOverBudgetWhenNothingFits() {
 		List<UserStorylineInterestLine> lines = LongStream.range(100, 103)
-			.mapToObj(head -> new UserStorylineInterestLine(new StorylineId(head), null, 0.4, 0.6, InterestShift.NONE))
+			.mapToObj(head -> new UserStorylineInterestLine(new StorylineId(head), null, 0.1, 0.6, InterestShift.ENTERED))
 			.toList();
-		ReportInput input = input(List.of(userStorylines(userStoryline(31, 902), userStoryline(32, 903)), coverage(),
+		ReportInput input = input(List.of(userStorylines(userStoryline(31, 902), userStoryline(32, 903)),
 				new InterestsSection(List.of(), lines, List.of())), List.of());
 
 		FittedInput fitted = ReportInputFit.fit(input, 0);
@@ -212,9 +184,10 @@ class ReportInputFitTests {
 		assertThat(fitted.overBudget()).isTrue();
 		ReportInput after = fitted.input();
 		assertThat(after.sections()).extracting(InputSection::kind)
-			.containsExactly(ReportSectionKind.STORYLINES, ReportSectionKind.COVERAGE, ReportSectionKind.INTERESTS);
+			.containsExactly(ReportSectionKind.STORYLINES, ReportSectionKind.INTERESTS);
 		assertThat(storylines(after).userStorylines()).hasSize(1);
-		assertThat(interests(after).userStorylines()).hasSize(1);
+		// 관심 줄은 변화 줄뿐이라(관심 줄 고르기 — report-R17) 덜어 내는 단계가 없다
+		assertThat(interests(after).userStorylines()).hasSize(3);
 		assertThat(after.user()).isEqualTo(input.user());
 		assertThat(after.period()).isEqualTo(input.period());
 		assertThat(after.zone()).isEqualTo(input.zone());
@@ -234,17 +207,16 @@ class ReportInputFitTests {
 			.toList();
 		List<UserStorylineInterestLine> lines = LongStream.rangeClosed(1, 300)
 			.mapToObj(head -> new UserStorylineInterestLine(new StorylineId(head),
-					new UserStorylineSummary("바".repeat(120), "사".repeat(1_200), "아".repeat(800), UPDATED), 0.4, 0.6,
-					InterestShift.NONE))
+					new UserStorylineSummary("바".repeat(120), "사".repeat(1_200), "아".repeat(800), UPDATED), 0.1, 0.6,
+					InterestShift.ENTERED))
 			.toList();
 		List<PriorReport> priors = LongStream.rangeClosed(1, 7)
 			.mapToObj(id -> new PriorReport(new ReportId(id), ReportPeriodKind.WEEK, Instant.parse("2026-11-09T00:00:00Z"),
-					Instant.parse("2026-11-16T00:00:00Z"), "자".repeat(1_500),
+					Instant.parse("2026-11-16T00:00:00Z"),
 					List.of(new PriorSection(ReportSectionKind.STORYLINES, "차".repeat(200), "카".repeat(3_000)),
-							new PriorSection(ReportSectionKind.COVERAGE, "차".repeat(200), "카".repeat(3_000)),
 							new PriorSection(ReportSectionKind.INTERESTS, "차".repeat(200), "카".repeat(3_000)))))
 			.toList();
-		ReportInput input = input(List.of(new StorylinesSection(userStorylines), coverage(),
+		ReportInput input = input(List.of(new StorylinesSection(userStorylines),
 				new InterestsSection(List.of(), lines, List.of())), priors);
 
 		FittedInput fitted = ReportInputFit.fit(input, 112_000);
@@ -256,7 +228,7 @@ class ReportInputFitTests {
 
 	@Test
 	void refusesANegativeBudget() {
-		ReportInput input = ReportFixtures.input(coverage());
+		ReportInput input = ReportFixtures.input(ReportFixtures.interests());
 
 		assertThatThrownBy(() -> ReportInputFit.fit(input, -1)).isInstanceOf(IllegalArgumentException.class);
 	}
@@ -268,7 +240,7 @@ class ReportInputFitTests {
 
 	private static PriorReport prior(long id, String body) {
 		return new PriorReport(new ReportId(id), ReportPeriodKind.WEEK, Instant.parse("2026-11-09T00:00:00Z"),
-				Instant.parse("2026-11-16T00:00:00Z"), "지난 개요",
+				Instant.parse("2026-11-16T00:00:00Z"),
 				List.of(new PriorSection(ReportSectionKind.STORYLINES, "지난 제목", body)));
 	}
 

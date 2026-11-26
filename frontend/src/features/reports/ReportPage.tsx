@@ -7,9 +7,9 @@ import {
   type ReportStoryline,
   type ReportUserStorylineCount,
   type ReportInterests,
+  type ReportKind,
   ReportRequestError,
   type ReportSection,
-  type ReportTopicCount,
   useRegenerateReport,
   useReport,
 } from "@/features/reports/reportQueries";
@@ -24,15 +24,17 @@ import {
   LOAD_FAILED,
   NOT_FOUND,
   NO_LEVEL,
-  NO_PREVIOUS,
-  NO_PREVIOUS_VALUE,
   REGENERATE,
   REGENERATIONS_SPENT,
   REGENERATION_FAILED,
   TRACKED_IN_PERIOD,
+  type Tone,
   countColumns,
+  countsText,
+  currentCountText,
   hiddenSectionsText,
   levelText,
+  noPreviousTexts,
   previousLink,
   reportFailureTexts,
   reportPath,
@@ -41,8 +43,14 @@ import {
   reportTitle,
   reportsPath,
   shiftLabels,
-  statsTitles,
+  shiftTones,
+  sectionHeadings,
+  stateTones,
+  storylineColumns,
+  storylineTableTitles,
+  toneClasses,
   trendLabels,
+  trendTones,
   usageText,
 } from "@/features/reports/reportTexts";
 import {
@@ -51,6 +59,8 @@ import {
   userStorylinePath,
 } from "@/features/storylines/storylineTexts";
 import { formatDateTime } from "@/shared/lib/dateTime";
+import { storylineStateLabels } from "@/shared/lib/storylineState";
+import { cellColor, cellOpacity } from "@/shared/lib/interestLevel";
 import { Button } from "@/shared/ui/button";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
@@ -61,8 +71,8 @@ function readId(value: string | undefined): number | null {
 }
 
 /**
- * 변화 리포트 한 편 — 상태(만드는 중 · 비어 있음 · 실패 · 내용), 개요와 갈래 섹션마다 제목 · 본문 · 그 갈래의 숫자 표 · 인용, 숨긴 섹션
- * 안내, 비교한 직전 리포트, 모델 · 토큰(docs/specs/reader.md reader-R16). 비교는 리포트가 만들 때 남긴 숫자 그대로다
+ * 변화 리포트 한 편 — 상태(만드는 중 · 비어 있음 · 실패 · 내용), 갈래 섹션마다 고정 제목 · 요지(모델이 쓴 제목) · 본문 · 그 갈래의 표 · 인용,
+ * 숨긴 섹션 안내, 직전 리포트, 모델 · 토큰(docs/specs/web.md web-R17). 표는 리포트가 만들 때 남긴 값 그대로다
  */
 export function ReportPage() {
   const id = readId(useParams().id);
@@ -152,7 +162,7 @@ function Body({
       return (
         <div className="space-y-8">
           {report.sections.map((section) => (
-            <Section key={section.kind} section={section} />
+            <Section key={section.kind} section={section} kind={summary.kind} />
           ))}
           {report.hiddenSections > 0 && (
             <p role="status" className="text-sm text-muted-foreground">
@@ -202,18 +212,22 @@ function Regenerate({
   );
 }
 
-function Section({ section }: { section: ReportSection }) {
-  if (section.kind === "OVERVIEW") {
-    return <p className="break-words whitespace-pre-line">{section.body}</p>;
-  }
+/** 갈래 섹션 — 갈래의 고정 제목 아래 모델이 쓴 제목을 요지 한 줄로, 이어 본문 · 표 · 인용 */
+function Section({
+  section,
+  kind,
+}: {
+  section: ReportSection;
+  kind: ReportKind;
+}) {
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold break-words">{section.title}</h2>
+      <h2 className="text-lg font-semibold">{sectionHeadings[section.kind]}</h2>
+      <p className="font-medium break-words">{section.title}</p>
       <p className="break-words whitespace-pre-line">{section.body}</p>
       {section.userStorylines !== null && (
-        <UserStorylineCounts rows={section.userStorylines} />
+        <UserStorylineCounts rows={section.userStorylines} kind={kind} />
       )}
-      {section.topics !== null && <TopicCounts rows={section.topics} />}
       {section.interests !== null && (
         <InterestLevels interests={section.interests} />
       )}
@@ -257,24 +271,61 @@ function Table({
   );
 }
 
-function previousValue(value: number | null): string {
-  return value === null ? NO_PREVIOUS_VALUE : String(value);
+/** 판정 · 변화 낱말 칸 — 색으로 오름 · 내림 · 그대로를 보인다. 덧붙인 글은 칸의 title 과 화면 낭독에만 */
+function ToneCell({
+  label,
+  tone,
+  detail,
+}: {
+  label: string;
+  tone: Tone;
+  detail?: string;
+}) {
+  return (
+    <td className="py-1 pr-3 whitespace-nowrap" title={detail}>
+      <span
+        className={`rounded px-1.5 py-0.5 text-xs font-medium ${toneClasses[tone]}`}
+      >
+        {label}
+      </span>
+      {detail !== undefined && <span className="sr-only"> ({detail})</span>}
+    </td>
+  );
 }
 
-function level(value: number | null): string {
-  return value === null ? NO_LEVEL : levelText(value);
+/** 관심 값 칸 — 관심사 히스토리의 칸처럼 색 네모만 보이고 값은 칸의 title 과 화면 낭독에만 */
+function LevelCell({
+  column,
+  value,
+}: {
+  column: string;
+  value: number | null;
+}) {
+  const text = value === null ? NO_LEVEL : levelText(value);
+  return (
+    <td className="py-1 pr-3" title={`${column} · ${text}`}>
+      <span
+        aria-hidden="true"
+        className={`block h-4 w-4 rounded-sm ${cellColor(value)}`}
+        style={{ opacity: cellOpacity(value) }}
+      />
+      <span className="sr-only">{text}</span>
+    </td>
+  );
 }
 
-function UserStorylineCounts({ rows }: { rows: ReportUserStorylineCount[] }) {
+/** 추적한 흐름 표 — 주간은 직전 주간과 견준 판정, 월간은 생성 때 흐름의 상태(직전과 견주지 않는다) */
+function UserStorylineCounts({
+  rows,
+  kind,
+}: {
+  rows: ReportUserStorylineCount[];
+  kind: ReportKind;
+}) {
   return (
     <Table
-      caption={statsTitles.STORYLINES}
-      headers={[
-        countColumns.userStoryline,
-        countColumns.current,
-        countColumns.previous,
-        countColumns.trend,
-      ]}
+      caption={storylineTableTitles[kind]}
+      headers={[countColumns.userStoryline, storylineColumns[kind]]}
     >
       {rows.map((row) => (
         <tr key={row.storyline.storylineId} className="border-t border-input">
@@ -286,46 +337,48 @@ function UserStorylineCounts({ rows }: { rows: ReportUserStorylineCount[] }) {
               </span>
             )}
           </th>
-          <td className="py-1 pr-3 whitespace-nowrap">{row.articles}</td>
-          <td className="py-1 pr-3 whitespace-nowrap">
-            {previousValue(row.previous)}
-          </td>
-          <td className="py-1 pr-3 whitespace-nowrap">
-            {trendLabels[row.trend]}
-          </td>
+          <StorylineCountCell row={row} kind={kind} />
         </tr>
       ))}
     </Table>
   );
 }
 
-function TopicCounts({ rows }: { rows: ReportTopicCount[] }) {
-  return (
-    <Table
-      caption={statsTitles.COVERAGE}
-      headers={[
-        countColumns.topic,
-        countColumns.current,
-        countColumns.previous,
-        countColumns.trend,
-      ]}
-    >
-      {rows.map((row) => (
-        <tr key={row.name} className="border-t border-input">
-          <th scope="row" className="py-1 pr-3 text-left font-normal">
-            {row.name}
-          </th>
-          <td className="py-1 pr-3 whitespace-nowrap">{row.articles}</td>
-          <td className="py-1 pr-3 whitespace-nowrap">
-            {previousValue(row.previous)}
+/** 흐름 줄의 판정 · 상태 칸 — 상태를 남기지 않은 옛 리포트의 월간 줄은 빈 칸 */
+function StorylineCountCell({
+  row,
+  kind,
+}: {
+  row: ReportUserStorylineCount;
+  kind: ReportKind;
+}) {
+  switch (kind) {
+    case "WEEK":
+      return (
+        <ToneCell
+          label={trendLabels[row.trend]}
+          tone={trendTones[row.trend]}
+          detail={countsText(row.articles, row.previous)}
+        />
+      );
+    case "MONTH": {
+      const detail = currentCountText(row.articles);
+      if (row.state === null) {
+        return (
+          <td className="py-1 pr-3" title={detail}>
+            <span className="sr-only">{detail}</span>
           </td>
-          <td className="py-1 pr-3 whitespace-nowrap">
-            {trendLabels[row.trend]}
-          </td>
-        </tr>
-      ))}
-    </Table>
-  );
+        );
+      }
+      return (
+        <ToneCell
+          label={storylineStateLabels[row.state]}
+          tone={stateTones[row.state]}
+          detail={detail}
+        />
+      );
+    }
+  }
 }
 
 function InterestLevels({ interests }: { interests: ReportInterests }) {
@@ -334,7 +387,7 @@ function InterestLevels({ interests }: { interests: ReportInterests }) {
     <div className="space-y-3">
       {interests.topics.length > 0 && (
         <Table
-          caption={`${statsTitles.INTERESTS} — ${countColumns.topic}`}
+          caption={countColumns.topic}
           headers={[countColumns.topic, ...headers]}
         >
           {interests.topics.map((row) => (
@@ -342,20 +395,19 @@ function InterestLevels({ interests }: { interests: ReportInterests }) {
               <th scope="row" className="py-1 pr-3 text-left font-normal">
                 {row.name}
               </th>
-              <td className="py-1 pr-3 whitespace-nowrap">
-                {level(row.start)}
-              </td>
-              <td className="py-1 pr-3 whitespace-nowrap">{level(row.end)}</td>
-              <td className="py-1 pr-3 whitespace-nowrap">
-                {shiftLabels[row.shift]}
-              </td>
+              <LevelCell column={countColumns.start} value={row.start} />
+              <LevelCell column={countColumns.end} value={row.end} />
+              <ToneCell
+                label={shiftLabels[row.shift]}
+                tone={shiftTones[row.shift]}
+              />
             </tr>
           ))}
         </Table>
       )}
       {interests.userStorylines.length > 0 && (
         <Table
-          caption={`${statsTitles.INTERESTS} — ${countColumns.userStoryline}`}
+          caption={countColumns.userStoryline}
           headers={[countColumns.userStoryline, ...headers]}
         >
           {interests.userStorylines.map((row) => (
@@ -366,13 +418,12 @@ function InterestLevels({ interests }: { interests: ReportInterests }) {
               <th scope="row" className="py-1 pr-3 text-left font-normal">
                 <StorylineName storyline={row.storyline} />
               </th>
-              <td className="py-1 pr-3 whitespace-nowrap">
-                {level(row.start)}
-              </td>
-              <td className="py-1 pr-3 whitespace-nowrap">{level(row.end)}</td>
-              <td className="py-1 pr-3 whitespace-nowrap">
-                {shiftLabels[row.shift]}
-              </td>
+              <LevelCell column={countColumns.start} value={row.start} />
+              <LevelCell column={countColumns.end} value={row.end} />
+              <ToneCell
+                label={shiftLabels[row.shift]}
+                tone={shiftTones[row.shift]}
+              />
             </tr>
           ))}
         </Table>
@@ -463,7 +514,7 @@ function CitationLine({ citation }: { citation: ReportCitation }) {
   }
 }
 
-/** 비교한 직전 리포트 — 생성 때 직전 값과 견준 리포트(내용 · 시작한 실패)에만. 시작하지 않고 실패한 리포트는 견주지 않았다 */
+/** 직전 리포트 — 생성 때 이은 직전 리포트(내용 · 시작한 실패)에만. 주간은 그 값과 견줬고 월간은 견주지 않는다. 시작하지 않고 실패한 리포트는 잇지 않았다 */
 function Previous({ report }: { report: ReportDetail }) {
   const status = report.report.status;
   if (status !== "READY" && status !== "FAILED") {
@@ -474,7 +525,11 @@ function Previous({ report }: { report: ReportDetail }) {
     return null;
   }
   if (report.previous === null) {
-    return <p className="text-sm text-muted-foreground">{NO_PREVIOUS}</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        {noPreviousTexts[report.report.kind]}
+      </p>
+    );
   }
   const previous = report.previous;
   return (

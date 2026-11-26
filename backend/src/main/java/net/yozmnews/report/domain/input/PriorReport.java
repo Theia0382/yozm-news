@@ -10,18 +10,15 @@ import net.yozmnews.report.ReportPeriodKind;
 /**
  * 직전 리포트 글 — 직전 리포트 또는 월간에 싣는 주간 리포트의 보이는 글 · docs/specs/report.md §5 · report-R20
  *
- * @param overview 개요
  * @param sections 보이는 갈래 섹션 — 위치 순
  */
-public record PriorReport(ReportId id, ReportPeriodKind kind, Instant start, Instant end, String overview,
-		List<PriorSection> sections) {
+public record PriorReport(ReportId id, ReportPeriodKind kind, Instant start, Instant end, List<PriorSection> sections) {
 
 	public PriorReport {
 		Objects.requireNonNull(id, "id");
 		Objects.requireNonNull(kind, "kind");
 		Objects.requireNonNull(start, "start");
 		Objects.requireNonNull(end, "end");
-		Objects.requireNonNull(overview, "overview");
 		sections = List.copyOf(Objects.requireNonNull(sections, "sections"));
 	}
 

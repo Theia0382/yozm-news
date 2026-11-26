@@ -24,18 +24,17 @@ import net.yozmnews.report.ReportSummary;
 import net.yozmnews.report.ReportTrend;
 import net.yozmnews.report.ReportView;
 import net.yozmnews.storyline.StorylineId;
+import net.yozmnews.storyline.StorylineState;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 /**
- * 조회의 풀기 · 숨기기 · 숫자 · 쪽 — 합친 것은 남는 것으로, 지운 것은 빼고, 인용을 모두 잃은 섹션 · 개요의 숨김과 그 수, 보이는 갈래
- * 섹션의 숫자와 사용자 스토리라인 줄의 풀기. 기대 숫자는 손으로 쓴 스냅숏 리터럴에서 손으로 옮긴 값이다.
+ * 조회의 풀기 · 숨기기 · 숫자 · 쪽 — 합친 것은 남는 것으로, 지운 것은 빼고, 인용을 모두 잃은 섹션의 숨김과 그 수, 보이는 갈래 섹션의
+ * 숫자(생성 때 흐름 상태 — 옛 판 스냅숏이면 없음)와 사용자 스토리라인 줄의 풀기. 기대 숫자는 손으로 쓴 스냅숏 리터럴에서 손으로 옮긴 값이다.
  * <p>
  * 지키는 규칙: report-R11 · report-R12 · report-R25 · report-R26
  */
 class ReportViewsTests {
-
-	private static final StoredSection OVERVIEW = new StoredSection(ReportSectionKind.OVERVIEW, null, "개요", List.of());
 
 	/** 사건 902 는 그대로, 903 은 904 에 합쳐졌고, 905 는 지웠다. 스토리라인 31 은 그대로, 32 는 33 에 합쳐졌고, 34 는 지웠다 */
 	private static final Map<EventId, EventId> EVENTS = Map.of(new EventId(902), new EventId(902), new EventId(903),
@@ -48,17 +47,15 @@ class ReportViewsTests {
 	private static final Map<StorylineId, StorylineId> HEADS = Map.of(new StorylineId(31), new StorylineId(31),
 			new StorylineId(32), new StorylineId(33), new StorylineId(33), new StorylineId(33));
 
-	/** 갈래 셋이 있는 스냅숏 — 손으로 쓴 꼴(report-R19) */
+	/** 갈래 둘이 있는 스냅숏 — 손으로 쓴 꼴(report-R19) */
 	private static final String SNAPSHOT = """
-			{"version":2,"tagSet":5,
+			{"version":3,"tagSet":5,
 			 "period":{"kind":"WEEK","start":"2026-11-16T00:00:00Z","end":"2026-11-23T00:00:00Z"},
 			 "storylines":{"basis":"PUBLISHED","userStorylines":[
-			   {"head":31,"tops":[31],"articles":12,"previous":7,"trend":"ROSE","trackedInPeriod":false},
-			   {"head":32,"tops":[32],"articles":5,"previous":null,"trend":"NO_COMPARISON","trackedInPeriod":true},
-			   {"head":33,"tops":[33],"articles":9,"previous":9,"trend":"STEADY","trackedInPeriod":false},
-			   {"head":34,"tops":[34],"articles":3,"previous":1,"trend":"STEADY","trackedInPeriod":false}]},
-			 "coverage":{"basis":"FIRST_EVALUATED","topics":[
-			   {"key":"economy.finance","name":"금융","articles":40,"previous":12,"trend":"ROSE"}]},
+			   {"head":31,"tops":[31],"articles":12,"previous":7,"trend":"ROSE","trackedInPeriod":false,"state":"ACTIVE"},
+			   {"head":32,"tops":[32],"articles":5,"previous":null,"trend":"NO_COMPARISON","trackedInPeriod":true,"state":"QUIET"},
+			   {"head":33,"tops":[33],"articles":9,"previous":9,"trend":"STEADY","trackedInPeriod":false,"state":"ENDED"},
+			   {"head":34,"tops":[34],"articles":3,"previous":1,"trend":"STEADY","trackedInPeriod":false,"state":"ACTIVE"}]},
 			 "interests":{
 			   "topics":[{"key":"economy.finance","name":"금융","start":0.42,"end":null,"shift":"LEFT"}],
 			   "userStorylines":[{"head":34,"start":null,"end":0.3,"shift":"ENTERED"},
@@ -66,51 +63,47 @@ class ReportViewsTests {
 
 	@Test
 	void resolvesMergedTargetsLeavesOutRemovedOnesAndKeepsOneOfTargetsThatBecameTheSame() {
-		List<ReportSectionView> sections = view(List.of(OVERVIEW, new StoredSection(ReportSectionKind.STORYLINES, "흐름",
+		List<ReportSectionView> sections = view(List.of(new StoredSection(ReportSectionKind.STORYLINES, "흐름",
 				"본문", List.of(storyline(32), event(905), event(903), event(904), storyline(34), storyline(31)))));
 
-		assertThat(sections).containsExactly(new ReportSectionView(ReportSectionKind.OVERVIEW, null, "개요", List.of(), null),
-				new ReportSectionView(ReportSectionKind.STORYLINES, "흐름", "본문",
+		assertThat(sections).containsExactly(new ReportSectionView(ReportSectionKind.STORYLINES, "흐름", "본문",
 						List.of(storyline(33), event(904), storyline(31)), null));
 	}
 
 	@Test
 	void hidesASectionThatLostEveryCitationAndShowsOneThatNeverHadAny() {
-		List<ReportSectionView> sections = view(List.of(OVERVIEW,
-				new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문 하나", List.of(event(905), storyline(34))),
-				new StoredSection(ReportSectionKind.INTERESTS, "관심", "본문 둘", List.of()),
-				new StoredSection(ReportSectionKind.COVERAGE, "보도량", "본문 셋", List.of(event(905), event(902)))));
+		ReportView view = render(row(1, ReportStatus.READY, null), List.of(
+				new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문 하나", List.of()),
+				new StoredSection(ReportSectionKind.INTERESTS, "관심", "본문 둘", List.of(event(905), storyline(34)))), EVENTS,
+				STORYLINES);
 
-		assertThat(sections).extracting(ReportSectionView::kind)
-			.containsExactly(ReportSectionKind.OVERVIEW, ReportSectionKind.INTERESTS, ReportSectionKind.COVERAGE);
-		assertThat(sections.get(2).citations()).containsExactly(event(902));
+		assertThat(view.sections()).extracting(ReportSectionView::kind).containsExactly(ReportSectionKind.STORYLINES);
+		assertThat(view.hiddenSections()).isEqualTo(1);
 	}
 
 	@Test
-	void hidesTheOverviewOnlyWhenEveryKindSectionWasHidden() {
-		List<ReportSectionView> allHidden = view(List.of(OVERVIEW,
-				new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문", List.of(event(905))),
-				new StoredSection(ReportSectionKind.COVERAGE, "보도량", "본문", List.of(storyline(34)))));
-		List<ReportSectionView> oneLeft = view(List.of(OVERVIEW,
-				new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문", List.of(event(905))),
-				new StoredSection(ReportSectionKind.COVERAGE, "보도량", "본문", List.of(storyline(31)))));
+	void keepsOnlyTheCitationsThatStillExistInAVisibleSection() {
+		List<ReportSectionView> sections = view(List.of(
+				new StoredSection(ReportSectionKind.INTERESTS, "관심", "본문", List.of(event(905), event(902)))));
 
-		assertThat(allHidden).isEmpty();
-		assertThat(oneLeft).extracting(ReportSectionView::kind)
-			.containsExactly(ReportSectionKind.OVERVIEW, ReportSectionKind.COVERAGE);
+		assertThat(sections).singleElement().satisfies(section -> assertThat(section.citations()).containsExactly(event(902)));
 	}
 
 	@Test
-	void showsTheOverviewOfAReadyReportWithoutKindSections() {
-		assertThat(view(List.of(OVERVIEW)))
-			.containsExactly(new ReportSectionView(ReportSectionKind.OVERVIEW, null, "개요", List.of(), null));
+	void aReportWhoseEverySectionWasHiddenShowsNoSection() {
+		ReportView view = render(row(1, ReportStatus.READY, null), List.of(
+				new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문", List.of(event(905))),
+				new StoredSection(ReportSectionKind.INTERESTS, "관심", "본문", List.of(storyline(34)))), EVENTS, STORYLINES);
+
+		assertThat(view.sections()).isEmpty();
+		assertThat(view.hiddenSections()).isEqualTo(2);
 	}
 
 	@Test
 	void aReportThatIsNotReadyHasNoSections() {
 		for (ReportStatus status : List.of(ReportStatus.SCHEDULED, ReportStatus.RUNNING, ReportStatus.EMPTY,
 				ReportStatus.FAILED)) {
-			ReportView view = render(row(1, status, SNAPSHOT), List.of(OVERVIEW,
+			ReportView view = render(row(1, status, SNAPSHOT), List.of(
 					new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문", List.of(storyline(34)))), EVENTS,
 					STORYLINES);
 			assertThat(view.sections()).as(status.name()).isEmpty();
@@ -142,48 +135,63 @@ class ReportViewsTests {
 
 	@Test
 	void showsEachVisibleKindSectionWithItsNumbersAndCountsTheHiddenOnes() {
-		ReportView view = render(row(1, ReportStatus.READY, SNAPSHOT), List.of(OVERVIEW,
+		ReportView view = render(row(1, ReportStatus.READY, SNAPSHOT), List.of(
 				new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문 하나", List.of(storyline(32))),
-				new StoredSection(ReportSectionKind.COVERAGE, "보도량", "본문 둘", List.of()),
-				new StoredSection(ReportSectionKind.INTERESTS, "관심", "본문 셋", List.of(storyline(34)))), EVENTS, HEADS);
+				new StoredSection(ReportSectionKind.INTERESTS, "관심", "본문 둘", List.of(storyline(34)))), EVENTS, HEADS);
 
 		assertThat(view.hiddenSections()).isEqualTo(1);
+		// 생성 때 헤드 32(잠잠함)는 33 에 합쳐져 33 의 줄이 되고, 같은 스토리라인이 된 33(끝남)의 줄은 첫 줄만 남는다
 		assertThat(view.sections()).containsExactly(
-				new ReportSectionView(ReportSectionKind.OVERVIEW, null, "개요", List.of(), null),
 				new ReportSectionView(ReportSectionKind.STORYLINES, "흐름", "본문 하나", List.of(storyline(33)),
 						new ReportSectionStats.UserStorylines(List.of(
-								new ReportSectionStats.UserStorylineCount(new StorylineId(31), 12, 7L, ReportTrend.ROSE, false),
+								new ReportSectionStats.UserStorylineCount(new StorylineId(31), 12, 7L, ReportTrend.ROSE, false,
+										StorylineState.ACTIVE),
 								new ReportSectionStats.UserStorylineCount(new StorylineId(33), 5, null, ReportTrend.NO_COMPARISON,
-										true)))),
-				new ReportSectionView(ReportSectionKind.COVERAGE, "보도량", "본문 둘", List.of(),
-						new ReportSectionStats.Coverage(
-								List.of(new ReportSectionStats.TopicCount("금융", 40, 12L, ReportTrend.ROSE)))));
+										true, StorylineState.QUIET)))));
+	}
+
+	@Test
+	void aSnapshotOfThePreviousVersionShowsTheUserStorylineLinesWithoutAState() {
+		String previousVersion = """
+				{"version":2,"tagSet":5,
+				 "period":{"kind":"MONTH","start":"2026-10-26T00:00:00Z","end":"2026-11-26T00:00:00Z"},
+				 "storylines":{"basis":"PUBLISHED","userStorylines":[
+				   {"head":31,"tops":[31],"articles":12,"previous":null,"trend":"NO_COMPARISON","trackedInPeriod":true}]},
+				 "coverage":{"basis":"FIRST_EVALUATED","topics":[
+				   {"key":"economy.finance","name":"금융","articles":40,"previous":null,"trend":"NO_COMPARISON"}]}}""";
+
+		ReportView view = render(row(1, ReportStatus.READY, previousVersion), List.of(
+				new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문", List.of(storyline(31)))), EVENTS, HEADS);
+
+		assertThat(view.sections()).singleElement().satisfies(section -> assertThat(section.stats()).isEqualTo(
+				new ReportSectionStats.UserStorylines(List.of(new ReportSectionStats.UserStorylineCount(new StorylineId(31), 12, null,
+						ReportTrend.NO_COMPARISON, true, null)))));
 	}
 
 	@Test
 	void aVisibleInterestsSectionHasTopicLinesAndTheUserStorylineLinesThatStillExist() {
-		ReportView view = render(row(1, ReportStatus.READY, SNAPSHOT), List.of(OVERVIEW,
+		ReportView view = render(row(1, ReportStatus.READY, SNAPSHOT), List.of(
 				new StoredSection(ReportSectionKind.INTERESTS, "관심", "본문", List.of(storyline(31)))), EVENTS, HEADS);
 
 		assertThat(view.hiddenSections()).isZero();
-		assertThat(view.sections().get(1).stats()).isEqualTo(new ReportSectionStats.Interests(
+		assertThat(view.sections().get(0).stats()).isEqualTo(new ReportSectionStats.Interests(
 				List.of(new ReportSectionStats.TopicLevel("금융", 0.42, null, InterestShift.LEFT)),
 				List.of(new ReportSectionStats.UserStorylineLevel(new StorylineId(33), 0.2, 0.6, InterestShift.NONE))));
 	}
 
 	@Test
 	void aSectionWhoseKindIsMissingFromTheSnapshotOrAnUnreadableSnapshotHasNoNumbers() {
-		String withoutCoverage = """
-				{"version":2,"tagSet":5,"period":{"kind":"WEEK","start":"2026-11-16T00:00:00Z","end":"2026-11-23T00:00:00Z"}}""";
-		String unknownVersion = SNAPSHOT.replace("\"version\":2", "\"version\":3");
-		List<StoredSection> stored = List.of(OVERVIEW,
-				new StoredSection(ReportSectionKind.COVERAGE, "보도량", "본문", List.of()),
-				new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문", List.of(storyline(31))));
+		String withoutKinds = """
+				{"version":3,"tagSet":5,"period":{"kind":"WEEK","start":"2026-11-16T00:00:00Z","end":"2026-11-23T00:00:00Z"}}""";
+		String unknownVersion = SNAPSHOT.replace("\"version\":3", "\"version\":4");
+		List<StoredSection> stored = List.of(
+				new StoredSection(ReportSectionKind.INTERESTS, "관심", "본문 하나", List.of()),
+				new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문 둘", List.of(storyline(31))));
 
-		for (String snapshot : List.of(withoutCoverage, unknownVersion)) {
+		for (String snapshot : List.of(withoutKinds, unknownVersion)) {
 			ReportView view = render(row(1, ReportStatus.READY, snapshot), stored, EVENTS, HEADS);
 			assertThat(view.sections()).extracting(ReportSectionView::stats).containsOnlyNulls();
-			assertThat(view.sections()).extracting(ReportSectionView::body).containsExactly("개요", "본문", "본문");
+			assertThat(view.sections()).extracting(ReportSectionView::body).containsExactly("본문 하나", "본문 둘");
 		}
 	}
 
@@ -237,9 +245,9 @@ class ReportViewsTests {
 	void carriesThePreviousReportAsASummaryWhenThereIsOne() {
 		ReportRow previous = row(3, ReportStatus.READY, null);
 
-		assertThat(ReportViews.view(row(4, ReportStatus.READY, null), List.of(OVERVIEW), null, EVENTS, STORYLINES,
+		assertThat(ReportViews.view(row(4, ReportStatus.READY, null), List.of(), null, EVENTS, STORYLINES,
 				previous, ZoneOffset.UTC).previous()).extracting(ReportSummary::id).isEqualTo(new ReportId(3));
-		assertThat(render(row(4, ReportStatus.READY, null), List.of(OVERVIEW), EVENTS, STORYLINES).previous()).isNull();
+		assertThat(render(row(4, ReportStatus.READY, null), List.of(), EVENTS, STORYLINES).previous()).isNull();
 	}
 
 	private static List<ReportSectionView> view(List<StoredSection> stored) {

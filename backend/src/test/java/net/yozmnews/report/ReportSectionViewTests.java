@@ -3,6 +3,7 @@ package net.yozmnews.report;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -12,32 +13,28 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 /**
- * 섹션 값 · 요약 · 한 편의 불변식 — 섹션 종류와 숫자의 짝, 기간 날짜의 순서, 숨긴 섹션 수의 하한. 지키는 규칙: report-R25 · report-R26
+ * 섹션 값 · 요약 · 한 편의 불변식 — 섹션 종류와 숫자의 짝, 섹션 제목, 기간 날짜의 순서, 숨긴 섹션 수의 하한. 지키는 규칙: report-R25 · report-R26
  */
 class ReportSectionViewTests {
 
 	private static final ReportSectionStats USER_STORYLINES = new ReportSectionStats.UserStorylines(List.of());
-
-	private static final ReportSectionStats COVERAGE = new ReportSectionStats.Coverage(List.of());
 
 	private static final ReportSectionStats INTERESTS = new ReportSectionStats.Interests(List.of(), List.of());
 
 	@Test
 	void eachKindSectionTakesOnlyTheNumbersOfItsKind() {
 		assertThatNoException().isThrownBy(() -> section(ReportSectionKind.STORYLINES, USER_STORYLINES));
-		assertThatNoException().isThrownBy(() -> section(ReportSectionKind.COVERAGE, COVERAGE));
 		assertThatNoException().isThrownBy(() -> section(ReportSectionKind.INTERESTS, INTERESTS));
-		assertThatNoException().isThrownBy(() -> section(ReportSectionKind.COVERAGE, null));
+		assertThatNoException().isThrownBy(() -> section(ReportSectionKind.STORYLINES, null));
 
-		assertThatIllegalArgumentException().isThrownBy(() -> section(ReportSectionKind.COVERAGE, USER_STORYLINES));
 		assertThatIllegalArgumentException().isThrownBy(() -> section(ReportSectionKind.STORYLINES, INTERESTS));
-		assertThatIllegalArgumentException().isThrownBy(() -> section(ReportSectionKind.INTERESTS, COVERAGE));
+		assertThatIllegalArgumentException().isThrownBy(() -> section(ReportSectionKind.INTERESTS, USER_STORYLINES));
 	}
 
 	@Test
-	void theOverviewHasNoNumbers() {
-		assertThatNoException().isThrownBy(() -> section(ReportSectionKind.OVERVIEW, null));
-		assertThatIllegalArgumentException().isThrownBy(() -> section(ReportSectionKind.OVERVIEW, COVERAGE));
+	void aSectionAlwaysHasATitle() {
+		assertThatNullPointerException().isThrownBy(
+				() -> new ReportSectionView(ReportSectionKind.STORYLINES, null, "본문", List.of(), null));
 	}
 
 	@Test
@@ -66,7 +63,7 @@ class ReportSectionViewTests {
 	}
 
 	private static ReportSectionView section(ReportSectionKind kind, @Nullable ReportSectionStats stats) {
-		return new ReportSectionView(kind, null, "본문", List.of(), stats);
+		return new ReportSectionView(kind, "제목", "본문", List.of(), stats);
 	}
 
 }

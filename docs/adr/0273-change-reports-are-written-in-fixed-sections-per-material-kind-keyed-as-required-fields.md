@@ -1,6 +1,6 @@
 # ADR-0273: 변화 리포트는 갈래마다 고정 섹션으로 쓰고, 출력은 갈래를 키로 한 필수 칸이다
 
-- 상태: 승인. 부분 대체 — 맥락의 입력 갈래 넷([ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md)) · 갈래 집합([ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md))
+- 상태: 승인. 부분 대체 — 맥락의 입력 갈래 넷([ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md)) · 갈래 집합([ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md)) · 섹션의 개요([ADR-0338](0338-a-change-report-writes-only-kind-sections-without-an-overview.md)) · 갈래 종류([ADR-0339](0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md))
 - 날짜: 2026-11-22
 - 근거: [이슈 #237](https://github.com/Theia0382/yozm-news/issues/237) — 기점 `d25590c` 의 변화 리포트 입력 갈래(pipeline §10)와 다이제스트 출력 서술(digest-R4)을 대조하고, 갈래마다 고정 섹션을 골랐다
 - 관련: [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(변화 리포트를 둔다 — 출력 꼴은 적지 않았다), [ADR-0269](0269-the-digest-output-keys-top-stories-by-item-alias-as-required-fields-and-lists-headlines-as-elements.md)(같은 근거 — 구조화 출력이 모든 칸을 쓰게 하는 필수 키 꼴)
@@ -15,8 +15,10 @@
 
 ## 결정
 
-> 부분 대체(둘째 문장) — [ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md). 지금 상태: [report Spec](../specs/report.md#재료) report-R14
+> 부분 대체 — 첫 문장 · 셋째 문장(개요)은 [ADR-0338](0338-a-change-report-writes-only-kind-sections-without-an-overview.md), 둘째 문장(갈래 종류)은 [ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md) · [ADR-0339](0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md). 지금 상태: [report Spec](../specs/report.md#출력-서술과-읽기) report-R5 · [report Spec](../specs/report.md#재료) report-R14
 - **섹션은 개요와 입력 갈래마다 하나다.** 갈래 종류는 닫힌 집합이다 — 구독한 스토리라인(`STORYLINES`) · 보도량(`COVERAGE`) · 관심 변화(`INTERESTS`) · 새로 나타난 것과 줄어든 것(`RISE_AND_FALL`). 개요(`OVERVIEW`)는 출력의 섹션이고 입력 갈래가 아니다.
+> 부분 대체(둘째 문장의 개요) — [ADR-0338](0338-a-change-report-writes-only-kind-sections-without-an-overview.md). 지금 상태: [report Spec](../specs/report.md#출력-서술과-읽기) report-R5
+
 - **입력에 재료가 있는 갈래만 섹션이 된다.** 출력은 개요 문자열과, 그 갈래들의 종류를 키로 한 필수 칸이다. 칸마다 제목 · 본문 · 인용 별칭 목록이다.
 
 규칙은 [report Spec](../specs/report.md#출력-서술과-읽기) report-R5 · R6 에 있다.

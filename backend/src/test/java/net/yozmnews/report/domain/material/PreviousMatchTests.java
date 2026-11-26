@@ -8,39 +8,12 @@ import java.util.Set;
 
 import net.yozmnews.report.domain.material.ReportSnapshot.SnapshotUserStoryline;
 import net.yozmnews.storyline.StorylineId;
-import net.yozmnews.tag.TagKeyMapping;
-import net.yozmnews.tag.TagKind;
-import net.yozmnews.tag.TagSetId;
 import org.junit.jupiter.api.Test;
 
 /**
- * 직전 값 잇기 — 같은 버전 · 계보 1:1 · 갈라짐 · 합침 · 지움, 합쳐진 스토리라인 · 이어진 사용자 스토리라인. 지키는 규칙: report-R18
+ * 직전 값 잇기 — 합쳐진 스토리라인 · 이어진 사용자 스토리라인 · 지운 스토리라인. 지키는 규칙: report-R18
  */
 class PreviousMatchTests {
-
-	@Test
-	void topicsOfTheSameVersionKeepTheirKeys() {
-		assertThat(PreviousMatch.topics(Map.of("economy.finance", 12L), null)).containsExactly(Map.entry("economy.finance", 12L));
-		assertThat(PreviousMatch.topics(Map.of(), null)).isEmpty();
-	}
-
-	@Test
-	void topicsCarryOnlyThroughAOneToOneLineage() {
-		// 버전 3 → 4: 이름만 바뀜(finance → money) · 갈라짐(tech → ai, chip) · 합침(sports.ball, sports.run → sports.all,
-		// sports.run 은 스냅숏에 없다) · 지움(weather) · 그대로(politics)
-		TagKeyMapping lineage = new TagKeyMapping(new TagSetId(3), new TagSetId(4), Map.of(TagKind.TOPIC, Map.of(
-				"economy.finance", Set.of("economy.money"),
-				"tech", Set.of("tech.ai", "tech.chip"),
-				"sports.ball", Set.of("sports.all"),
-				"sports.run", Set.of("sports.all"),
-				"weather", Set.of(),
-				"politics", Set.of("politics"))));
-
-		Map<String, Long> carried = PreviousMatch.topics(Map.of("economy.finance", 12L, "tech", 30L, "sports.ball", 5L,
-				"weather", 4L, "politics", 9L), lineage);
-
-		assertThat(carried).containsOnly(Map.entry("economy.money", 12L), Map.entry("politics", 9L));
-	}
 
 	@Test
 	void userStorylinesCarryOnlyWhenOnePreviousUserStorylineMeetsOneCurrentUserStoryline() {

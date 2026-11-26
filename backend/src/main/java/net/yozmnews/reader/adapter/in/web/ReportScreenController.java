@@ -130,9 +130,6 @@ class ReportScreenController {
 		}
 		switch (section.stats()) {
 			case ReportSectionStats.UserStorylines counts -> counts.userStorylines().forEach(count -> storylines.add(count.storyline()));
-			case ReportSectionStats.Coverage coverage -> {
-				// 주제는 이름을 싣고 왔다
-			}
 			case ReportSectionStats.Interests interests ->
 				interests.userStorylines().forEach(level -> storylines.add(level.storyline()));
 		}

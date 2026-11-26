@@ -153,7 +153,7 @@ erDiagram
 
 ## 변화 리포트
 
-변화 리포트 테이블(`reports` · `report_sections` · `report_items`)은 [report Spec §6](specs/report.md#6-데이터)에 있다. 생성에 쓴 통계를 `reports.stats_snapshot` 에 함께 저장하고, 이전 리포트와의 비교는 이 스냅숏으로 한다. 생성을 시작할 때 직전 값을 꺼낸 직전 리포트와 기간 날짜를 적는 사용자 시간대(`reports.zone`)를 함께 남긴다. 직전 리포트(`reports.previous_report_id`)는 같은 테이블을 가리키는 FK 다. 섹션은 개요 또는 종류 섹션 하나이고, 인용(`report_items`)은 스토리라인 또는 사건을 생성 때의 ID 그대로 가리킨다 — 모두 모듈 사이라 FK 가 없고, 합쳐지거나 지워진 사건 · 스토리라인은 조회가 푼다([report Spec](specs/report.md#리포트-조회) report-R11).
+변화 리포트 테이블(`reports` · `report_sections` · `report_items`)은 [report Spec §6](specs/report.md#6-데이터)에 있다. 생성에 쓴 통계를 `reports.stats_snapshot` 에 함께 저장하고, 주간 리포트의 이전 리포트와의 비교는 이 스냅숏으로 한다. 생성을 시작할 때 이은 직전 리포트와 기간 날짜를 적는 사용자 시간대(`reports.zone`)를 함께 남긴다. 직전 리포트(`reports.previous_report_id`)는 같은 테이블을 가리키는 FK 다. 섹션은 종류 섹션(추적한 사용자 스토리라인 · 관심 변화) 하나이고, 인용(`report_items`)은 스토리라인 또는 사건을 생성 때의 ID 그대로 가리킨다 — 모두 모듈 사이라 FK 가 없고, 합쳐지거나 지워진 사건 · 스토리라인은 조회가 푼다([report Spec](specs/report.md#리포트-조회) report-R11).
 
 ## 프레임워크 테이블
 

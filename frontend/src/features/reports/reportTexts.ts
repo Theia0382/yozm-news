@@ -10,6 +10,7 @@ import type {
 } from "@/features/reports/reportQueries";
 import type { components } from "@/shared/api/schema";
 import { formatDate } from "@/shared/lib/dateTime";
+import type { StorylineState } from "@/shared/lib/storylineState";
 
 type SectionKind = components["schemas"]["ReportSectionResponse"]["kind"];
 
@@ -34,7 +35,7 @@ export const REPORTS_TITLE = "변화 리포트";
 
 /** 목록 머리의 설명 */
 export const REPORTS_INTRO =
-  "주간 · 월간으로 추적한 흐름, 구독한 주제의 보도량, 관심이 어떻게 달라졌는지 정리한 리포트입니다. 리포트는 등록한 LLM 키로 만듭니다.";
+  "주간 · 월간으로 추적한 흐름과 관심이 어떻게 달라졌는지 정리한 리포트입니다. 리포트는 등록한 LLM 키로 만듭니다.";
 
 /** 종류의 이름 */
 export const kindLabels = {
@@ -70,7 +71,7 @@ export const IN_PROGRESS = "리포트를 만드는 중입니다.";
 
 /** 한 편이 비어 있을 때(재료 없음) */
 export const EMPTY_TEXT =
-  "이 기간에는 리포트에 담을 변화가 없었습니다 — 추적한 흐름 · 구독한 주제 · 관심 신호가 없으면 비어 있습니다.";
+  "이 기간에는 리포트에 담을 변화가 없었습니다 — 추적한 흐름도, 새로 생기거나 사라진 관심 · 바꾼 구독도 없으면 비어 있습니다.";
 
 /** 한 편이 실패했을 때의 머리 문장 */
 export const FAILED_TITLE = "리포트를 만들지 못했습니다.";
@@ -92,13 +93,17 @@ export const reportFailureTexts: Record<ReportFailure, string> = {
   INTERRUPTED: "만들기가 정한 시간 안에 끝나지 않아 멈췄습니다.",
 };
 
-/** 섹션 종류마다 숫자 표의 이름 — 개요는 표가 없다 */
-export const statsTitles = {
-  OVERVIEW: null,
-  STORYLINES: "추적한 흐름의 보도량",
-  COVERAGE: "구독한 주제의 보도량",
+/** 섹션 종류마다 섹션의 고정 제목 — 모델이 쓴 제목은 그 아래 요지 한 줄이다 */
+export const sectionHeadings = {
+  STORYLINES: "추적한 흐름",
   INTERESTS: "관심의 변화",
-} as const satisfies Record<SectionKind, string | null>;
+} as const satisfies Record<SectionKind, string>;
+
+/** 추적한 흐름 표의 이름 — 주간은 직전 주간과 견준 보도, 월간은 생성 때 흐름의 상태 */
+export const storylineTableTitles = {
+  WEEK: "보도",
+  MONTH: "상태",
+} as const satisfies Record<ReportKind, string>;
 
 /** 보도량 판정의 이름 */
 export const trendLabels = {
@@ -116,6 +121,39 @@ export const shiftLabels = {
   NONE: "변화 없음",
 } as const satisfies Record<InterestShift, string>;
 
+/** 판정 · 변화 · 상태 칸의 색 갈래 — 오름 · 내림 · 그대로 */
+export type Tone = "up" | "down" | "flat";
+
+/** 흐름 상태의 색 갈래 — 진행은 주 색, 잠잠 · 끝남은 바탕. 낱말은 정본 storylineStateLabels */
+export const stateTones = {
+  ACTIVE: "up",
+  QUIET: "flat",
+  ENDED: "flat",
+} as const satisfies Record<StorylineState, Tone>;
+
+/** 보도량 판정의 색 갈래 */
+export const trendTones = {
+  NEW: "up",
+  ROSE: "up",
+  FELL: "down",
+  STEADY: "flat",
+  NO_COMPARISON: "flat",
+} as const satisfies Record<ReportTrend, Tone>;
+
+/** 관심 변화의 색 갈래 */
+export const shiftTones = {
+  ENTERED: "up",
+  LEFT: "down",
+  NONE: "flat",
+} as const satisfies Record<InterestShift, Tone>;
+
+/** 색 갈래마다 낱말 칸의 모양 — 관심사 히스토리의 칸과 같은 주 색 · 경고 색 · 바탕 */
+export const toneClasses = {
+  up: "bg-primary/15 text-primary",
+  down: "bg-destructive/15 text-destructive",
+  flat: "bg-muted text-muted-foreground",
+} as const satisfies Record<Tone, string>;
+
 /** 숫자 표의 열 이름 */
 export const countColumns = {
   userStoryline: "흐름",
@@ -123,13 +161,30 @@ export const countColumns = {
   current: "이번 기간",
   previous: "직전 기간",
   trend: "판정",
+  state: "상태",
   start: "기간 시작",
   end: "기간 끝",
   shift: "변화",
 } as const;
 
-/** 직전 값이 없는 칸 */
-export const NO_PREVIOUS_VALUE = "—";
+/** 추적한 흐름 표의 둘째 열 — 주간은 직전 주간과 견준 판정, 월간은 생성 때 흐름의 상태 */
+export const storylineColumns = {
+  WEEK: countColumns.trend,
+  MONTH: countColumns.state,
+} as const satisfies Record<ReportKind, string>;
+
+/** 직전 값이 없을 때 */
+export const NO_PREVIOUS_VALUE = "없음";
+
+/** 보도량 판정 칸이 수를 알리는 문구 — 화면에는 판정만 보이고 이 문구는 칸의 title · 화면 낭독에만 둔다 */
+export function countsText(current: number, previous: number | null): string {
+  return `${countColumns.current} ${current}건 · ${countColumns.previous} ${previous === null ? NO_PREVIOUS_VALUE : `${previous}건`}`;
+}
+
+/** 월간 흐름 상태 칸이 수를 알리는 문구 — 직전과 견주지 않아 이번 기간 수만, 칸의 title · 화면 낭독에만 */
+export function currentCountText(current: number): string {
+  return `${countColumns.current} ${current}건`;
+}
 
 /** 관심 값이 없는 칸 */
 export const NO_LEVEL = "신호 없음";
@@ -157,18 +212,27 @@ export function hiddenSectionsText(count: number): string {
 export const ALL_HIDDEN =
   "이 리포트가 인용한 흐름 · 사건이 모두 사라져 글을 보이지 않습니다.";
 
-/** 비교한 직전 리포트로 가는 링크 */
+/** 직전 리포트로 가는 링크 — 주간은 흐름 보도를 견준 직전 주간, 월간은 견주지 않은 직전 월간 */
 export function previousLink(
   kind: ReportKind,
   firstDay: string,
   lastDay: string,
 ): string {
-  return `비교한 직전 ${kindLabels[kind]} 리포트 · ${periodText(firstDay, lastDay)}`;
+  const period = periodText(firstDay, lastDay);
+  switch (kind) {
+    case "WEEK":
+      return `비교한 직전 ${kindLabels[kind]} 리포트 · ${period}`;
+    case "MONTH":
+      return `직전 ${kindLabels[kind]} 리포트 · ${period}`;
+  }
 }
 
-/** 비교한 직전 리포트가 없을 때 */
-export const NO_PREVIOUS =
-  "비교한 직전 리포트가 없습니다 — 첫 리포트이거나 직전 기간과 이어지지 않아 직전 기간 값이 비어 있습니다.";
+/** 직전 리포트가 없을 때 — 종류마다 */
+export const noPreviousTexts = {
+  WEEK: "비교한 직전 리포트가 없습니다 — 첫 리포트이거나 직전 기간과 이어지지 않아 직전 기간 값이 비어 있습니다.",
+  MONTH:
+    "직전 월간 리포트가 없습니다 — 첫 월간 리포트이거나 직전 기간과 이어지지 않습니다.",
+} as const satisfies Record<ReportKind, string>;
 
 /** 사용량 줄 — 금액으로 바꾸지 않는다 */
 export function usageText(

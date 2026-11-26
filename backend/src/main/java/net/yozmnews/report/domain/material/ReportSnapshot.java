@@ -2,9 +2,7 @@ package net.yozmnews.report.domain.material;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -13,16 +11,15 @@ import java.util.TreeSet;
 import net.yozmnews.report.InterestShift;
 import net.yozmnews.report.ReportTrend;
 import net.yozmnews.report.domain.input.Count;
-import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.InputSection;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.StorylinesSection;
-import net.yozmnews.report.domain.input.TopicCoverageLine;
 import net.yozmnews.report.domain.input.TopicInterestLine;
 import net.yozmnews.report.domain.input.UserStorylineInterestLine;
 import net.yozmnews.report.domain.input.UserStorylineMaterial;
 import net.yozmnews.report.domain.report.ReportPeriod;
 import net.yozmnews.storyline.StorylineId;
+import net.yozmnews.storyline.StorylineState;
 import net.yozmnews.tag.TagSetId;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
@@ -34,18 +31,19 @@ import tools.jackson.databind.node.ObjectNode;
 /**
  * 통계 스냅숏 꼴의 정본 — 쓰기와 읽기 · docs/specs/report.md §5 · report-R19
  * <p>
- * 생성에 쓴 통계를 JSON 객체 하나로 쓴다 — 꼴의 판, 키의 태그 체계 버전, 기간, 입력에 든 갈래의 칸만. 보도량은 기간 시각의 종류를 함께 싣고
- * (구독 주제 {@value #FIRST_EVALUATED} · 사용자 스토리라인 {@value #PUBLISHED}), 이은 직전 값과 판정을 함께 남긴다. 주제 이름은 싣고 사건 줄 · 정리의
- * 글은 싣지 않는다. 읽기는 판이 {@link #VERSION} 과 같을 때만 값을 낸다 — 파싱은 {@link #stats} 하나이고, 다음 리포트가 견줄 기사 수
- * ({@link #read})는 그 결과를 옮긴 것이다.
+ * 생성에 쓴 통계를 JSON 객체 하나로 쓴다 — 꼴의 판, 키의 태그 체계 버전, 기간, 입력에 든 갈래의 칸만. 사용자 스토리라인 보도량은 기간 시각의 종류
+ * ({@value #PUBLISHED})를 함께 싣고, 이은 직전 값과 판정, 생성 때 헤드의 상태를 함께 남긴다. 주제 이름은 싣고 사건 줄 · 정리의 글은 싣지 않는다.
+ * 읽기는 판이 {@link #VERSION} 이거나 {@link #PREVIOUS_VERSION} 일 때만 값을 낸다 — {@link #PREVIOUS_VERSION} 은 헤드의 상태가 없고(null),
+ * 그 판에 있던 구독 주제 보도량 칸은 읽지 않는다. 파싱은 {@link #stats} 하나이고, 다음 리포트가 견줄 기사 수({@link #read})는 그 결과를 옮긴
+ * 것이다.
  */
 public final class ReportSnapshot {
 
 	/** 꼴의 판 — 올리면 옛 판을 읽는 길이나 옮기는 마이그레이션을 함께 둔다 */
-	public static final int VERSION = 2;
+	public static final int VERSION = 3;
 
-	/** 구독 주제 보도량의 기간 시각 — 첫 평가 시각 */
-	public static final String FIRST_EVALUATED = "FIRST_EVALUATED";
+	/** 읽는 옛 판 — 사용자 스토리라인 줄에 헤드의 상태가 없다. 구독 주제 보도량 칸(coverage)이 있을 수 있고 읽지 않는다 */
+	public static final int PREVIOUS_VERSION = 2;
 
 	/** 사용자 스토리라인 보도량의 기간 시각 — 사건 배정의 발행 시각 */
 	public static final String PUBLISHED = "PUBLISHED";
@@ -58,15 +56,11 @@ public final class ReportSnapshot {
 	/**
 	 * 직전 리포트의 스냅숏에서 다음 리포트가 견줄 값
 	 *
-	 * @param tagSet 주제 키의 태그 체계 버전
-	 * @param topics 구독 행 키 → 기사 수 — 보도량 갈래가 없었으면 빈 맵
 	 * @param userStorylines 사용자 스토리라인 — 추적한 사용자 스토리라인 갈래가 없었으면 빈 목록
 	 */
-	public record SnapshotValues(TagSetId tagSet, Map<String, Long> topics, List<SnapshotUserStoryline> userStorylines) {
+	public record SnapshotValues(List<SnapshotUserStoryline> userStorylines) {
 
 		public SnapshotValues {
-			Objects.requireNonNull(tagSet, "tagSet");
-			topics = Map.copyOf(topics);
 			userStorylines = List.copyOf(userStorylines);
 		}
 
@@ -86,35 +80,13 @@ public final class ReportSnapshot {
 	 * 스냅숏의 모든 칸 — 갈래 칸이 없으면 그 갈래가 null
 	 *
 	 * @param tagSet 주제 키의 태그 체계 버전
-	 * @param coverage 구독 주제의 보도량
 	 * @param userStorylines 추적한 사용자 스토리라인의 보도량
 	 * @param interests 관심의 변화
 	 */
-	public record SnapshotStats(TagSetId tagSet, @Nullable CoverageStats coverage, @Nullable UserStorylineStats userStorylines,
-			@Nullable InterestStats interests) {
+	public record SnapshotStats(TagSetId tagSet, @Nullable UserStorylineStats userStorylines, @Nullable InterestStats interests) {
 
 		public SnapshotStats {
 			Objects.requireNonNull(tagSet, "tagSet");
-		}
-
-	}
-
-	/** 구독 주제의 보도량 — 스냅숏의 순서 */
-	public record CoverageStats(List<TopicStat> topics) {
-
-		public CoverageStats {
-			topics = List.copyOf(topics);
-		}
-
-	}
-
-	/** 구독 행 하나 — 키 · 이름 · 이번 · 이은 직전 값(없으면 null) · 판정 */
-	public record TopicStat(String key, String name, long articles, @Nullable Long previous, ReportTrend trend) {
-
-		public TopicStat {
-			Objects.requireNonNull(key, "key");
-			Objects.requireNonNull(name, "name");
-			Objects.requireNonNull(trend, "trend");
 		}
 
 	}
@@ -128,9 +100,12 @@ public final class ReportSnapshot {
 
 	}
 
-	/** 사용자 스토리라인 하나 — 생성 때의 헤드 · 꼭대기들 · 이번 · 이은 직전 값(없으면 null) · 판정 · 기간 안 추적 */
+	/**
+	 * 사용자 스토리라인 하나 — 생성 때의 헤드 · 꼭대기들 · 이번 · 이은 직전 값(없으면 null) · 판정 · 기간 안 추적 · 생성 때 헤드의 상태(옛 판이면
+	 * null)
+	 */
 	public record UserStorylineStat(StorylineId head, Set<StorylineId> tops, long articles, @Nullable Long previous,
-			ReportTrend trend, boolean trackedInPeriod) {
+			ReportTrend trend, boolean trackedInPeriod, @Nullable StorylineState state) {
 
 		public UserStorylineStat {
 			Objects.requireNonNull(head, "head");
@@ -186,7 +161,6 @@ public final class ReportSnapshot {
 		for (InputSection section : sections) {
 			switch (section) {
 				case StorylinesSection storylines -> writeUserStorylines(root.putObject("storylines"), storylines);
-				case CoverageSection coverage -> writeCoverage(root.putObject("coverage"), coverage);
 				case InterestsSection interests -> writeInterests(root.putObject("interests"), interests);
 			}
 		}
@@ -194,22 +168,18 @@ public final class ReportSnapshot {
 	}
 
 	/**
-	 * 다음 리포트가 견줄 값을 읽는다 — {@link #stats} 의 주제 키 · 기사 수와 사용자 스토리라인의 헤드 · 꼭대기 · 기사 수.
+	 * 다음 리포트가 견줄 값을 읽는다 — {@link #stats} 의 사용자 스토리라인의 헤드 · 꼭대기 · 기사 수.
 	 * @return 모르는 판이거나 읽지 못하면 빈 값
 	 */
 	public static Optional<SnapshotValues> read(@Nullable String json) {
 		return stats(json).map(stats -> {
-			Map<String, Long> topics = new LinkedHashMap<>();
-			if (stats.coverage() != null) {
-				stats.coverage().topics().forEach(topic -> topics.put(topic.key(), topic.articles()));
-			}
 			List<SnapshotUserStoryline> userStorylines = (stats.userStorylines() == null) ? List.of()
 					: stats.userStorylines()
 						.userStorylines()
 						.stream()
 						.map(userStoryline -> new SnapshotUserStoryline(userStoryline.head(), userStoryline.tops(), userStoryline.articles()))
 						.toList();
-			return new SnapshotValues(stats.tagSet(), topics, userStorylines);
+			return new SnapshotValues(userStorylines);
 		});
 	}
 
@@ -223,13 +193,15 @@ public final class ReportSnapshot {
 		}
 		try {
 			JsonNode root = JSON.readTree(json);
-			if (root == null || !root.isObject() || !root.path("version").isInt()
-					|| root.path("version").intValue() != VERSION || !root.path("tagSet").canConvertToLong()) {
+			if (root == null || !root.isObject() || !root.path("version").isInt() || !root.path("tagSet").canConvertToLong()) {
+				return Optional.empty();
+			}
+			int version = root.path("version").intValue();
+			if (version != VERSION && version != PREVIOUS_VERSION) {
 				return Optional.empty();
 			}
 			return Optional.of(new SnapshotStats(new TagSetId(root.path("tagSet").longValue()),
-					root.has("coverage") ? readCoverage(root.path("coverage")) : null,
-					root.has("storylines") ? readUserStorylines(root.path("storylines")) : null,
+					root.has("storylines") ? readUserStorylines(root.path("storylines"), version == VERSION) : null,
 					root.has("interests") ? readInterests(root.path("interests")) : null));
 		}
 		catch (JacksonException | IllegalArgumentException ex) {
@@ -237,16 +209,7 @@ public final class ReportSnapshot {
 		}
 	}
 
-	private static CoverageStats readCoverage(JsonNode node) {
-		List<TopicStat> topics = new ArrayList<>();
-		for (JsonNode topic : node.path("topics")) {
-			topics.add(new TopicStat(text(topic, "key"), text(topic, "name"), number(topic, "articles"),
-					nullableNumber(topic, "previous"), ReportTrend.valueOf(text(topic, "trend"))));
-		}
-		return new CoverageStats(topics);
-	}
-
-	private static UserStorylineStats readUserStorylines(JsonNode node) {
+	private static UserStorylineStats readUserStorylines(JsonNode node, boolean withState) {
 		List<UserStorylineStat> userStorylines = new ArrayList<>();
 		for (JsonNode userStoryline : node.path("userStorylines")) {
 			Set<StorylineId> tops = new TreeSet<>(Comparator.comparingLong(StorylineId::value));
@@ -255,7 +218,8 @@ public final class ReportSnapshot {
 			}
 			userStorylines.add(new UserStorylineStat(new StorylineId(number(userStoryline, "head")), tops, number(userStoryline, "articles"),
 					nullableNumber(userStoryline, "previous"), ReportTrend.valueOf(text(userStoryline, "trend")),
-					bool(userStoryline, "trackedInPeriod")));
+					bool(userStoryline, "trackedInPeriod"),
+					withState ? StorylineState.valueOf(text(userStoryline, "state")) : null));
 		}
 		return new UserStorylineStats(userStorylines);
 	}
@@ -274,17 +238,6 @@ public final class ReportSnapshot {
 		return new InterestStats(topics, userStorylines);
 	}
 
-	private static void writeCoverage(ObjectNode node, CoverageSection coverage) {
-		node.put("basis", FIRST_EVALUATED);
-		ArrayNode topics = node.putArray("topics");
-		for (TopicCoverageLine line : coverage.topics()) {
-			ObjectNode topic = topics.addObject();
-			topic.put("key", line.key());
-			topic.put("name", line.name());
-			count(topic, line.articles());
-		}
-	}
-
 	private static void writeUserStorylines(ObjectNode node, StorylinesSection storylines) {
 		node.put("basis", PUBLISHED);
 		ArrayNode userStorylines = node.putArray("userStorylines");
@@ -295,6 +248,7 @@ public final class ReportSnapshot {
 			material.tops().stream().mapToLong(StorylineId::value).sorted().forEach(tops::add);
 			count(userStoryline, material.articles());
 			userStoryline.put("trackedInPeriod", material.trackedInPeriod());
+			userStoryline.put("state", material.headState().name());
 		}
 	}
 
