@@ -47,8 +47,10 @@
 | 후보 사건의 기사 | 사건에 배정된 기사 가운데 그 사용자에게 그 기간에 든 기사. 기간 규칙과 기사 제외(형식 · 소스)를 지난 기사이고 표본의 모집단이다(digest-R17 · R19) |
 | 사건 점수 | 사건 중요도 × `low_confidence` 가중치 × 관심도 가중치(주제 × 스토리라인). 후보 순위와 항목 점수가 쓴다(digest-R18 · R47) |
 | 표본 | 사건마다 생성에 넘기는 기사. 후보 사건의 기사 가운데 고정 해시 순으로 상한까지 고르고, 인용이자 화면의 출처 기사다(digest-R45) |
+| 요약문 길이 | 기사 RSS 요약문의 코드 포인트 수([source Spec](source.md#등록과-켜기)의 피드 미리보기 "요약문 길이"와 같은 셈). 항목의 요약문 길이는 생성에 넘기는 표본 기사 요약문 길이의 합이다(digest-R242). LLM 이 쓰는 요약의 길이 단계인 사용자 설정 "요약 길이"(`SummaryLength`)와 다르다 |
+| 요약문이 짧은 항목 | 항목의 요약문 길이가 사용자의 주요 뉴스 요약 하한(digest-R243)보다 짧아 헤드라인이 된 항목. 그 가운데 하한 이상이었으면 주요 뉴스가 되었을 항목의 수를 다이제스트 행에 남긴다(digest-R244) |
 | 항목 | 한 스토리라인으로 묶은 고른 사건들. 포함 나무의 꼭대기로 묶고 주요 뉴스 · 헤드라인으로 가른다. 인용 섹션 하나가 항목 하나이고, 섹션은 항목을 묶은 꼭대기를 갖는다(digest-R7 · R46 · R47) |
-| 주요 뉴스 | 다이제스트에서 항목 하나의 여러 기사를 종합한 섹션(`TOP_STORY`, 출력의 `top_stories`). 큰 슬롯 항목과 순위가 높은 항목이 주요 뉴스가 된다. 그 밖의 항목은 헤드라인(제목 · 짧은 코멘트)이다(digest-R145) |
+| 주요 뉴스 | 다이제스트에서 항목 하나의 여러 기사를 종합한 섹션(`TOP_STORY`, 출력의 `top_stories`). 요약문 길이가 사용자의 주요 뉴스 요약 하한 이상인 큰 슬롯 항목과 순위가 높은 항목이 주요 뉴스가 된다. 그 밖의 항목은 헤드라인(제목 · 짧은 코멘트)이다(digest-R145) |
 | 큰 판정 나무 | 예산 자르기 뒤 큰 슬롯 사건이 남은 큰 판정 행의 포함 나무. 그 나무에 든 사건은 큰 슬롯 항목에 든다(digest-R46) |
 | 별칭 | 이번 생성에서만 쓰는 짧은 이름. 기사 별칭(`A1` …)은 후보 행의 열쇠이고, 항목 별칭은 `I1` … 이다. 출력은 항목을 항목 별칭으로만 가리키고, 기사 별칭은 프롬프트에 싣지 않는다(digest-R3) |
 | 출력 | 생성기가 돌려준 원문(JSON 텍스트) |
@@ -356,7 +358,7 @@ public record TopicSuggestionList(TagSetId tagSet, List<String> subtopics) {}
 | `domain/schedule` | 일정 규칙 · 기간 산식 · 수동 생성 대상 | — |
 | `domain/candidate` | 항목 · 기사의 별칭, 후보 행 저장소와 보존 기한 | `DigestCandidate` · `AliasedCandidate` · `AliasedItem`. 선정 이유는 공개 enum `SelectionReason` 이다 |
 | `domain/selection` | 후보 선별의 순수 규칙 | `ActiveEvaluation` · `ArticleFacts` · `CandidateEvent` · `Shortlist` · `SelectedEvent` |
-| `domain/item` | 항목 묶기 · 항목 순위 · 주요 뉴스와 헤드라인 가르기 | `DigestItemPlan` · `ArrangedItem` · `ItemKind` |
+| `domain/item` | 항목 묶기 · 항목 순위 · 주요 뉴스와 헤드라인 가르기 · 사건의 요약문 길이 | `DigestItemPlan` · `ArrangedItem` · `ItemArrangement` · `ItemKind` · `EventSummaryLengths` |
 | `domain/input` | 생성의 입력 `DigestInput` | `DigestProfile` · `InputItem` · `InputEvent` · `CandidateArticle` |
 | `domain/prompt` | 프롬프트 구성 | `DigestPrompt` |
 | `domain/interest` | 관심도 · 관심사 히스토리 · 구독 제안의 순수 규칙 | `DeclinedTopic` · `ExposedEvent` · `Exposure` · `SubscriptionSignal` · `ExposureRow` · `InterestRecord` · `InterestPeriod` |
@@ -737,7 +739,7 @@ sequenceDiagram
 - `EventSample` — 사건마다 표본(digest-R45)
 - `BudgetCut` — 예산 자르기(digest-R128)
 - `CandidateSelector` — 단계 잇기와 선정 이유(digest-R21 · R130)
-- `ItemGrouping` · `ItemPlan` · `ItemRules` — 항목 묶기 · 항목 순위와 가르기 · 큰 슬롯 밖 주요 뉴스 수(digest-R46 · R47)
+- `ItemGrouping` · `ItemPlan` · `ItemRules` · `EventSummaryLengths` — 항목 묶기 · 항목 순위와 가르기 · 큰 슬롯 밖 주요 뉴스 수 · 주요 뉴스가 되는 요약문 길이 기준 · 사건의 요약문 길이(digest-R46 · R47 · R242 ~ R244)
 - `DigestInput` — 생성의 입력과 그 검증(digest-R66 · R131)
 - `DigestPrompts` · `PromptRules` — 프롬프트 구성과 그 상수 · 길이 기준(digest-R26)
 - `GenerationVerdict` · `GenerationFailures` — 생성 한 번의 판정과 관문 실패 종류의 옮기기(digest-R27)
@@ -847,7 +849,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 계기(`SCHEDULED` · `MANUAL`)
   - 만든 시각
   - 등록 토큰과 등록 시각. 등록 시각은 만든 시각과 같다
-- **digest-R57** — 시작은 `SCHEDULED` 에서만 `RUNNING` 으로 간다. 쓸 모델의 공급자 키(`Provider.key()`) · 모델 ID · 후보 수 · 시작 시각을 적는다
+- **digest-R57** — 시작은 `SCHEDULED` 에서만 `RUNNING` 으로 간다. 쓸 모델의 공급자 키(`Provider.key()`) · 모델 ID · 후보 수 · 요약문이 짧은 항목 수(digest-R244) · 시작 시각을 적는다
   - 생성 중 · 끝난 다이제스트는 시작하지 못한다
 - **digest-R58** — 생성기를 부르지 않거나 생성이 끝나지 않은 채 끝내기(`abandon`)는 `SCHEDULED` · `RUNNING` 에서 `FAILED` 로 간다(digest-R29 · R32)
   - 실패 코드 · 메시지만 적고 토큰 · 소요 시간은 없다
@@ -877,6 +879,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 사건이 없는 항목이 있다
   - 기사가 없는 사건이 있다
   - 기사의 선정 이유가 그 사건의 것과 다르다
+  - 요약문이 짧은 항목 수가 음수이거나 헤드라인 항목 수보다 크다
 - **digest-R67** — 기사를 지금 있는 기사로 좁히면(digest-R9) 항목의 기사도 좁히고, 기사가 남지 않은 항목은 뺀다
   - 남은 기사 · 항목의 별칭은 그대로다
   - 항목의 사건은 좁히지 않는다
@@ -957,7 +960,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 - **digest-R84** — 트랜잭션 안에서 부르면 아무것도 쓰기 전에 거부한다(`IllegalStateException`). 생성기 호출은 트랜잭션 밖이어야 한다
 - **digest-R85** — 후보 선별과 생성은 같은 모델을 쓴다. 쓸 모델은 그 입력을 고른 후보 선별(`CandidateSelection.select`)에 넘긴 모델이어야 하고, 부르는 쪽이 지킨다
   - 입력 토큰 예산은 선별이 그 모델의 예산으로 자른 것이고(digest-R22) 생성은 다시 자르지 않는다
-- **digest-R86** — 시작은 항목 · 기사에 생성의 입력 순서대로 별칭을 매기고(digest-R3), 항목의 사건 수를 후보 수로 적는다. 항목이 없으면 생성기를 부르지 않고 `EMPTY` 로 끝낸다
+- **digest-R86** — 시작은 항목 · 기사에 생성의 입력 순서대로 별칭을 매기고(digest-R3), 항목의 사건 수를 후보 수로, 입력의 요약문이 짧은 항목 수(digest-R244)를 함께 적는다. 항목이 없으면 생성기를 부르지 않고 `EMPTY` 로 끝낸다
 - **digest-R87** — 프롬프트를 만들고(digest-R26) 생성기를 트랜잭션 밖에서 부른다. 추론 강도는 입력 프로필의 값이다. 결과를 판정하고, 끝까지 쓴 응답을 읽지 못했거나 칸이 빠진 항목이 있으면 한 번 다시 묻는다(digest-R27)
 - **digest-R88** — 생성기가 예외를 던지면 그대로 올라가고 다이제스트는 `RUNNING` 으로 남는다
   - 다시 `run` 해도 시작하지 않는다(digest-R2)
@@ -1162,6 +1165,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 - **digest-R131** — 남은 사건은 항목으로 묶고 가른다(digest-R46 · R47). 결과는 생성의 입력(`DigestInput`)이고 아래 값을 싣는다. 검증은 digest-R66 이다
   - 프로필 — 구독 행의 이름 · 제외 지역의 이름(체계 순서), 시간대, 요약 길이, 추론 강도
   - 항목 — 종류 · 사건. 주요 뉴스 항목 다음 헤드라인 항목이다
+  - 요약문이 짧은 항목 수 — 가르기가 센 값(digest-R244)
   - 사건 — 선정 이유와 표본 기사의 값
   - 표본 기사의 값 — 기사, 선정 이유, 어림에 쓴 같은 읽기의 제목 · 요약문, 출처 이름(`ArticleDirectory.headlines`), 발행 시각, 붙은 주제 중분류 · 지역의 이름
   - 내용을 읽지 못한 표본 기사는 싣지 않는다
@@ -1178,10 +1182,10 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 
 ### 항목 묶기와 가르기
 
-판단의 이유는 [ADR-0262](../adr/0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) · [ADR-0264](../adr/0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md)에 있다.
+판단의 이유는 [ADR-0262](../adr/0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) · [ADR-0264](../adr/0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md) · [ADR-0353](../adr/0353-an-item-whose-summaries-fall-short-of-the-top-story-summary-lower-bound-is-a-headline-the-next-item-takes-its-seat-and-the-count-is-recorded.md)(요약문 길이 기준)에 있다.
 
 - **digest-R46** — 항목 묶기(`ItemGrouping`). 하위 규칙은 digest-R138 ~ R143 이다
-- **digest-R47** — 항목 순위와 가르기(`ItemPlan` · `ItemRules`). 하위 규칙은 digest-R144 ~ R146 이다
+- **digest-R47** — 항목 순위와 가르기(`ItemPlan` · `ItemRules` · `EventSummaryLengths`). 하위 규칙은 digest-R144 ~ R146 · R242 ~ R244 이다
 - **digest-R138** — 예산 자르기 뒤 남은 사건(큰 슬롯 사건 · 구독 사건 · 새 길 사건)은 후보 사건이 실은 꼭대기(digest-R16)로 묶고, 꼭대기를 다시 묻지 않는다. 그 꼭대기는 `storyline` 의 꼭대기 조회 `StorylineDirectory.topsOf` 가 사건마다 낸 포함 나무의 꼭대기이고 소속 점수 순이다([storyline-R37](storyline.md#공개-조회))
 - **digest-R139** — 큰 판정 나무는 예산 자르기 뒤 큰 슬롯 사건이 하나 이상 남은 큰 판정 행의 나무다. 그 나무의 꼭대기는 행 머리(`BigStoryline.storyline`)의 포함 나무 꼭대기(digest-R19, `BigRow.top`)다
   - 고르지 않은 행(큰 슬롯 수 밖이거나 사건이 모두 잘린 행)의 나무는 큰 판정 나무가 아니다
@@ -1198,9 +1202,19 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 생성의 입력(`InputItem.storyline`)과 별칭 항목(`AliasedItem.storyline`)이 날라 섹션에 저장한다(digest-R7)
   - 프롬프트는 읽지 않는다. 스토리라인 ID 는 모델에 가지 않는다([ADR-0284](../adr/0284-a-digest-item-keeps-the-top-that-grouped-it-on-its-section-and-items-with-a-flow-carry-a-flow-tracking-button.md))
 - **digest-R144** — 항목 점수는 항목 안 사건 점수(digest-R18)의 최대다. 점수가 있는 사건이 없으면 맨 뒤다. 순서는 항목 점수 내림차순 → 항목의 가장 작은 사건 ID 오름차순이다
-- **digest-R145** — 큰 판정 나무의 항목은 모두 주요 뉴스(`TOP_STORY`)다. 나머지 항목은 순서대로 `ItemRules.TOP_STORIES` 개까지 주요 뉴스이고, 그 뒤는 헤드라인(`HEADLINE`)이다. `TOP_STORIES` 는 5(측정 전)다
+- **digest-R145** — 항목의 요약문 길이(digest-R242)가 기준(digest-R243) 이상인 항목만 주요 뉴스(`TOP_STORY`)가 된다. 큰 판정 나무의 항목은 기준 이상이면 모두 주요 뉴스다. 나머지 항목은 기준 이상인 항목이 순서대로 `ItemRules.TOP_STORIES` 개까지 주요 뉴스다. 그 밖은 헤드라인(`HEADLINE`)이다. `TOP_STORIES` 는 5(측정 전)다
+  - 기준보다 짧은 항목은 큰 판정 나무의 항목이어도 헤드라인이다
+  - 기준 이상인 항목이 모자라면 주요 뉴스가 그만큼 준다. 큰 판정 나무의 항목이 헤드라인이 된 자리는 다른 항목이 채우지 않는다
   - 헤드라인 수는 따로 자르지 않는다
 - **digest-R146** — 생성에 넘기는 항목은 주요 뉴스 항목(순서대로) 다음 헤드라인 항목(순서대로)이다. 큰 판정 나무의 항목을 앞으로 올리지 않는다. 항목 안 사건은 사건 순위(digest-R18) 순서다
+- **digest-R242** — 항목의 요약문 길이는 항목 사건들의 요약문 길이 합이다. 사건의 요약문 길이(`EventSummaryLengths`)는 표본 기사(digest-R45) 가운데 내용을 읽은 기사의 RSS 요약문 코드 포인트 합이다
+  - 제목은 세지 않는다. 요약문이 없는 기사 · 내용을 읽지 못한 기사는 0 이다
+  - 토큰 어림 · 프롬프트의 기사 줄과 같은 읽기(digest-R22)이고 선별 때의 값이다. 프롬프트가 기사 줄을 어림 안으로 자르거나(digest-R197) 생성 중에 기사가 지워져도(digest-R9) 다시 세지 않는다
+- **digest-R243** — 기준(`ItemRules.minSummaryLength`)은 사용자의 요약 길이 단계에서 주요 뉴스 요약 길이 기준의 하한(digest-R194 — 짧게 100 · 보통 200 · 자세히 400)이다. 하한과 같으면 주요 뉴스다
+- **digest-R244** — 요약문이 짧은 항목 수(`ItemArrangement.shortSummary`)는 기준보다 짧아 헤드라인이 된 항목 가운데, 기준 이상이었으면 주요 뉴스가 되었을 항목의 수다
+  - 큰 판정 나무의 그런 항목과, 큰 화제 밖 자리가 남아 있는 동안 순위로 만난 그런 항목을 센다. 자리가 다 찬 뒤의 항목은 세지 않는다
+  - 헤드라인 항목 수를 넘지 않는다. 생성의 입력이 나르고(digest-R131) 시작할 때 다이제스트 행에 적는다(digest-R57)
+  - 출력에서 빠진 항목(digest-R6 · R27)이 아니다 — 처음 읽은 출력에 없던 항목 수 · 대체한 항목 수와 따로 센다
 
 ### 관심도
 
@@ -1431,7 +1445,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 요약 길이마다 개요 · 주요 뉴스 요약의 길이 기준(digest-R194)
   - 칸 이름 · 키 · 항목 별칭 접두는 그 정본 상수에서 채운다
   - 모델이 구조화 출력을 지원하지 않으면 출력 스키마 문서를 지시에 덧붙인다
-- **digest-R194** — 길이 기준(`PromptRules.overview` · `summary`)은 요약 길이마다 아래 코드 포인트 범위다. 기준의 위쪽은 출력 서술의 상한 안이다(digest-R5)
+- **digest-R194** — 길이 기준(`PromptRules.overview` · `summary`)은 요약 길이마다 아래 코드 포인트 범위다. 기준의 위쪽은 출력 서술의 상한 안이다(digest-R5). 주요 뉴스 요약의 하한은 주요 뉴스가 되는 항목의 요약문 길이 기준이기도 하다(digest-R243)
 
   | 요약 길이 | 개요 | 주요 뉴스 요약 |
   |---|---|---|
@@ -1665,10 +1679,11 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 - `V73__digest_items_drop_selection_reason.sql` — 인용의 선정 이유 칸 지우기
 - `V74__digest_item_fills.sql` — 첫 응답에서 빠진 항목 수 · 대체한 항목 수
 - `V77__digest_section_storyline.sql` — 섹션의 꼭대기
+- `V92__digest_short_summary_items.sql` — 요약문이 짧은 항목 수
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
-| `digests` | id, user_id, digest_date, period_start, period_end, status(`SCHEDULED`/`RUNNING`/`READY`/`EMPTY`/`FAILED`), trigger(`SCHEDULED`/`MANUAL`), provider(`openai`/`anthropic`/`openrouter`), model, candidate_count, input_tokens, output_tokens, duration_ms, error_code, error_message, first_missing_items, substituted_items, created_at, dispatch_token, dispatched_at, started_at, completed_at, version | 다이제스트 상태(digest-R1). 컬럼의 뜻은 표 아래 목록에 있다 |
+| `digests` | id, user_id, digest_date, period_start, period_end, status(`SCHEDULED`/`RUNNING`/`READY`/`EMPTY`/`FAILED`), trigger(`SCHEDULED`/`MANUAL`), provider(`openai`/`anthropic`/`openrouter`), model, candidate_count, short_summary_items, input_tokens, output_tokens, duration_ms, error_code, error_message, first_missing_items, substituted_items, created_at, dispatch_token, dispatched_at, started_at, completed_at, version | 다이제스트 상태(digest-R1). 컬럼의 뜻은 표 아래 목록에 있다 |
 | `digest_sections` | id, digest_id, kind(`OVERVIEW`/`TOP_STORY`/`HEADLINE`), position, title, body, storyline_id | 다이제스트의 섹션(digest-R7). 개요 또는 항목 하나다. 컬럼의 뜻은 표 아래 목록에 있다 |
 | `digest_section_events` | digest_section_id, position, event_id, selection_reason(`SUBSCRIBED`/`INTEREST`/`MAJOR_STORYLINE`) | 인용 섹션(항목)이 다룬 사건과 그 선정 이유(digest-R7). 컬럼의 뜻은 표 아래 목록에 있다 |
 | `digest_items` | digest_section_id, position, article_id | 섹션이 인용한 기사. 그 항목의 표본 기사이고 화면의 출처 기사다(digest-R7). 컬럼의 뜻은 표 아래 목록에 있다 |
@@ -1677,6 +1692,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 `digests`:
 
 - `first_missing_items` · `substituted_items` 는 처음 읽은 출력에 없던 항목 수와 대체 헤드라인으로 남긴 항목 수다(digest-R6 · R27). `READY` 에만 있고 둘은 함께 있다(제약 `digests_item_fills_ready` · `digests_item_fills_pair`). 이 칸이 생기기 전에 끝난 `READY` 행은 둘 다 NULL(기록 전)이다
+- `short_summary_items` 는 요약문이 짧은 항목 수다(digest-R244). 생성의 입력에서 정해져 시작할 때 후보 수와 함께 적고 끝난 뒤에도 남는다. 0 이상이고, 값이 있으면 후보 수가 있고 그 수를 넘지 않는다(제약 `digests_short_summary_started`). 이 칸이 생기기 전에 시작한 행은 NULL(기록 전)이다
 - `dispatch_token` · `dispatched_at` 은 생성 작업의 등록 토큰 · 마지막 등록 시각이다(digest-R29 · R32)
 - 같은 사용자 · 날짜의 계기 `SCHEDULED` 행은 하나다(부분 유일 인덱스 `digests_scheduled_date_key`)
 - 끝나지 않은 행은 `(status, user_id)` 부분 인덱스로 찾는다
@@ -1794,3 +1810,4 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 | [0322](../adr/0322-a-weekly-report-needs-three-ready-digest-days-a-monthly-report-two-ready-weeklies-wholly-inside-and-a-monthly-waits-for-unfinished-weeklies.md) | 주간 리포트는 그 주에 READY 다이제스트가 3일 이상, 월간은 그 기간에 다 든 READY 주간이 2편 이상일 때만 만들고, 월간은 끝나지 않은 주간을 기다리며 주간을 끄면 월간도 없다 |
 | [0324](../adr/0324-report-failures-become-notices-through-an-event-declared-by-the-receiving-user-module-like-digest-failures.md) | 리포트 실패는 받는 쪽 user 가 선언한 이벤트로 다이제스트와 같은 꼴의 알림이 되고, 실패 원인 타입을 함께 쓴다 |
 | [0326](../adr/0326-development-names-call-a-shared-storyline-storyline-a-user-storyline-user-storyline-and-a-judgement-candidate-of-unknown-kind-candidate.md) | 개발 이름은 공유 스토리라인을 `Storyline`, 사용자 스토리라인을 `UserStoryline` 으로 부르고, 종류를 모르는 판정 후보는 `Candidate` 로 부른다 |
+| [0353](../adr/0353-an-item-whose-summaries-fall-short-of-the-top-story-summary-lower-bound-is-a-headline-the-next-item-takes-its-seat-and-the-count-is-recorded.md) | 요약문이 주요 뉴스 요약 하한보다 짧은 항목은 헤드라인이고, 큰 화제 밖 빈자리는 다음 항목이 채우며, 그 수를 다이제스트 행에 남긴다 |

@@ -81,7 +81,7 @@
 | 제외 소스 | 사용자가 다이제스트 후보에서 뺄 소스. 소스 단위이고 이력이 없다(user-R90) |
 | 쓸 모델 | 고른 모델 · 허용 모델 목록 · 키 상태로 조회 때 정하는 모델(user-R95) |
 | 다이제스트 분량 | 다이제스트 최대 후보 수의 단계(적게 · 보통 · 많이) 또는 직접 입력한 수, 큰 슬롯 수, 요약 길이. 설정 행의 칸 넷이다(user-R96) |
-| 요약 길이 | 다이제스트 글(개요 · 주요 뉴스 요약)의 길이 단계 — 짧게 · 보통 · 자세히. 단계의 뜻은 다이제스트의 지시가 정한다(user-R96) |
+| 요약 길이 | 다이제스트 글(개요 · 주요 뉴스 요약)의 길이 단계 — 짧게 · 보통 · 자세히. 단계의 뜻은 다이제스트의 지시가 정한다(user-R96). 주요 뉴스 요약 길이의 하한은 주요 뉴스가 되는 항목의 요약문 길이 기준이기도 하다 |
 | 구독 제안 거절 | 사용자가 구독 제안을 거절한 주제 중분류. 기록 당시 버전의 키 · 거절 때 관심 · 시각을 갖는다. 관심 신호가 아니다(user-R64) |
 | 스토리라인 구독 | 사용자 스토리라인을 추적하는 상태. 사용자 스토리라인 ID 와 추적하기 시작한 시각을 갖는다(user-R52) |
 | 정리 | 사용자 스토리라인 하나를 그 사용자의 LLM 키로 간추린 글. 사용자 스토리라인 전체의 제목 · 흐름 요약 · 최근 전개와 추적 대상 꼭대기마다의 같은 세 글이다. 정리가 있는 사용자 스토리라인만 독자 화면에 보인다(user-R68 · R73) |
@@ -1269,7 +1269,7 @@ public interface SummaryJobQueue {
 - **user-R96** — 다이제스트 분량의 값은 아래다. 단계 값과 기본값을 정한 근거는 [ADR-0209](../adr/0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md) · [ADR-0223](../adr/0223-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md) · [ADR-0272](../adr/0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md)에 있다
   - 최대 후보 수(다이제스트 후보 사건의 수, [digest Spec](digest.md#후보-선별) digest-R21)는 단계 또는 직접 입력이다. 단계(`CandidateVolume`)는 적게 20 · 보통 40 · 많이 60 이다. 직접 입력은 10 ~ 100(측정 전)이다(`DigestVolume.MIN_COUNT` · `MAX_COUNT`)
   - 큰 슬롯 수는 0 ~ 10(측정 전)이다(`MIN_BIG_SLOTS` · `MAX_BIG_SLOTS`). 0 이면 큰 슬롯을 넣지 않는다
-  - 요약 길이는 짧게 · 보통 · 자세히다(`SummaryLength`). 단계의 뜻은 다이제스트의 지시가 정한다([digest-R26](digest.md#프롬프트-구성))
+  - 요약 길이는 짧게 · 보통 · 자세히다(`SummaryLength`). 단계의 뜻은 다이제스트의 지시가 정한다([digest-R26](digest.md#프롬프트-구성)). 주요 뉴스 요약 길이의 하한은 주요 뉴스가 되는 항목의 요약문 길이 기준이기도 하다([digest-R243](digest.md#항목-묶기와-가르기))
   - 기본은 단계 보통 · 큰 슬롯 수 3 · 요약 길이 보통이다(`InterestDefaults`)
   - 실제 사건 수는 입력 토큰 예산(안전 상한, [llm Spec](llm.md#공급자와-허용-모델-목록) llm-R4)이 더 줄일 수 있다
 - **user-R97** — 분량 저장은 네 칸을 통째로 바꾸고 이력이 없다

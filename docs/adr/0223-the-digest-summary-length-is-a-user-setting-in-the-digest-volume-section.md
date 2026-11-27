@@ -1,6 +1,6 @@
 # ADR-0223: 다이제스트의 요약 길이는 사용자 설정이고 "다이제스트 분량" 구획에 있다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 주요 뉴스 수를 정하는 것([ADR-0353](0353-an-item-whose-summaries-fall-short-of-the-top-story-summary-lower-bound-is-a-headline-the-next-item-takes-its-seat-and-the-count-is-recorded.md))
 - 날짜: 2026-11-18
 - 근거: [이슈 #177](https://github.com/Theia0382/yozm-news/issues/177) — 수용 기준의 결정 "원하는 분량을 사용자 설정으로 둘지 · 그 단계". 구현 커밋 `d3b074d`(설정 · V54) · `011bcbe`(지시의 길이 기준) · `3c4e6d0`(화면)
 - 관련: [ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)(보충 — 결과의 "다이제스트 분량" 구획에 요약 길이가 더해짐)
@@ -16,6 +16,7 @@
 - **요약 길이는 사용자 설정이다 — 짧게 · 보통 · 자세히, 기본 보통.** 저장은 `user` 의 설정 행 칸이고, 다이제스트가 읽는 관심 설정 조회가 낸다.
 - **단계의 뜻은 다이제스트의 지시가 정한다** — 단계마다 개요 · 주요 뉴스 요약의 길이 기준(코드 포인트 범위)이고, 정본은 `digest` 의 `PromptRules` 다. 값은 측정 전 목표다. `user` 는 고른 값만 저장한다.
 - **화면의 자리는 "다이제스트 분량" 구획이다** — 후보 수 · 큰 슬롯 수와 함께 저장한다.
+> 부분 대체 — [ADR-0353](0353-an-item-whose-summaries-fall-short-of-the-top-story-summary-lower-bound-is-a-headline-the-next-item-takes-its-seat-and-the-count-is-recorded.md). 지금 상태: [digest Spec](../specs/digest.md#항목-묶기와-가르기) digest-R145
 - 주요 뉴스의 개수는 손잡이로 두지 않는다 — 그날 뉴스의 흐름 수가 정한다.
 
 ## 결과
@@ -36,3 +37,4 @@
 - 2026-11-21: 결과 "출력 서술의 상한(개요 1,000 · 요약 2,000 코드 포인트)"의 개요 상한 — [digest Spec "출력 읽기"](../specs/digest.md#출력-읽기) digest-R5
 - 2026-11-21: 결정 "단계의 뜻은 다이제스트의 지시가 정한다"의 실측 — 한 공급자 모델로 사용자 넷의 7일치 다이제스트를 만들어 재고 길이 기준을 정했다. 값은 개요 · 주요 뉴스 요약 순으로 짧게 250 ~ 400 · 100 ~ 300, 보통 500 ~ 800 · 200 ~ 500, 자세히 800 ~ 1,200 · 400 ~ 800 코드 포인트다([digest Spec "프롬프트 구성"](../specs/digest.md#프롬프트-구성) digest-R194)
 - 2026-11-25: 결정 "요약 길이는 사용자 설정이다"의 기본 보통의 실측 — 한 공급자 모델로 사용자 넷의 7일치 다이제스트를 만들어 재고 기본 보통으로 정했다([이슈 #182](https://github.com/Theia0382/yozm-news/issues/182))
+- 2026-11-27: 결정 "단계의 뜻은 다이제스트의 지시가 정한다" — 주요 뉴스 요약 길이 기준의 하한이 주요 뉴스가 되는 항목의 요약문 길이 기준이기도 하다([ADR-0353](0353-an-item-whose-summaries-fall-short-of-the-top-story-summary-lower-bound-is-a-headline-the-next-item-takes-its-seat-and-the-count-is-recorded.md) · [digest Spec "항목 묶기와 가르기"](../specs/digest.md#항목-묶기와-가르기) digest-R243)
