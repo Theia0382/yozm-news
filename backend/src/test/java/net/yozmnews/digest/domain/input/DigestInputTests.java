@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 생성의 입력 — 항목 · 사건 · 기사의 순서를 그대로 두고, 같은 사건 · 같은 기사 두 번, 사건 없는 항목, 기사 없는 사건, 사건과 다른 선정 이유의
- * 기사를 거부한다
+ * 기사를 거부한다. 요약문이 짧은 항목 수는 0 이상 헤드라인 항목 수 이하다
  */
 class DigestInputTests {
 
@@ -31,7 +31,7 @@ class DigestInputTests {
 				List.of(event(30, SelectionReason.MAJOR_STORYLINE, 7, 3), event(10, SelectionReason.SUBSCRIBED, 1)), null);
 		InputItem headline = new InputItem(ItemKind.HEADLINE, List.of(event(20, SelectionReason.INTEREST, 9)), null);
 
-		DigestInput input = new DigestInput(PROFILE, List.of(big, headline));
+		DigestInput input = new DigestInput(PROFILE, List.of(big, headline), 0);
 
 		assertThat(input.items()).extracting(InputItem::kind).containsExactly(ItemKind.TOP_STORY, ItemKind.HEADLINE);
 		assertThat(input.items().getFirst().events()).extracting(InputEvent::event)
@@ -46,11 +46,11 @@ class DigestInputTests {
 		// 같은 사건 두 번
 		assertThatIllegalArgumentException().isThrownBy(() -> new DigestInput(PROFILE,
 				List.of(new InputItem(ItemKind.TOP_STORY, List.of(event(10, SelectionReason.SUBSCRIBED, 1)), null),
-						new InputItem(ItemKind.HEADLINE, List.of(event(10, SelectionReason.SUBSCRIBED, 2)), null))));
+						new InputItem(ItemKind.HEADLINE, List.of(event(10, SelectionReason.SUBSCRIBED, 2)), null)), 0));
 		// 같은 기사 두 번 — 다른 사건이어도
 		assertThatIllegalArgumentException().isThrownBy(() -> new DigestInput(PROFILE,
 				List.of(new InputItem(ItemKind.TOP_STORY,
-						List.of(event(10, SelectionReason.SUBSCRIBED, 1), event(11, SelectionReason.SUBSCRIBED, 1)), null))));
+						List.of(event(10, SelectionReason.SUBSCRIBED, 1), event(11, SelectionReason.SUBSCRIBED, 1)), null)), 0));
 		assertThatIllegalArgumentException().isThrownBy(() -> new InputItem(ItemKind.TOP_STORY, List.of(), null));
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new InputEvent(new EventId(10), SelectionReason.SUBSCRIBED, List.of()));
@@ -60,8 +60,21 @@ class DigestInputTests {
 	}
 
 	@Test
+	void theShortSummaryItemsStayWithinTheHeadlineItems() {
+		// 헤드라인 항목 둘 — 요약문이 짧은 항목 수는 0 ~ 2
+		List<InputItem> items = List.of(
+				new InputItem(ItemKind.TOP_STORY, List.of(event(10, SelectionReason.SUBSCRIBED, 1)), null),
+				new InputItem(ItemKind.HEADLINE, List.of(event(20, SelectionReason.SUBSCRIBED, 2)), null),
+				new InputItem(ItemKind.HEADLINE, List.of(event(30, SelectionReason.SUBSCRIBED, 3)), null));
+
+		assertThat(new DigestInput(PROFILE, items, 2).shortSummaryItems()).isEqualTo(2);
+		assertThatIllegalArgumentException().isThrownBy(() -> new DigestInput(PROFILE, items, 3));
+		assertThatIllegalArgumentException().isThrownBy(() -> new DigestInput(PROFILE, items, -1));
+	}
+
+	@Test
 	void noItemsIsAnInputToo() {
-		assertThat(new DigestInput(PROFILE, List.of()).items()).isEmpty();
+		assertThat(new DigestInput(PROFILE, List.of(), 0).items()).isEmpty();
 	}
 
 	private static InputEvent event(long id, SelectionReason reason, long... articles) {

@@ -834,6 +834,8 @@ class CandidateSelectionTests {
 		assertThat(input.items()).extracting(item -> item.events().getFirst().event().value(), InputItem::kind)
 			.containsExactly(tuple(event(longSummary), ItemKind.TOP_STORY), tuple(this.e1, ItemKind.TOP_STORY),
 					tuple(event(this.a5), ItemKind.TOP_STORY), tuple(event(shortSummary), ItemKind.HEADLINE));
+		// 요약문이 짧아 주요 뉴스 자리를 받지 못한 항목은 첫째 사건 하나 — 생성의 입력이 그 수를 나른다
+		assertThat(input.shortSummaryItems()).isEqualTo(1);
 	}
 
 	@Test
@@ -852,6 +854,7 @@ class CandidateSelectionTests {
 			.containsExactly(tuple(event(shortSummary), ItemKind.TOP_STORY),
 					tuple(event(longSummary), ItemKind.TOP_STORY), tuple(this.e1, ItemKind.TOP_STORY),
 					tuple(event(this.a5), ItemKind.TOP_STORY));
+		assertThat(input.shortSummaryItems()).isZero();
 	}
 
 	@Test

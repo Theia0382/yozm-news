@@ -208,7 +208,7 @@ class DigestPromptsBudgetTests {
 	}
 
 	private static DigestInput input(DigestProfile profile, List<InputItem> items) {
-		return new DigestInput(profile, items);
+		return new DigestInput(profile, items, 0);
 	}
 
 	private static InputEvent event(long id, CandidateArticle... articles) {

@@ -80,7 +80,7 @@ class DigestSectionMappingTests {
 		Digest scheduled = scheduled();
 		assertThat(scheduled.version()).contains(0L);
 
-		Digest running = this.digests.save(scheduled.start(MODEL, 2, T0));
+		Digest running = this.digests.save(scheduled.start(MODEL, 2, 0, T0));
 		Digest ready = this.digests
 			.save(running.complete(new Completion.Ready(new TokenUsage(1_200, 340), Duration.ofMillis(2_000), 2, 1), T1));
 
@@ -124,7 +124,7 @@ class DigestSectionMappingTests {
 	void storesADigestMadeWithAnOpenRouterModel() {
 		LlmModel openRouter = new LlmModel(Provider.OPENROUTER, "openai/gpt-6.1-terra", 32_000, true);
 
-		Digest running = this.digests.save(scheduled().start(openRouter, 2, T0));
+		Digest running = this.digests.save(scheduled().start(openRouter, 2, 0, T0));
 
 		Digest read = this.digests.lock(running.id().value()).orElseThrow();
 		assertThat(read.provider()).contains("openrouter");
@@ -133,7 +133,7 @@ class DigestSectionMappingTests {
 
 	@Test
 	void storesTheFailureCode() {
-		Digest failed = this.digests.save(this.digests.save(scheduled().start(MODEL, 2, T0))
+		Digest failed = this.digests.save(this.digests.save(scheduled().start(MODEL, 2, 0, T0))
 			.complete(new Completion.Failed(DigestFailure.UNREADABLE_OUTPUT, "JSON 이 아니다", null, null), T1));
 
 		assertThat(this.jdbc.sql("select status, error_code, error_message from digests where id = :id")
@@ -146,10 +146,10 @@ class DigestSectionMappingTests {
 	@Test
 	void refusesAStaleVersion() {
 		Digest scheduled = scheduled();
-		this.digests.save(scheduled.start(MODEL, 2, T0));
+		this.digests.save(scheduled.start(MODEL, 2, 0, T0));
 
 		assertThatExceptionOfType(OptimisticLockingFailureException.class)
-			.isThrownBy(() -> this.digests.save(scheduled.start(MODEL, 3, T1)));
+			.isThrownBy(() -> this.digests.save(scheduled.start(MODEL, 3, 0, T1)));
 	}
 
 	@Test

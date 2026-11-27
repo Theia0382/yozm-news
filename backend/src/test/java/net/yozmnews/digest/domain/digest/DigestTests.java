@@ -59,7 +59,7 @@ class DigestTests {
 
 	@Test
 	void startsWithTheRequestedModelAndDoesNotStartAgain() {
-		Digest started = scheduled().start(MODEL, 5, T1);
+		Digest started = scheduled().start(MODEL, 5, 0, T1);
 
 		assertThat(started.status()).isEqualTo(DigestStatus.RUNNING);
 		assertThat(started.provider()).contains("anthropic");
@@ -68,8 +68,27 @@ class DigestTests {
 		assertThat(started.startedAt()).contains(T1);
 
 		// 생성 중인 다이제스트는 다시 시작하지 않는다 — 같은 다이제스트의 생성기 호출은 하나다
-		assertThatThrownBy(() -> started.start(new LlmModel(Provider.OPENAI, "gpt-5.5-mini", 100_000, true), 3, T2))
+		assertThatThrownBy(() -> started.start(new LlmModel(Provider.OPENAI, "gpt-5.5-mini", 100_000, true), 3, 0, T2))
 			.isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
+	void startRecordsTheShortSummaryItemsAndKeepsThemAfterTheEnd() {
+		Digest started = scheduled().start(MODEL, 5, 2, T1);
+
+		assertThat(started.shortSummaryItems()).contains(2);
+		assertThat(started.complete(new Completion.Empty(), T2).shortSummaryItems()).contains(2);
+		assertThat(started.abandon(DigestFailure.INTERRUPTED, "멈췄다", T2).shortSummaryItems()).contains(2);
+		// 시작 전은 빈 값이고, 시작 전에 끝난 다이제스트도 빈 값이다
+		assertThat(scheduled().shortSummaryItems()).isEmpty();
+		assertThat(scheduled().abandon(DigestFailure.NO_USABLE_MODEL, "쓸 모델이 없다", T1).shortSummaryItems()).isEmpty();
+	}
+
+	@Test
+	void theShortSummaryItemsStayWithinTheCandidateCount() {
+		assertThat(scheduled().start(MODEL, 5, 5, T1).shortSummaryItems()).contains(5);
+		assertThatThrownBy(() -> scheduled().start(MODEL, 5, 6, T1)).isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> scheduled().start(MODEL, 5, -1, T1)).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
@@ -104,7 +123,7 @@ class DigestTests {
 
 	@Test
 	void abandonsARunningDigestAndKeepsItsModel() {
-		Digest abandoned = scheduled().start(MODEL, 5, T1).abandon(DigestFailure.INTERRUPTED, "끝나지 않았다", T2);
+		Digest abandoned = scheduled().start(MODEL, 5, 0, T1).abandon(DigestFailure.INTERRUPTED, "끝나지 않았다", T2);
 
 		assertThat(abandoned.status()).isEqualTo(DigestStatus.FAILED);
 		assertThat(abandoned.failure()).contains(DigestFailure.INTERRUPTED);
@@ -118,7 +137,7 @@ class DigestTests {
 
 	@Test
 	void refusesToAbandonAFinishedDigest() {
-		Digest empty = scheduled().start(MODEL, 0, T1).complete(new Completion.Empty(), T2);
+		Digest empty = scheduled().start(MODEL, 0, 0, T1).complete(new Completion.Empty(), T2);
 
 		assertThatThrownBy(() -> empty.abandon(DigestFailure.INTERRUPTED, "끝나지 않았다", T2))
 			.isInstanceOf(IllegalStateException.class);
@@ -133,7 +152,7 @@ class DigestTests {
 		assertThat(again.dispatchedAt()).isEqualTo(T1);
 		assertThat(again.createdAt()).isEqualTo(T0);
 		// 생성 중이거나 끝난 다이제스트는 다시 등록하지 않는다 — 시작하고 끝내도 토큰은 그대로다
-		Digest running = scheduled().start(MODEL, 5, T1);
+		Digest running = scheduled().start(MODEL, 5, 0, T1);
 		assertThatThrownBy(() -> running.redispatch(NEW_TOKEN, T2)).isInstanceOf(IllegalStateException.class);
 		Digest failed = running.abandon(DigestFailure.INTERRUPTED, "끝나지 않았다", T2);
 		assertThat(failed.dispatchToken()).isEqualTo(TOKEN);
@@ -143,7 +162,7 @@ class DigestTests {
 
 	@Test
 	void completesReadyWithUsageAndDuration() {
-		Digest ready = scheduled().start(MODEL, 5, T1)
+		Digest ready = scheduled().start(MODEL, 5, 0, T1)
 			.complete(new Completion.Ready(new TokenUsage(1_200, 340), Duration.ofMillis(2_000), 3, 1), T2);
 
 		assertThat(ready.status()).isEqualTo(DigestStatus.READY);
@@ -171,8 +190,8 @@ class DigestTests {
 
 	@Test
 	void onlyAReadyDigestHasTheItemCounts() {
-		Digest empty = scheduled().start(MODEL, 0, T1).complete(new Completion.Empty(), T2);
-		Digest failed = scheduled().start(MODEL, 1, T1)
+		Digest empty = scheduled().start(MODEL, 0, 0, T1).complete(new Completion.Empty(), T2);
+		Digest failed = scheduled().start(MODEL, 1, 0, T1)
 			.complete(new Completion.Failed(DigestFailure.NO_CITATION, "x", null, null), T2);
 
 		assertThat(empty.firstMissingItems()).isEmpty();
@@ -184,7 +203,7 @@ class DigestTests {
 
 	@Test
 	void completesEmptyWithoutUsage() {
-		Digest empty = scheduled().start(MODEL, 0, T1).complete(new Completion.Empty(), T2);
+		Digest empty = scheduled().start(MODEL, 0, 0, T1).complete(new Completion.Empty(), T2);
 
 		assertThat(empty.status()).isEqualTo(DigestStatus.EMPTY);
 		assertThat(empty.usage()).isEmpty();
@@ -196,7 +215,7 @@ class DigestTests {
 	void completesFailedAndCutsALongMessage() {
 		String message = "가".repeat(499) + "𝐀" + "넘침";
 
-		Digest failed = scheduled().start(MODEL, 5, T1)
+		Digest failed = scheduled().start(MODEL, 5, 0, T1)
 			.complete(new Completion.Failed(DigestFailure.NO_CITATION, message, new TokenUsage(10, 20),
 					Duration.ofMillis(5)), T2);
 
@@ -208,7 +227,7 @@ class DigestTests {
 
 	@Test
 	void keepsAShortMessageWhole() {
-		Digest failed = scheduled().start(MODEL, 5, T1)
+		Digest failed = scheduled().start(MODEL, 5, 0, T1)
 			.complete(new Completion.Failed(DigestFailure.KEY_MISSING, "키가 없다", null, null), T2);
 
 		assertThat(failed.errorMessage()).contains("키가 없다");
@@ -218,7 +237,7 @@ class DigestTests {
 
 	@Test
 	void aFailureOfTheGatewayHasTheTimeButNoTokens() {
-		Digest failed = scheduled().start(MODEL, 5, T1)
+		Digest failed = scheduled().start(MODEL, 5, 0, T1)
 			.complete(new Completion.Failed(DigestFailure.KEY_INVALID, "OpenAI 401", null, Duration.ofMillis(1_500)),
 					T2);
 
@@ -235,10 +254,10 @@ class DigestTests {
 
 	@Test
 	void refusesToStartAFinishedDigest() {
-		Digest ready = scheduled().start(MODEL, 5, T1)
+		Digest ready = scheduled().start(MODEL, 5, 0, T1)
 			.complete(new Completion.Ready(new TokenUsage(1, 1), Duration.ZERO, 0, 0), T2);
 
-		assertThatThrownBy(() -> ready.start(MODEL, 5, T2)).isInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(() -> ready.start(MODEL, 5, 0, T2)).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test
@@ -246,7 +265,7 @@ class DigestTests {
 		assertThatThrownBy(() -> scheduled().complete(new Completion.Empty(), T1))
 			.isInstanceOf(IllegalStateException.class);
 
-		Digest empty = scheduled().start(MODEL, 0, T1).complete(new Completion.Empty(), T2);
+		Digest empty = scheduled().start(MODEL, 0, 0, T1).complete(new Completion.Empty(), T2);
 
 		assertThatThrownBy(() -> empty.complete(new Completion.Empty(), T2))
 			.isInstanceOf(IllegalStateException.class);

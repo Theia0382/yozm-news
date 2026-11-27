@@ -44,12 +44,12 @@ public final class DigestInputs {
 			ItemKind kind = (items.size() < TOP_STORIES) ? ItemKind.TOP_STORY : ItemKind.HEADLINE;
 			items.add(item(kind, event(candidate.articleId().value(), candidate.reason(), candidate.articleId().value())));
 		}
-		return new DigestInput(PROFILE, items);
+		return new DigestInput(PROFILE, items, 0);
 	}
 
 	/** 항목들을 그 순서로 담은 입력 */
 	public static DigestInput items(InputItem... items) {
-		return new DigestInput(PROFILE, List.of(items));
+		return new DigestInput(PROFILE, List.of(items), 0);
 	}
 
 	/** 항목 하나 — 사건들을 그 순서로 */

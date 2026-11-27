@@ -167,7 +167,7 @@ class DigestPromptsTests {
 		DigestPrompt structured = compose(PROFILE, items, STRUCTURED);
 		DigestPrompt plain = compose(PROFILE, items, PLAIN);
 		String schema = StructuredOutputSchema
-			.json(DigestOutputSchema.root(CandidateSet.of(new DigestInput(PROFILE, items))));
+			.json(DigestOutputSchema.root(CandidateSet.of(new DigestInput(PROFILE, items, 0))));
 
 		assertThat(structured.outputSchema()).isEqualTo(schema).contains("\"I1\"");
 		assertThat(plain.outputSchema()).isEqualTo(schema);
@@ -221,18 +221,18 @@ class DigestPromptsTests {
 
 	@Test
 	void anItemWithoutAnAliasIsRefused() {
-		DigestInput input = new DigestInput(PROFILE, List.of(single(ItemKind.TOP_STORY, BIG_ID, "제목")));
+		DigestInput input = new DigestInput(PROFILE, List.of(single(ItemKind.TOP_STORY, BIG_ID, "제목")), 0);
 		CandidateSet other = CandidateSet
-			.of(new DigestInput(PROFILE, List.of(single(ItemKind.TOP_STORY, 1L, "다른 사건"))));
+			.of(new DigestInput(PROFILE, List.of(single(ItemKind.TOP_STORY, 1L, "다른 사건")), 0));
 		CandidateSet otherKind = CandidateSet
-			.of(new DigestInput(PROFILE, List.of(single(ItemKind.HEADLINE, BIG_ID, "제목"))));
+			.of(new DigestInput(PROFILE, List.of(single(ItemKind.HEADLINE, BIG_ID, "제목")), 0));
 
 		assertThatIllegalArgumentException().isThrownBy(() -> DigestPrompts.compose(input, other, STRUCTURED));
 		assertThatIllegalArgumentException().isThrownBy(() -> DigestPrompts.compose(input, otherKind, STRUCTURED));
 	}
 
 	private static DigestPrompt compose(DigestProfile profile, List<InputItem> items, LlmModel model) {
-		DigestInput input = new DigestInput(profile, items);
+		DigestInput input = new DigestInput(profile, items, 0);
 		return DigestPrompts.compose(input, CandidateSet.of(input), model);
 	}
 

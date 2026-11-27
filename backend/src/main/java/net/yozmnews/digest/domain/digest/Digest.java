@@ -52,6 +52,12 @@ public final class Digest {
 
 	private final @Nullable Integer candidateCount;
 
+	/**
+	 * 요약문이 짧은 항목 수 — 항목의 요약문 길이(RSS 요약문)가 주요 뉴스 요약 하한보다 짧아 헤드라인이 된 항목 가운데, 하한 이상이었으면 주요
+	 * 뉴스가 되었을 항목의 수. 후보 수와 함께 시작할 때 적고 그 수를 넘지 않는다
+	 */
+	private final @Nullable Integer shortSummaryItems;
+
 	private final @Nullable Integer inputTokens;
 
 	private final @Nullable Integer outputTokens;
@@ -88,8 +94,9 @@ public final class Digest {
 	@PersistenceCreator
 	Digest(@Nullable Long id, long userId, LocalDate digestDate, Instant periodStart, Instant periodEnd,
 			DigestStatus status, DigestTrigger trigger, @Nullable String provider, @Nullable String model,
-			@Nullable Integer candidateCount, @Nullable Integer inputTokens, @Nullable Integer outputTokens,
-			@Nullable Long durationMs, @Nullable DigestFailure errorCode, @Nullable String errorMessage,
+			@Nullable Integer candidateCount, @Nullable Integer shortSummaryItems, @Nullable Integer inputTokens,
+			@Nullable Integer outputTokens, @Nullable Long durationMs, @Nullable DigestFailure errorCode,
+			@Nullable String errorMessage,
 			@Nullable Integer firstMissingItems, @Nullable Integer substitutedItems, Instant createdAt, UUID dispatchToken,
 			Instant dispatchedAt, @Nullable Instant startedAt, @Nullable Instant completedAt, @Nullable Long version) {
 		this.id = id;
@@ -102,6 +109,7 @@ public final class Digest {
 		this.provider = provider;
 		this.model = model;
 		this.candidateCount = candidateCount;
+		this.shortSummaryItems = shortSummaryItems;
 		this.inputTokens = inputTokens;
 		this.outputTokens = outputTokens;
 		this.durationMs = durationMs;
@@ -126,7 +134,8 @@ public final class Digest {
 		Objects.requireNonNull(user, "user");
 		Objects.requireNonNull(period, "period");
 		return new Digest(null, user.value(), digestDate, period.start(), period.end(), DigestStatus.SCHEDULED, trigger,
-				null, null, null, null, null, null, null, null, null, null, now, dispatchToken, now, null, null, null);
+				null, null, null, null, null, null, null, null, null, null, null, now, dispatchToken, now, null, null,
+				null);
 	}
 
 	/**
@@ -140,30 +149,35 @@ public final class Digest {
 			throw new IllegalStateException("생성을 기다리는 다이제스트만 다시 등록할 수 있다: " + this.status);
 		}
 		return new Digest(this.id, this.userId, this.digestDate, this.periodStart, this.periodEnd, this.status,
-				this.trigger, this.provider, this.model, this.candidateCount, this.inputTokens, this.outputTokens,
-				this.durationMs, this.errorCode, this.errorMessage, this.firstMissingItems, this.substitutedItems,
-				this.createdAt, token, now, this.startedAt,
-				this.completedAt, this.version);
+				this.trigger, this.provider, this.model, this.candidateCount, this.shortSummaryItems, this.inputTokens,
+				this.outputTokens, this.durationMs, this.errorCode, this.errorMessage, this.firstMissingItems,
+				this.substitutedItems, this.createdAt, token, now, this.startedAt, this.completedAt, this.version);
 	}
 
 	/**
 	 * 생성을 시작한다 — 생성을 기다리는 다이제스트만 시작한다. 생성 중인 다이제스트는 다시 시작하지 않는다.
 	 * @param candidateCount 후보 수 — 생성에 넘기는 사건 수
+	 * @param shortSummaryItems 요약문이 짧은 항목 수 — 생성의 입력이 나른 값
+	 * @throws IllegalArgumentException 후보 수가 음수이거나, 요약문이 짧은 항목 수가 음수이거나 후보 수보다 클 때
 	 * @throws IllegalStateException 생성을 기다리는 다이제스트가 아닐 때
 	 */
-	public Digest start(LlmModel model, int candidateCount, Instant now) {
+	public Digest start(LlmModel model, int candidateCount, int shortSummaryItems, Instant now) {
 		Objects.requireNonNull(model, "model");
 		Objects.requireNonNull(now, "now");
 		if (candidateCount < 0) {
 			throw new IllegalArgumentException("후보 수가 음수다: " + candidateCount);
 		}
+		if (shortSummaryItems < 0 || shortSummaryItems > candidateCount) {
+			throw new IllegalArgumentException(
+					"요약문이 짧은 항목 수가 후보 수 " + candidateCount + " 의 범위 밖이다: " + shortSummaryItems);
+		}
 		if (this.status != DigestStatus.SCHEDULED) {
 			throw new IllegalStateException("생성을 기다리는 다이제스트만 시작할 수 있다: " + this.status);
 		}
 		return new Digest(this.id, this.userId, this.digestDate, this.periodStart, this.periodEnd,
-				DigestStatus.RUNNING, this.trigger, model.provider().key(), model.id(), candidateCount, null, null,
-				null, null, null, null, null, this.createdAt, this.dispatchToken, this.dispatchedAt, now, null,
-				this.version);
+				DigestStatus.RUNNING, this.trigger, model.provider().key(), model.id(), candidateCount, shortSummaryItems,
+				null, null, null, null, null, null, null, this.createdAt, this.dispatchToken, this.dispatchedAt, now,
+				null, this.version);
 	}
 
 	/**
@@ -204,7 +218,7 @@ public final class Digest {
 			@Nullable DigestFailure failure, @Nullable String message, @Nullable Integer firstMissing,
 			@Nullable Integer substituted, Instant now) {
 		return new Digest(this.id, this.userId, this.digestDate, this.periodStart, this.periodEnd, finished,
-				this.trigger, this.provider, this.model, this.candidateCount,
+				this.trigger, this.provider, this.model, this.candidateCount, this.shortSummaryItems,
 				usage == null ? null : usage.inputTokens(), usage == null ? null : usage.outputTokens(),
 				took == null ? null : took.toMillis(), failure, message, firstMissing, substituted, this.createdAt,
 				this.dispatchToken,
@@ -260,6 +274,13 @@ public final class Digest {
 	 */
 	public Optional<Integer> candidateCount() {
 		return Optional.ofNullable(this.candidateCount);
+	}
+
+	/**
+	 * @return 시작할 때 받은 요약문이 짧은 항목 수 — 시작 전이거나 이 칸이 생기기 전에 시작한 행이면 빈 값
+	 */
+	public Optional<Integer> shortSummaryItems() {
+		return Optional.ofNullable(this.shortSummaryItems);
 	}
 
 	/**

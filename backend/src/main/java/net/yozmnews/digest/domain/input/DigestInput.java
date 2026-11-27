@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.domain.item.ItemKind;
 import net.yozmnews.event.EventId;
 
 /**
@@ -14,15 +15,23 @@ import net.yozmnews.event.EventId;
  *
  * @param profile 사용자 프로필
  * @param items 항목 — 생성에 넘기는 순서(주요 뉴스 항목 다음 헤드라인 항목, 각각 항목 순위)
+ * @param shortSummaryItems 요약문이 짧은 항목 수 — 항목의 요약문 길이(RSS 요약문)가 주요 뉴스 요약 하한보다 짧아 헤드라인이 된 항목
+ *     가운데 하한 이상이었으면 주요 뉴스가 되었을 항목의 수. 생성이 시작할 때 다이제스트 행에 적는다
  */
-public record DigestInput(DigestProfile profile, List<InputItem> items) {
+public record DigestInput(DigestProfile profile, List<InputItem> items, int shortSummaryItems) {
 
 	/**
-	 * @throws IllegalArgumentException 같은 사건이나 같은 기사가 두 번 있을 때
+	 * @throws IllegalArgumentException 같은 사건이나 같은 기사가 두 번 있거나, 요약문이 짧은 항목 수가 음수이거나 헤드라인 항목 수보다
+	 *     클 때
 	 */
 	public DigestInput {
 		Objects.requireNonNull(profile, "profile");
 		items = List.copyOf(Objects.requireNonNull(items, "items"));
+		long headlines = items.stream().filter(item -> item.kind() == ItemKind.HEADLINE).count();
+		if (shortSummaryItems < 0 || shortSummaryItems > headlines) {
+			throw new IllegalArgumentException(
+					"요약문이 짧은 항목 수가 헤드라인 항목 수 " + headlines + " 의 범위 밖이다: " + shortSummaryItems);
+		}
 		Set<EventId> events = new HashSet<>();
 		Set<ArticleId> articles = new HashSet<>();
 		for (InputItem item : items) {

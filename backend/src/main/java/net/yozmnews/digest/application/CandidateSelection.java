@@ -289,7 +289,7 @@ public class CandidateSelection {
 						names::topicName),
 				ordered(interests.excludedRegions(), names.regionOrder(), names::regionName), interests.timezone(),
 				interests.summaryLength(), interests.effort());
-		return new DigestInput(profile, inputItems);
+		return new DigestInput(profile, inputItems, arranged.shortSummary());
 	}
 
 	/**
