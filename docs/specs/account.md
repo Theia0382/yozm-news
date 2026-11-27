@@ -1143,7 +1143,7 @@ public interface HumanVerifier {
   - 비밀 키의 빈 값은 없음과 같다
 - **account-R101** — 봇 차단을 켠 인스턴스에서만 확인을 부른다. `@HumanChecked` 가 있는 처리기(로그인 · 복구 재설정 · 공개 가입)는 요청 제한 뒤에 헤더 `X-Human-Check` 의 토큰을 처리기의 동작 이름(`GuardedAction.actionName()`) · 클라이언트 주소와 함께 검증기에 묻는다. 거부면 403 `human-check-failed`(account-R3)다.
   - 토큰이 없거나 1 ~ 2,048자가 아니면 묻지 않고 거부한다
-- **account-R102** — Turnstile 검증기는 코드 상수 주소(siteverify)에 비밀 키 · 토큰 · 클라이언트 주소를 폼으로 보낸다. 연결 3초, 응답 5초, 본문 64 KiB 를 상한으로 두고 리다이렉트 · 프록시를 쓰지 않는다
+- **account-R102** — Turnstile 검증기는 코드 상수 주소(siteverify)에 비밀 키 · 토큰 · 클라이언트 주소를 폼으로 보낸다. 연결 3초, 응답 5초, 본문 64 KiB 를 상한으로 둔다. 클라이언트는 `platform` 의 공용 구성 `ExternalHttpClients` 로 만든다 — HTTP/1.1 이고 리다이렉트 · 프록시를 쓰지 않는다([platform Spec](platform.md#externalhttpclients) platform-R135). 신호 없이 끊긴 연결은 그 연결로 간 검증 하나만 닿지 못함이 되고, 다음 검증은 새 연결로 간다
 - **account-R103** — Turnstile 검증 응답은 `TurnstileAnswers` 가 아래와 같이 판정한다. `hostname` 은 보지 않는다.
   - 연결 · 마감 실패, 본문 상한 넘김, 5xx, 읽지 못하는 본문은 닿지 못함이다. 처리기로 넘어간다
   - `success` 가 참이고 동작 이름이 같으면 통과, 동작 이름이 다르면 거부다
@@ -1249,3 +1249,4 @@ public interface HumanVerifier {
 | [0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md) | 사용자를 인자로 받는 소비자 조회는 화면 경로에서 세션 사용자로 부를 수 있다 |
 | [0308](../adr/0308-account-authentication-and-security-live-in-the-account-module-while-interests-and-notices-stay-in-user.md) | 계정 · 인증 · 보안은 `account` 모듈이 갖고, 관심 · 화면 내 알림은 `user` 에 남는다 — 다른 모듈은 계정을 공개 조회로 읽고 `users` 에 FK 를 두지 않는다 |
 | [0309](../adr/0309-account-facts-are-published-after-commit-and-user-writes-interest-defaults-and-password-notices-from-them.md) | 계정 생김 · 비밀번호 바뀜은 이 모듈이 커밋 뒤 이벤트로 알리고, 관심 설정 기본값 · 비밀번호 알림은 받는 `user` 가 쓴다 |
+| [0352](../adr/0352-external-api-http-clients-come-from-one-platform-configuration-pinned-to-http-1-1-so-a-connection-past-its-deadline-is-dropped.md) | 외부 API 를 부르는 JDK 클라이언트는 platform 공용 구성 하나로 만들고 HTTP/1.1 로 고정한다 — 마감에 걸린 연결을 버린다 |

@@ -26,6 +26,7 @@
 - **날짜 범위 변환** — 날짜 범위를 시간대의 자정으로 시각 범위에 옮기고, 시간대 전환 여유를 더한 시각 길이 상한을 내는 공개 타입(`DayRange`). 집계 기간(`tag` 의 `EvaluationPeriod`) · 판정 원본 조회 기간(`evaluation` 의 `JudgementPeriod`) · 사건 조회 기간(`event` 의 `EventPeriod`)이 쓴다
 - **운영 설정의 행위자 종류** — 운영 설정을 정한 주체의 종류(`ChangeActor`). 시스템과 운영자 둘이다. `tag` 의 태그 체계 설정(태그 기준 · 저장 기준 · 태그 체계 버전), `storyline` 의 큰 판정 기준, `account` 의 가입 정책이 이력에 쓴다
 - **HTTP 응답 본문 상한** — JDK `HttpClient` 의 응답 본문을 상한까지만 받는 공개 타입(`CappedBody`). 외부 API 를 부르는 어댑터(`evaluation` 의 Jev · 외부 임베딩, `llm` 의 공급자 전송, `account` 의 Turnstile 검증)가 쓴다
+- **외부 API 클라이언트 구성** — 외부 API 를 부르는 JDK `HttpClient` 의 공용 구성(`ExternalHttpClients`)(platform-R135). 같은 네 어댑터가 클라이언트를 이 구성으로 만든다
 - **사용자 식별자** — 사용자를 가리키는 값 타입(`UserId`). 사용자 데이터를 가진 모듈이 주인을 가리키고, 화면용 API 처리기가 세션 사용자를 받는 인자 타입이다(platform-R24). 세션 사용자로 인자를 채우는 일은 `account` 의 것이다
 - **비밀 값** — 비밀 값 평문의 래퍼(`SecretValue`)와 요청 헤더에 실을 값의 꼴(`HeaderValueShape`)(platform-R22 · R23). 래퍼는 문자열 표현이 값을 숨기고 직렬화하면 실패한다. 래퍼는 사용자 LLM 키를 다루는 모듈(`llm` · `credential`)이, 꼴은 API 키를 헤더에 싣는 모듈(`evaluation` 의 Jev 키 · 임베딩 키, `llm` 의 키 검증)이 쓴다
 - **벡터의 pgvector 텍스트 표현** — 벡터를 pgvector 의 텍스트 표현으로 쓰고 되읽는 공개 타입(`VectorText`). 기사 표현 · 사건 중심(`event`)과 스토리라인 중심(`storyline`)의 저장소가 쓴다
@@ -101,6 +102,7 @@
 | 확률 범위 | `ProbabilityRange` |
 | 날짜 범위 변환 | `DayRange` |
 | HTTP 응답 본문 수신자 | `CappedBody`. 중첩 타입을 더하면 넷이다 |
+| 외부 API 클라이언트 구성 | `ExternalHttpClients` |
 | 벡터의 pgvector 텍스트 표현 | `VectorText` |
 | 운영 설정의 행위자 종류 | `ChangeActor` |
 | 비밀 값 | `SecretValue` · `HeaderValueShape`. `HeaderValueShape` 는 중첩 enum 을 더하면 둘이다 |
@@ -477,6 +479,24 @@ public final class CappedBody implements HttpResponse.BodySubscriber<CappedBody.
 - 본문을 끝까지 받아야 완료되므로, 부르는 쪽이 완료를 마감으로 기다리면 마감이 본문 읽기까지 덮는다
 
 관련 규칙: 없음. 상한 값은 쓰는 어댑터가 갖는다.
+
+### ExternalHttpClients
+
+외부 API 를 부르는 JDK `HttpClient` 의 공용 구성이다. 빈이 아니고, 생성자를 공개하지 않는다.
+
+```java
+public final class ExternalHttpClients {
+    // 공용 구성을 담은 새 빌더 — 부르는 쪽은 build() 만 한다
+    public static HttpClient.Builder builder(Duration connectTimeout);
+}
+```
+
+- 계약
+  - 빌더는 HTTP/1.1 · 리다이렉트를 따르지 않음 · 시스템 프록시를 읽지 않음 · 받은 연결 마감을 담는다
+  - `connectTimeout` 이 null 이면 `NullPointerException`
+  - 요청 마감 · 응답 본문 상한은 쓰는 어댑터가 갖는다(본문은 `CappedBody`)
+
+관련 규칙: platform-R135.
 
 ### DayRange
 
@@ -1492,6 +1512,12 @@ stateDiagram-v2
 - **platform-R133** — 끝난 지 2일이 지난 회차 기록은 하루 한 번 반복 작업이 지운다(지금 − 2일보다 앞선 끝 시각)
 - **platform-R134** — 회차 이름은 소문자 낱말을 `-` 로 잇는다(`[a-z]+(-[a-z]+)*`). 코드의 정본은 `RoundRules.NAME` 이고 표의 CHECK 가 같은 꼴로 저장을 거부한다. 이름은 회차를 가진 모듈이 정해 넘기고, 이 모듈은 이름의 뜻을 모른다
 
+### 외부 API 클라이언트
+
+판단의 이유는 [ADR-0352](../adr/0352-external-api-http-clients-come-from-one-platform-configuration-pinned-to-http-1-1-so-a-connection-past-its-deadline-is-dropped.md)에 있다.
+
+- **platform-R135** — 외부 API 를 부르는 JDK `HttpClient` 는 `ExternalHttpClients.builder` 로만 만들고, 부르는 쪽은 그 빌더에서 프로토콜 버전을 다시 정하지 않는다. 구성은 HTTP/1.1 이다 — 마감에 걸려 취소된 요청이 그 연결을 닫아, 네트워크 경로가 바뀌어 상대의 신호 없이 죽은 연결도 다음 요청부터 새 연결로 간다. 봉인 시험 `ExternalHttpClientSourceTests` 가 main 에서 클라이언트를 만들거나 버전을 정하는 곳을 이 구성 하나로 묶는다
+
 ### 폐지한 규칙
 
 - **platform-R10** — (폐지 — 운영자 접근 통제는 [account Spec](account.md#운영자-접근-통제) account-R1 · account-R4 가 정한다)
@@ -1559,3 +1585,4 @@ stateDiagram-v2
 | [0276](../adr/0276-platform-describes-reads-and-draws-llm-output-and-task-modules-keep-their-own-shape-and-value-mapping.md) | LLM 출력의 서술 · 읽기 · JSON Schema 그리기는 `platform` 이 맡고, 과제 모듈은 자기 서술과 값 옮기기만 한다 |
 | [0347](../adr/0347-a-recurring-round-takes-another-batch-of-the-same-size-within-a-time-budget-while-its-queue-has-more.md) | 반복 회차는 뭉치를 마친 뒤 가져올 대기가 남았으면 시간 예산 안에서 같은 크기의 뭉치를 다시 가져온다 |
 | [0348](../adr/0348-each-round-leaves-a-round-record-in-platform-and-the-operator-screen-shows-backlog-and-recent-throughput-per-round.md) | 회차마다 회차 기록을 남기고, 운영자 화면 처리 현황이 회차마다 밀린 수와 최근 1시간 처리량을 보인다 |
+| [0352](../adr/0352-external-api-http-clients-come-from-one-platform-configuration-pinned-to-http-1-1-so-a-connection-past-its-deadline-is-dropped.md) | 외부 API 를 부르는 JDK 클라이언트는 platform 공용 구성 하나로 만들고 HTTP/1.1 로 고정한다 — 마감에 걸린 연결을 버린다 |

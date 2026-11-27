@@ -1028,7 +1028,8 @@ public record Relation(Map<RelationAnswer, Double> probabilities, double firstOn
 - `JevArticleEvaluator`(`adapter/out/jev`) — v1 구현. TypeSafe System One API(`POST {기본 주소}/v1/systemone`)를 JDK `HttpClient` 로 부른다. 기본 주소 · 모델 · 키는 설정(§7)이다. 같은 스키마를 내는 경로(OpenRouter 의 호환 경로 등)는 기본 주소와 모델 이름을 바꿔 쓰고, 다른 스키마로 옮기는 변환은 없다([ADR-0063](../adr/0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md))
   - 평가 · 판정 모두 기사 하나에 요청 하나다. 문맥 초과의 확인 요청은 evaluation-R58 이다. 전송 · 결말 분기 · 확인 요청은 평가와 판정이 함께 쓴다
   - 연결 마감은 5초이고, 요청 하나(헤더 · 본문 전부)의 마감은 `EvaluatorTiming.REQUEST_DEADLINE`(evaluation-R98)이다. 요청 객체의 시간 제한은 응답 헤더까지만 덮고, 본문까지는 응답 전체를 기다리는 마감이 덮는다
-  - 응답 본문은 1 MiB 까지 받는다(본문 수신자는 `platform` 의 `CappedBody`). 리다이렉트를 따르지 않고 시스템 프록시를 읽지 않는다
+  - 응답 본문은 1 MiB 까지 받는다(본문 수신자는 `platform` 의 `CappedBody`)
+  - 클라이언트는 `platform` 의 공용 구성 `ExternalHttpClients` 로 만든다 — HTTP/1.1 이고, 리다이렉트를 따르지 않고 시스템 프록시를 읽지 않는다([platform Spec](platform.md#externalhttpclients) platform-R135). 마감에 걸린 요청은 그 연결을 닫으므로, 네트워크 경로가 바뀌어 신호 없이 끊긴 연결도 다음 요청이 새 연결로 이어 간다
   - 요청을 다시 보내지 않는다. 재시도는 부르는 쪽(평가 대기 · 판정을 부른 작업)이 한다
   - Jev 대응표(정본 `JevErrors` · `JevArticleEvaluator`)는 아래다. 응답 본문이 상한을 넘으면 상태와 무관하게 평가기 사용 불가다
 
@@ -1098,7 +1099,7 @@ public interface ArticleEmbedder {
   - 접두사
 - `OnnxArticleEmbedderConfiguration`(`adapter/out/onnx`) — 로컬 모델 구현의 결선. `@WorkerRole` 이고, profile `local` 밖에서 provider 가 `onnx`(기본)일 때 등록한다. 모델을 열지 못하면 `IllegalStateException` 이다
 - `OpenAiCompatibleEmbedder`(`adapter/out/openai`) — OpenAI 호환 외부 구현([ADR-0090](../adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md)). 판단은 `domain/openai` 가 한다
-  - JDK `HttpClient` 로 부른다. 연결 마감 5초, 요청 하나의 마감 30초, 응답 본문 상한 32 MiB(본문 수신자는 `platform` 의 `CappedBody`)이고, 리다이렉트를 따르지 않고 시스템 프록시를 읽지 않는다
+  - JDK `HttpClient` 로 부른다. 연결 마감 5초, 요청 하나의 마감 30초, 응답 본문 상한 32 MiB(본문 수신자는 `platform` 의 `CappedBody`)다. 클라이언트는 `platform` 의 공용 구성 `ExternalHttpClients` 로 만든다 — HTTP/1.1 이고, 리다이렉트를 따르지 않고 시스템 프록시를 읽지 않는다([platform Spec](platform.md#externalhttpclients) platform-R135). 신호 없이 끊긴 연결은 그 연결로 간 요청 하나가 마감에 걸린 뒤 새 연결로 이어 간다
   - `POST {주소}/embeddings` 를 한 요청의 입력 수로 나눠 차례로 보내고, 한 요청이라도 실패하면 그 실패가 전체 결과다
   - 키가 있으면 `Authorization` 을 보낸다
   - 연결 · 마감 · 입출력 실패는 `TRANSIENT`, 본문 상한 초과는 `EMBEDDER_UNAVAILABLE` 로 스스로 바꾼다
@@ -1541,3 +1542,4 @@ evaluation-R54 · R58 · R59 는 태그 판정만이 아니라 모든 판정(태
 | [0194](../adr/0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md) | 스토리라인 잇기는 띠 안 후보만 Jev 에 같은 사안의 전개인지 묻고, 물은 확률을 쌍마다 기록해 크기가 두 배가 될 때까지 다시 쓴다 |
 | [0259](../adr/0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) | 평가기 요청 마감 · 판정 한 번의 가장 긴 시간 · 일시 실패 뒤 간격은 `evaluation` 의 공개 타입 하나가 정본이고, 판정을 부르는 대기의 점유 기간은 판정 한 번의 가장 긴 시간에서 계산한다 |
 | [0326](../adr/0326-development-names-call-a-shared-storyline-storyline-a-user-storyline-user-storyline-and-a-judgement-candidate-of-unknown-kind-candidate.md) | 개발 이름은 공유 스토리라인을 `Storyline`, 사용자 스토리라인을 `UserStoryline` 으로 부르고, 종류를 모르는 판정 후보는 `Candidate` 로 부른다 |
+| [0352](../adr/0352-external-api-http-clients-come-from-one-platform-configuration-pinned-to-http-1-1-so-a-connection-past-its-deadline-is-dropped.md) | 외부 API 를 부르는 JDK 클라이언트는 platform 공용 구성 하나로 만들고 HTTP/1.1 로 고정한다 — 마감에 걸린 연결을 버린다 |
