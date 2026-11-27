@@ -30,6 +30,7 @@ import net.yozmnews.evaluation.domain.openai.OpenAiEmbeddingRequest;
 import net.yozmnews.evaluation.domain.openai.OpenAiEmbeddingResponse;
 import net.yozmnews.evaluation.domain.openai.OpenAiModelVersion;
 import net.yozmnews.platform.CappedBody;
+import net.yozmnews.platform.ExternalHttpClients;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -101,11 +102,7 @@ final class OpenAiCompatibleEmbedder implements ArticleEmbedder, AutoCloseable {
 		this.maxResponseBytes = maxResponseBytes;
 		this.info = new EmbedderInfo(NAME,
 				OpenAiModelVersion.of(model, dimensions, baseUrl, inputPrefix, sendDimensions), dimensions);
-		this.client = HttpClient.newBuilder()
-			.connectTimeout(CONNECT_TIMEOUT)
-			.followRedirects(HttpClient.Redirect.NEVER)
-			.proxy(HttpClient.Builder.NO_PROXY)
-			.build();
+		this.client = ExternalHttpClients.builder(CONNECT_TIMEOUT).build();
 	}
 
 	@Override

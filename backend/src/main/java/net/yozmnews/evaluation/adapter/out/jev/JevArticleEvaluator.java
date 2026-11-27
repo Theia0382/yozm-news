@@ -40,6 +40,7 @@ import net.yozmnews.evaluation.domain.jev.JevOutcome;
 import net.yozmnews.evaluation.domain.jev.JevRequest;
 import net.yozmnews.evaluation.domain.jev.JevResponse;
 import net.yozmnews.platform.CappedBody;
+import net.yozmnews.platform.ExternalHttpClients;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -47,8 +48,8 @@ import org.jspecify.annotations.Nullable;
  * <p>
  * 평가 · 소속 판정은 기사 하나에, 관계 판정은 스토리라인 쌍 하나에 요청 하나를 보낸다. 문맥 초과면 같은 질문을 빈 state 로 한 번 더 물어 기사(state) 탓인지 질문
  * 쪽(체계 · 서술) 탓인지 가른다 — 확인 요청의 답은 결과로 쓰지 않는다. 요청 하나(헤더 · 본문 전부)에 마감을 걸고, 응답 본문은 상한까지만
- * 받는다. 클라이언트는 리다이렉트를 따르지 않고 시스템 프록시를 읽지 않으며, 요청을 다시 보내지 않는다 — 재시도는 부르는 쪽(평가 대기 · 판정을
- * 부른 작업)이 한다.
+ * 받는다. 클라이언트는 {@link ExternalHttpClients} 의 공용 구성으로 만들고(platform-R135), 요청을 다시 보내지 않는다 — 재시도는 부르는
+ * 쪽(평가 대기 · 판정을 부른 작업)이 한다.
  * <p>
  * 키는 {@code Authorization} 헤더로만 나간다. 실패 문구에는 요청 헤더 · 요청 본문 · 응답 본문 원문을 담지 않는다.
  */
@@ -99,11 +100,7 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 		this.model = Objects.requireNonNull(model, "model");
 		this.key = Objects.requireNonNull(key, "key");
 		this.deadline = Objects.requireNonNull(deadline, "deadline");
-		this.client = HttpClient.newBuilder()
-			.connectTimeout(CONNECT_TIMEOUT)
-			.followRedirects(HttpClient.Redirect.NEVER)
-			.proxy(HttpClient.Builder.NO_PROXY)
-			.build();
+		this.client = ExternalHttpClients.builder(CONNECT_TIMEOUT).build();
 	}
 
 	@Override

@@ -23,6 +23,7 @@ import net.yozmnews.account.domain.humancheck.HumanCheckToken;
 import net.yozmnews.account.domain.humancheck.HumanVerifier;
 import net.yozmnews.account.domain.humancheck.TurnstileAnswers;
 import net.yozmnews.platform.CappedBody;
+import net.yozmnews.platform.ExternalHttpClients;
 import net.yozmnews.platform.GuardedAction;
 import net.yozmnews.platform.SecretValue;
 import org.slf4j.Logger;
@@ -32,8 +33,9 @@ import org.slf4j.LoggerFactory;
  * Cloudflare Turnstile 검증기 — 토큰 · 비밀 키 · 클라이언트 주소를 siteverify 에 보내고 답을 {@link TurnstileAnswers} 로 판정한다.
  * docs/specs/account.md §4 · account-R33
  * <p>
- * 주소는 코드 상수다 — 운영 설정으로 바꿀 수 없다. 리다이렉트를 따르지 않고 프록시를 쓰지 않는다. 연결 · 응답 마감과 본문 상한을 둔다. 로그 ·
- * 문구에 토큰 · 비밀 키를 싣지 않는다. 비밀 키가 틀렸다는 답은 거부이고 ERROR 로그를 남긴다 — 운영 설정 오류를 숨기지 않는다.
+ * 주소는 코드 상수다 — 운영 설정으로 바꿀 수 없다. 클라이언트는 {@link ExternalHttpClients} 의 공용 구성으로 만든다(platform-R135). 연결 ·
+ * 응답 마감과 본문 상한을 둔다. 로그 · 문구에 토큰 · 비밀 키를 싣지 않는다. 비밀 키가 틀렸다는 답은 거부이고 ERROR 로그를 남긴다 — 운영 설정
+ * 오류를 숨기지 않는다.
  */
 final class TurnstileHumanVerifier implements HumanVerifier, AutoCloseable {
 
@@ -70,11 +72,7 @@ final class TurnstileHumanVerifier implements HumanVerifier, AutoCloseable {
 		this.endpoint = URI.create(Objects.requireNonNull(endpoint, "endpoint"));
 		this.secret = Objects.requireNonNull(secret, "secret");
 		this.deadline = Objects.requireNonNull(deadline, "deadline");
-		this.client = HttpClient.newBuilder()
-			.connectTimeout(CONNECT_TIMEOUT)
-			.followRedirects(HttpClient.Redirect.NEVER)
-			.proxy(HttpClient.Builder.NO_PROXY)
-			.build();
+		this.client = ExternalHttpClients.builder(CONNECT_TIMEOUT).build();
 	}
 
 	@Override

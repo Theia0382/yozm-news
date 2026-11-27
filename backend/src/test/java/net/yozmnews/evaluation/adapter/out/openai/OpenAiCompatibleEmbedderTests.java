@@ -19,6 +19,8 @@ import java.util.List;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
+import net.yozmnews.StallingRelay;
+import net.yozmnews.TrustingTls;
 import net.yozmnews.evaluation.EmbedderFailureKind;
 import net.yozmnews.evaluation.Embedding;
 import net.yozmnews.evaluation.EmbeddingFailure;
@@ -32,14 +34,21 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 /**
  * OpenAI 호환 외부 임베딩 — WireMock 을 제공자 자리에 두고 연결(경로 · 키 헤더 · 묶음 나누기 · 요청 본문)과 연결 쪽 실패(거절 · 마감 · 본문
  * 상한), 실패 문구의 비밀 값 노출을 본다. 응답 읽기 · 상태 갈래의 판단은 {@code domain/openai} 시험이 본다.
+ * 신호 없이 끊긴 연결 뒤 새 연결로 이어 가는지는 HTTPS 전용 서버와 정지 중계({@code StallingRelay})로 본다.
  * <p>
- * 지키는 규칙: ADR-0090 · ADR-0092 · docs/overview.md §6 비밀 값(키 · 응답 본문 · 입력 텍스트가 문구에 남지 않는다)
+ * 지키는 규칙: ADR-0090 · ADR-0092 · platform-R135 · docs/overview.md §6 비밀 값(키 · 응답 본문 · 입력 텍스트가 문구에 남지 않는다)
  */
 class OpenAiCompatibleEmbedderTests {
 
 	@RegisterExtension
 	static WireMockExtension server = WireMockExtension.newInstance()
 		.options(wireMockConfig().dynamicPort().gzipDisabled(true))
+		.build();
+
+	/** 끊긴 연결에서의 회복 시험이 쓰는 HTTPS 전용 서버 — ALPN 으로 HTTP/2 를 협상할 수 있다 */
+	@RegisterExtension
+	static WireMockExtension tls = WireMockExtension.newInstance()
+		.options(wireMockConfig().httpDisabled(true).dynamicHttpsPort().gzipDisabled(true))
 		.build();
 
 	private static final String KEY = "sk-test-secret-0123";
@@ -171,6 +180,30 @@ class OpenAiCompatibleEmbedderTests {
 			assertThat(failure.kind()).isEqualTo(EmbedderFailureKind.EMBEDDER_UNAVAILABLE);
 			assertThat(failure.message()).isEqualTo("외부 임베딩 응답 본문이 상한(16 바이트)을 넘었다");
 		});
+	}
+
+	@Test
+	void recoversOnANewConnectionAfterTheDeadline() throws IOException {
+		tls.stubFor(post(urlEqualTo("/v1/embeddings")).willReturn(ok(1)));
+
+		OpenAiCompatibleEmbedder embedder = null;
+		try (StallingRelay relay = new StallingRelay(tls.getHttpsPort())) {
+			embedder = TrustingTls.whileDefault(() -> new OpenAiCompatibleEmbedder(
+					URI.create("https://localhost:" + relay.port() + "/v1"), "m-1", null, 2, false, "", 32,
+					Duration.ofSeconds(2), OpenAiCompatibleEmbedder.MAX_RESPONSE_BYTES));
+
+			assertThat(embedder.embed(List.of("가"))).isInstanceOf(Embeddings.class);
+			relay.stallExisting();
+			assertThat(embedder.embed(List.of("가"))).isEqualTo(
+					new EmbeddingFailure(EmbedderFailureKind.TRANSIENT, "외부 임베딩 응답 마감(2초)을 넘었다"));
+			assertThat(embedder.embed(List.of("가"))).isInstanceOf(Embeddings.class);
+			assertThat(relay.acceptedConnections()).isEqualTo(2);
+		}
+		finally {
+			if (embedder != null) {
+				embedder.close();
+			}
+		}
 	}
 
 	@Test
