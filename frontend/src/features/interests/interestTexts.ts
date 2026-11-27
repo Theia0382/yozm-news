@@ -99,7 +99,7 @@ export const summaryLengthNames: Record<SummaryLength, string> = {
 };
 
 export const SUMMARY_LENGTH_HELP_TEXT =
-  "다이제스트의 개요와 주요 뉴스 요약을 얼마나 길게 쓸지 정합니다. 길수록 출력 토큰(비용)이 늘고 읽는 시간도 늡니다.";
+  "다이제스트의 개요와 주요 뉴스 요약을 얼마나 길게 쓸지 정합니다. 길수록 출력 토큰(비용)이 늘고 읽는 시간도 늡니다. 기사 요약문이 고른 요약 길이보다 짧은 소식은 주요 뉴스 대신 헤드라인으로 두므로, 길게 할수록 주요 뉴스가 줄 수 있습니다.";
 
 /** 추론 강도의 이름 — 낮음부터 */
 export const reasoningEffortNames: Record<ReasoningEffort, string> = {

@@ -228,7 +228,7 @@
 | [0220](0220-big-slot-candidates-are-grouped-by-big-storyline-row-in-the-prompt-and-the-digest-llm-neither-makes-nor-links-groups.md) | 큰 슬롯 후보는 큰 판정 행마다 묶어 프롬프트에 보이고, 다이제스트 LLM 은 묶음을 새로 만들거나 잇지 않는다 | 대체됨 (0262) |
 | [0221](0221-generator-results-are-success-or-failure-and-the-use-case-asks-once-more-only-for-a-complete-unreadable-answer.md) | 다이제스트 생성기의 결과는 성공 · 실패 갈래이고, 끝까지 쓴 응답을 읽지 못하면 유스케이스가 한 번 다시 묻는다 | 승인 (부분 대체: 0270) |
 | [0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md) | 관심도는 주제 중분류마다 노출로 나눈 반응에 가상 노출을 더해 평활하고 반감기로 감쇠하며, 노출은 덮인 다이제스트를 포함한 인용 전부다 | 승인 (부분 대체: 0260 · 0268 · 0295) |
-| [0223](0223-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md) | 다이제스트의 요약 길이는 사용자 설정이고 "다이제스트 분량" 구획에 있다 | 승인 |
+| [0223](0223-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md) | 다이제스트의 요약 길이는 사용자 설정이고 "다이제스트 분량" 구획에 있다 | 승인 (부분 대체: 0353) |
 | [0224](0224-sign-in-rechecks-the-credential-version-under-its-lock-after-storing-the-session-and-sessions-are-saved-as-they-change.md) | 로그인은 세션을 저장한 뒤 자격 행을 잠가 대조한 자격의 버전을 다시 확인하고, 세션 저장소는 세션 변경을 곧바로 저장한다 | 승인 |
 | [0225](0225-interest-history-values-read-only-the-window-before-each-reference-time-and-the-period-in-progress-is-measured-at-the-call.md) | 관심사 히스토리의 기간 값은 기준 시각 앞 120일의 창만 읽어 다이제스트와 같은 산식으로 계산하고, 진행 중인 기간은 부르는 시각을 기준으로 한다 | 승인 (부분 대체: 0277) |
 | [0226](0226-new-and-lost-interests-are-neighbouring-periods-crossing-one-threshold-on-the-interest-value.md) | 새로 생긴 관심 · 사라진 관심은 관심 값이 기준값 이상인지를 이웃 기간끼리 견주어 정한다 | 승인 |
@@ -264,7 +264,7 @@
 | [0259](0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) | 평가기 요청 마감 · 판정 한 번의 가장 긴 시간 · 일시 실패 뒤 간격은 evaluation 의 공개 타입 하나가 정본이고, 판정을 부르는 대기의 점유 기간은 판정 한 번의 가장 긴 시간에서 계산한다 | 승인 |
 | [0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md) | 다이제스트 후보는 사건이고, 기간에 첫 평가된 기사가 있는 배정된 사건만 든다 | 승인 (부분 대체: 0265 · 0279 · 0280 · 0296 · 0297) |
 | [0261](0261-event-topics-and-regions-are-keys-on-at-least-half-of-evaluated-members-importance-is-the-maximum-and-digest-counts-them-at-query-time.md) | 사건의 주제 · 지역은 평가 있는 소속 기사의 절반 이상에 붙은 키, 중요도는 최대이고, `digest` 가 조회 때 센다 | 승인 (부분 대체: 0277) |
-| [0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) | 고른 사건은 포함 나무 꼭대기로 항목을 묶고, 주요 뉴스와 헤드라인은 코드가 가르며, LLM 은 항목마다 쓰고 배지는 항목에 하나다 | 승인 (부분 대체: 0265 · 0269 · 0270) |
+| [0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) | 고른 사건은 포함 나무 꼭대기로 항목을 묶고, 주요 뉴스와 헤드라인은 코드가 가르며, LLM 은 항목마다 쓰고 배지는 항목에 하나다 | 승인 (부분 대체: 0265 · 0269 · 0270 · 0353) |
 | [0263](0263-articles-sent-per-event-are-sampled-up-to-a-cap-with-a-fixed-seed-from-those-in-the-period-and-the-sample-is-the-citations-and-sources.md) | 사건마다 LLM 에 넘기는 기사는 그 기간에 든 기사에서 고정 시드로 상한까지 뽑고, 그 표본이 인용 · 출처다 | 승인 (부분 대체: 0265 · 0268) |
 | [0264](0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md) | 스토리라인 꼭대기 조회는 사건마다 포함 나무 뿌리를 소속 점수 순으로 내고 점수는 싣지 않는다 | 승인 |
 | [0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md) | 반응은 다이제스트 항목에 한 번 누르고 그 항목의 사건들에 기록하며, 화면은 항목에 누른 값을 보이고 신호는 사건 기록이 맡는다 | 승인 |
@@ -354,6 +354,7 @@
 | [0350](0350-test-jvm-exits-on-out-of-memory-without-a-default-heap-dump.md) | 테스트 JVM 은 메모리가 모자라면 바로 끝나고, 힙 덤프는 기본으로 남기지 않는다 | 승인 |
 | [0351](0351-non-web-test-contexts-are-generic-application-contexts.md) | 웹이 아닌 시험 컨텍스트는 GenericApplicationContext 로 만든다 | 승인 |
 | [0352](0352-external-api-http-clients-come-from-one-platform-configuration-pinned-to-http-1-1-so-a-connection-past-its-deadline-is-dropped.md) | 외부 API 를 부르는 JDK 클라이언트는 platform 공용 구성 하나로 만들고 HTTP/1.1 로 고정한다 — 마감에 걸린 연결을 버린다 | 승인 |
+| [0353](0353-an-item-whose-summaries-fall-short-of-the-top-story-summary-lower-bound-is-a-headline-the-next-item-takes-its-seat-and-the-count-is-recorded.md) | 요약문이 주요 뉴스 요약 하한보다 짧은 항목은 헤드라인이고, 큰 화제 밖 빈자리는 다음 항목이 채우며, 그 수를 다이제스트 행에 남긴다 | 승인 |
 
 ## 운영 규칙
 

@@ -471,6 +471,12 @@ describe("InterestsPage", () => {
       ).length;
 
     await user.click(await volume.findByRole("radio", { name: "자세히" }));
+    // 요약 길이는 주요 뉴스 요약의 길이와 함께 주요 뉴스가 되는 소식도 가른다
+    expect(
+      volume.getByText(
+        "다이제스트의 개요와 주요 뉴스 요약을 얼마나 길게 쓸지 정합니다. 길수록 출력 토큰(비용)이 늘고 읽는 시간도 늡니다. 기사 요약문이 고른 요약 길이보다 짧은 소식은 주요 뉴스 대신 헤드라인으로 두므로, 길게 할수록 주요 뉴스가 줄 수 있습니다.",
+      ),
+    ).toBeInTheDocument();
     const readsBeforeSave = volumeReads();
     await user.click(volume.getByRole("button", { name: "분량 저장" }));
 

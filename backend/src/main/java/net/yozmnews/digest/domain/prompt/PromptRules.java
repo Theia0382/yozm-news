@@ -22,7 +22,10 @@ public final class PromptRules {
 	private PromptRules() {
 	}
 
-	/** 주요 뉴스 요약({@code summary})의 길이 기준(코드 포인트) */
+	/**
+	 * 주요 뉴스 요약({@code summary})의 길이 기준(코드 포인트). 하한은 주요 뉴스가 되는 항목의 요약문 길이 기준이기도 하다
+	 * ({@code ItemRules.minSummaryLength}) — 하한을 고치면 주요 뉴스로 고르는 항목이 바뀐다
+	 */
 	public static Range summary(SummaryLength length) {
 		return switch (length) {
 			case SHORT -> new Range(100, 300);

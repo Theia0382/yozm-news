@@ -2,6 +2,7 @@ package net.yozmnews.digest.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.groups.Tuple.tuple;
 
 import java.time.Instant;
 import java.time.InstantSource;
@@ -68,8 +69,8 @@ import org.springframework.test.context.TestPropertySource;
  * 시각 · 소스 · 사건 · 사건의 소속 기사 평가 · 꼭대기 · 내용 조회를 거쳐 규칙까지. 기본 체계(버전 1)로 본다. 기간은 2026-11-05 하루(UTC)이고
  * 기사는 모두 그날 0시 발행이다({@link EventArticles#insert}).
  * <p>
- * 지키는 규칙: digest-R15 ~ digest-R19 · digest-R21 · digest-R22 · digest-R25 · digest-R44 ~ digest-R46 — 후보는 사건(사건 없는 기사는 버림), 구독 필터는 사건의 주제 · 지역 제외는 사건의 지역 · 기사 제외는 기사마다, 사건 중요도는 소속
- * 기사의 최대, 표본(기간에 든 · 제외를 지난 기사), 상한 · 선정 이유, 항목 묶기(꼭대기), 관심 설정과 계보 표의 활성 버전 대조, 관심도 순위와
+ * 지키는 규칙: digest-R15 ~ digest-R19 · digest-R21 · digest-R22 · digest-R25 · digest-R44 ~ digest-R47 — 후보는 사건(사건 없는 기사는 버림), 구독 필터는 사건의 주제 · 지역 제외는 사건의 지역 · 기사 제외는 기사마다, 사건 중요도는 소속
+ * 기사의 최대, 표본(기간에 든 · 제외를 지난 기사), 상한 · 선정 이유, 항목 묶기(꼭대기), 주요 뉴스 · 헤드라인 가르기(요약문 길이 기준 — 보통 하한 200), 관심 설정과 계보 표의 활성 버전 대조, 관심도 순위와
  * {@code INTEREST}(노출 · 좋아요 · 주제 구독 변경 · 스토리라인 구독 변경), 싫어요 거름(구독 사건 · 큰 슬롯 사건 — 합쳐진 사건의 싫어요 포함), 큰 슬롯의 행 순서(관심을 곱한 순서 · 항목의 꼭대기) · 주제 거름, 중립
  * 결과의 토큰 어림,
  * 관심도 재료를 읽는 범위의 끝(부르는 시각), 생성의 입력(프로필 · 항목 · 사건 · 표본 기사 재료)
@@ -92,6 +93,9 @@ class CandidateSelectionTests {
 			Instant.parse("2026-11-06T00:00:00Z"));
 
 	private static final LlmModel ROOMY = new LlmModel(Provider.OPENAI, "gpt-test", 32_000, true);
+
+	/** 보통 단계의 주요 뉴스 요약 하한 200 에 꼭 닿는 요약문 — 200 코드 포인트 */
+	private static final String LONG_SUMMARY = "가".repeat(200);
 
 	/** 지시 6,000 + 프로필(구독 행 1 × 20 + 고정 틀 200) + 사건 E1 213 — 사건 E1 하나만 든다 */
 	private static final LlmModel ONE_CANDIDATE = new LlmModel(Provider.OPENAI, "gpt-test", 6_000 + 20 + 200 + 213,
@@ -286,7 +290,11 @@ class CandidateSelectionTests {
 		long storyline = this.rows.storyline("2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z", this.e1);
 		this.rows.member(storyline, this.e1);
 		this.rows.member(storyline, event(this.a5));
-		long alone = event(eventArticle("혼자 사건", "politics.executive", 2.0, "2026-11-05T06:00:00Z", 1));
+		long aloneArticle = eventArticle("혼자 사건", "politics.executive", 2.0, "2026-11-05T06:00:00Z", 1);
+		long alone = event(aloneArticle);
+		// 두 항목 모두 요약문 길이가 보통 하한 200 이상이어야 주요 뉴스다 — 고정 요약문 "요약"(2)으로는 둘 다 헤드라인이 된다
+		summarize(this.a1, LONG_SUMMARY);
+		summarize(aloneArticle, LONG_SUMMARY);
 
 		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
 
@@ -372,6 +380,8 @@ class CandidateSelectionTests {
 	@Test
 	void aBigStorylineOutsideTheSubscriptionsComesFirstAsTheBigSlotWithItsArticles() {
 		long[] conflict = bigStoryline();
+		// 큰 슬롯 항목이 주요 뉴스이려면 요약문 길이가 보통 하한 200 이상이어야 한다 — 고정 요약문 "요약"(2) 셋으로는 헤드라인이 된다
+		summarize(conflict[0], LONG_SUMMARY);
 
 		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
 
@@ -800,13 +810,51 @@ class CandidateSelectionTests {
 
 		DigestInput input = this.selection.select(new UserId(this.user), DAY, nine).orElseThrow();
 
-		// 사건마다 기사 하나라 기사 순서가 항목 순서다 — 주요 뉴스 다섯 다음 헤드라인 넷
+		// 사건마다 기사 하나라 기사 순서가 항목 순서다 — 요약문이 모두 "요약"(2)이라 어느 항목도 보통 하한 200 에 닿지 않아 모두 헤드라인이고
+		// 헤드라인은 항목 순위대로다
 		assertThat(articles(input)).containsExactly(z, n[1], n[2], n[3], n[4], n[6], n[7], n[8], n[9]);
 		assertThat(events(input)).filteredOn(entry -> entry.endsWith(":INTEREST")).containsExactly(event(z) + ":INTEREST");
 		assertThat(articles(input)).doesNotContain(d);
-		assertThat(input.items()).extracting(InputItem::kind)
-			.containsExactly(ItemKind.TOP_STORY, ItemKind.TOP_STORY, ItemKind.TOP_STORY, ItemKind.TOP_STORY,
-					ItemKind.TOP_STORY, ItemKind.HEADLINE, ItemKind.HEADLINE, ItemKind.HEADLINE, ItemKind.HEADLINE);
+		assertThat(input.items()).extracting(InputItem::kind).containsOnly(ItemKind.HEADLINE).hasSize(9);
+	}
+
+	@Test
+	void anEventWithAShortSummaryGivesItsTopStorySeatToTheNextEvent() {
+		// 보통 사용자(요약 하한 200). 순위 첫째 사건(5.0)만 요약문 "요약"(2)이고, 둘째 사건(4.5) · 고정 사건 E1(4.0 — 기사 1) · 사건 5(1.0)는
+		// 200 코드 포인트
+		long shortSummary = eventArticle("짧은 요약", "politics.executive", 5.0, "2026-11-05T06:00:00Z", 1);
+		long longSummary = eventArticle("긴 요약", "politics.executive", 4.5, "2026-11-05T06:00:00Z", 1);
+		summarize(longSummary, LONG_SUMMARY);
+		summarize(this.a1, LONG_SUMMARY);
+		summarize(this.a5, LONG_SUMMARY);
+
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+
+		// 첫째 사건이 비운 주요 뉴스 자리를 다음 순위들이 채우고, 첫째 사건은 헤드라인(순위 자리)
+		assertThat(input.items()).extracting(item -> item.events().getFirst().event().value(), InputItem::kind)
+			.containsExactly(tuple(event(longSummary), ItemKind.TOP_STORY), tuple(this.e1, ItemKind.TOP_STORY),
+					tuple(event(this.a5), ItemKind.TOP_STORY), tuple(event(shortSummary), ItemKind.HEADLINE));
+		// 요약문이 짧아 주요 뉴스 자리를 받지 못한 항목은 첫째 사건 하나 — 생성의 입력이 그 수를 나른다
+		assertThat(input.shortSummaryItems()).isEqualTo(1);
+	}
+
+	@Test
+	void anEventWhoseSummaryReachesTheMinimumIsATopStory() {
+		// 위 시험의 대조 — 첫째 사건의 요약문도 200 코드 포인트면 넷 모두 주요 뉴스, 순위대로
+		long shortSummary = eventArticle("짧은 요약", "politics.executive", 5.0, "2026-11-05T06:00:00Z", 1);
+		long longSummary = eventArticle("긴 요약", "politics.executive", 4.5, "2026-11-05T06:00:00Z", 1);
+		summarize(longSummary, LONG_SUMMARY);
+		summarize(this.a1, LONG_SUMMARY);
+		summarize(this.a5, LONG_SUMMARY);
+		summarize(shortSummary, LONG_SUMMARY);
+
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+
+		assertThat(input.items()).extracting(item -> item.events().getFirst().event().value(), InputItem::kind)
+			.containsExactly(tuple(event(shortSummary), ItemKind.TOP_STORY),
+					tuple(event(longSummary), ItemKind.TOP_STORY), tuple(this.e1, ItemKind.TOP_STORY),
+					tuple(event(this.a5), ItemKind.TOP_STORY));
+		assertThat(input.shortSummaryItems()).isZero();
 	}
 
 	@Test
@@ -1069,6 +1117,14 @@ class CandidateSelectionTests {
 		long article = article(title, topic, importance, evaluatedAt, source);
 		eventOf(article);
 		return article;
+	}
+
+	/** 기사의 요약문을 바꾼다 */
+	private void summarize(long article, String summary) {
+		this.jdbc.sql("update articles set summary_text = :summary where id = :article")
+			.param("summary", summary)
+			.param("article", article)
+			.update();
 	}
 
 	/** 기사의 평가에 지역을 붙인다 */

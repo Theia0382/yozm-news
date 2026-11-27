@@ -130,7 +130,8 @@ public class DigestGeneration {
 			throw new IllegalStateException(IN_TRANSACTION);
 		}
 		CandidateSet set = CandidateSet.of(input);
-		Started started = Objects.requireNonNull(this.transaction.execute(status -> start(id, model, set)));
+		Started started = Objects.requireNonNull(
+				this.transaction.execute(status -> start(id, model, set, input.shortSummaryItems())));
 		if (started.finished() != null) {
 			return started.finished();
 		}
@@ -176,13 +177,14 @@ public class DigestGeneration {
 		return new TokenUsage(a.inputTokens() + b.inputTokens(), a.outputTokens() + b.outputTokens());
 	}
 
-	private Started start(DigestId id, LlmModel model, CandidateSet set) {
+	private Started start(DigestId id, LlmModel model, CandidateSet set, int shortSummaryItems) {
 		Digest digest = lock(id);
 		if (digest.status() != DigestStatus.SCHEDULED) {
 			// 끝났거나 다른 실행이 생성 중이다 — 다시 시작하지 않는다
 			return new Started(digest.status(), digest.userId(), 0);
 		}
-		Digest running = this.digests.save(digest.start(model, set.eventCount(), this.clock.instant()));
+		Digest running = this.digests
+			.save(digest.start(model, set.eventCount(), shortSummaryItems, this.clock.instant()));
 		this.candidates.replace(id, set);
 		if (set.isEmpty()) {
 			Digest empty = this.endings.save(running.complete(new Completion.Empty(), this.clock.instant()));

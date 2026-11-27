@@ -35,8 +35,11 @@ import net.yozmnews.digest.domain.interest.InterestWeights;
 import net.yozmnews.digest.domain.interest.InterestWindow;
 import net.yozmnews.digest.domain.interest.Interests;
 import net.yozmnews.digest.domain.item.ArrangedItem;
+import net.yozmnews.digest.domain.item.EventSummaryLengths;
+import net.yozmnews.digest.domain.item.ItemArrangement;
 import net.yozmnews.digest.domain.item.ItemGrouping;
 import net.yozmnews.digest.domain.item.ItemPlan;
+import net.yozmnews.digest.domain.item.ItemRules;
 import net.yozmnews.digest.domain.selection.ActiveEvaluation;
 import net.yozmnews.digest.domain.selection.ArticleFacts;
 import net.yozmnews.digest.domain.selection.BigRowOrder;
@@ -237,16 +240,18 @@ public class CandidateSelection {
 				bigTops.put(row, big.get().tops().get(row));
 			}
 		}
-		List<ArrangedItem> items = ItemPlan.arrange(ItemGrouping.group(selected, bigTops), weights);
-		return Optional.of(new Attempt(Optional.of(input(interests, items, samples, contents))));
+		ItemArrangement arranged = ItemPlan.arrange(ItemGrouping.group(selected, bigTops), weights,
+				EventSummaryLengths.of(samples, contents), ItemRules.minSummaryLength(interests.summaryLength()));
+		return Optional.of(new Attempt(Optional.of(input(interests, arranged, samples, contents))));
 	}
 
 	/**
 	 * 항목마다 사건 · 표본 기사에 프롬프트 재료를 붙인다 — 내용을 읽지 못한(그 사이 지운) 표본 기사는 빠진다. 예산 자르기가 남긴 사건은 내용을
 	 * 읽은 표본 기사가 하나 이상이다. 이름은 관심 설정 버전(활성 버전)의 이름이다
 	 */
-	private DigestInput input(DigestInterests interests, List<ArrangedItem> items,
+	private DigestInput input(DigestInterests interests, ItemArrangement arranged,
 			Map<EventId, List<ArticleFacts>> samples, Map<ArticleId, ArticleContent> contents) {
+		List<ArrangedItem> items = arranged.items();
 		TagSetNames names = this.tagSets.names(interests.tagSet());
 		List<ArticleId> cited = new ArrayList<>();
 		for (ArrangedItem item : items) {
@@ -284,7 +289,7 @@ public class CandidateSelection {
 						names::topicName),
 				ordered(interests.excludedRegions(), names.regionOrder(), names::regionName), interests.timezone(),
 				interests.summaryLength(), interests.effort());
-		return new DigestInput(profile, inputItems);
+		return new DigestInput(profile, inputItems, arranged.shortSummary());
 	}
 
 	/**

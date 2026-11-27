@@ -199,8 +199,8 @@ class DigestGenerationTests {
 
 	private Map<String, Object> row(DigestId id) {
 		return this.jdbc.sql("""
-				select status, provider, model, candidate_count, input_tokens, output_tokens, duration_ms, error_code,
-				       error_message, completed_at is not null as completed
+				select status, provider, model, candidate_count, short_summary_items, input_tokens, output_tokens,
+				       duration_ms, error_code, error_message, completed_at is not null as completed
 				from digests where id = :id
 				""").param("id", id.value()).query().singleRow();
 	}
@@ -269,6 +269,7 @@ class DigestGenerationTests {
 			.containsEntry("provider", "anthropic")
 			.containsEntry("model", "claude-sonnet-5-5")
 			.containsEntry("candidate_count", 0)
+			.containsEntry("short_summary_items", 0)
 			.containsEntry("completed", true);
 		assertThat(row.get("input_tokens")).isNull();
 		assertThat(row.get("duration_ms")).isNull();
@@ -385,7 +386,7 @@ class DigestGenerationTests {
 		DigestInput fixed = candidates(2);
 		DigestInput input = new DigestInput(new DigestProfile(fixed.profile().topics(),
 				fixed.profile().excludedRegions(), fixed.profile().timezone(),
-				fixed.profile().summaryLength(), ReasoningEffort.HIGH), fixed.items());
+				fixed.profile().summaryLength(), ReasoningEffort.HIGH), fixed.items(), 0);
 
 		assertThat(generation.run(id, MODEL, input)).isEqualTo(DigestStatus.READY);
 
@@ -596,6 +597,24 @@ class DigestGenerationTests {
 		assertThat(calls).hasValue(1);
 		assertThat(fills(id)).containsEntry("first_missing_items", 0).containsEntry("substituted_items", 0);
 		assertThat(log.getOut()).doesNotContain("다이제스트 출력에 항목이 빠졌다");
+	}
+
+	@Test
+	void theShortSummaryItemsOfTheInputAreRecordedAndAreNotMissingItems() {
+		// 기사 다섯 — 주요 뉴스 항목 셋 · 헤드라인 항목 둘. 입력은 헤드라인 둘이 요약문이 짧은 항목이라고 나른다
+		AtomicInteger calls = new AtomicInteger();
+		DigestGeneration generation = generation(scripted(calls, request -> everyItem(request, "")));
+		DigestId id = schedule(generation);
+		DigestInput input = new DigestInput(DigestInputs.PROFILE, candidates(5).items(), 2);
+
+		assertThat(generation.run(id, MODEL, input)).isEqualTo(DigestStatus.READY);
+
+		assertThat(row(id)).containsEntry("candidate_count", 5).containsEntry("short_summary_items", 2);
+		// 요약문이 짧은 항목은 LLM 이 쓴 헤드라인이다 — 빠진 항목 · 대체 헤드라인과 섞이지 않는다
+		assertThat(sectionTexts(id)).containsExactly("OVERVIEW:-:흐름", "TOP_STORY:t:s", "TOP_STORY:t:s",
+				"TOP_STORY:t:s", "HEADLINE:h:-", "HEADLINE:h:-");
+		assertThat(fills(id)).containsEntry("first_missing_items", 0).containsEntry("substituted_items", 0);
+		assertThat(calls).hasValue(1);
 	}
 
 	@Test
