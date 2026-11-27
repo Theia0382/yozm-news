@@ -1,7 +1,9 @@
 package net.yozmnews.digest.domain.item;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
@@ -48,6 +50,13 @@ final class Items {
 		CandidateEvent candidate = event.event();
 		return new SelectedEvent(new CandidateEvent(candidate.facts(), tops, candidate.articles()), event.reason(),
 				event.bigRow());
+	}
+
+	/** 항목들의 모든 사건에 같은 요약문 길이 — 바꿀 수 있는 지도 */
+	static Map<EventId, Integer> summaryLengths(int length, List<DigestItemPlan> items) {
+		Map<EventId, Integer> lengths = new HashMap<>();
+		items.forEach(item -> item.events().forEach(event -> lengths.put(event.event().facts().id(), length)));
+		return lengths;
 	}
 
 	/** 항목의 사건 ID — 순서대로 */
