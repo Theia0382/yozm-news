@@ -23,13 +23,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import net.yozmnews.llm.adapter.out.sdk.TransportFailure.Kind;
 import net.yozmnews.platform.CappedBody;
+import net.yozmnews.platform.ExternalHttpClients;
 import org.jspecify.annotations.Nullable;
 
 /**
  * 공급자로 가는 HTTP 전송의 정본 — docs/specs/llm.md §4 · llm-R7 · R13 · R14.
  * <p>
- * 리다이렉트를 따르지 않고, 프록시를 쓰지 않고, 응답 본문을 상한까지만 받고, 마감을 헤더와 본문 전부에 건다. 응답을 넘기지 못하면
- * {@link TransportFailure} 다 — 문구에 주소 · 헤더 · 본문 · 원인 예외의 문구를 담지 않는다. 닫은 뒤의 요청은 보내지 않는다.
+ * 클라이언트는 {@link ExternalHttpClients} 의 공용 구성으로 만들고(platform-R135), 응답 본문을 상한까지만 받고, 마감을 헤더와 본문 전부에
+ * 건다. 응답을 넘기지 못하면 {@link TransportFailure} 다 — 문구에 주소 · 헤더 · 본문 · 원인 예외의 문구를 담지 않는다. 닫은 뒤의 요청은 보내지 않는다.
  */
 final class JdkTransport implements AutoCloseable {
 
@@ -62,11 +63,7 @@ final class JdkTransport implements AutoCloseable {
 	JdkTransport(Duration deadline, int maxResponseBytes) {
 		this.deadline = Objects.requireNonNull(deadline, "deadline");
 		this.maxResponseBytes = maxResponseBytes;
-		this.client = HttpClient.newBuilder()
-			.connectTimeout(CONNECT_TIMEOUT)
-			.followRedirects(HttpClient.Redirect.NEVER)
-			.proxy(HttpClient.Builder.NO_PROXY)
-			.build();
+		this.client = ExternalHttpClients.builder(CONNECT_TIMEOUT).build();
 	}
 
 	/**

@@ -26,6 +26,8 @@ import java.util.Map;
 
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import net.yozmnews.StallingRelay;
+import net.yozmnews.TrustingTls;
 import net.yozmnews.evaluation.AskedTag;
 import net.yozmnews.evaluation.EvaluatorTiming;
 import net.yozmnews.evaluation.FormatChoice;
@@ -55,9 +57,10 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 /**
  * Jev 평가기 — WireMock 을 Jev 자리에 두고 요청 형태 · 응답 변환 · 오류 갈래 · 마감 · 본문 상한 · 문맥 초과 확인 요청 · 키 노출을 본다.
  * 소속 판정도 같은 전송 · 갈래를 지나는지 본다.
+ * 신호 없이 끊긴 연결 뒤 새 연결로 이어 가는지는 HTTPS 전용 서버와 정지 중계({@code StallingRelay})로 본다.
  * 응답 본문은 실측 응답 · 공식 문서의 모양이다. 기본 주소에 경로가 있는 경우(OpenRouter 의 호환 경로처럼)를 쓴다.
  * <p>
- * 지키는 규칙: evaluation-R37 · evaluation-R38 · evaluation-R40 · evaluation-R41 · ADR-0058 ·
+ * 지키는 규칙: evaluation-R37 · evaluation-R38 · evaluation-R40 · evaluation-R41 · ADR-0058 · platform-R135 ·
  * docs/overview.md §6 비밀 값(키가 로그 · 문구에 남지 않는다)
  */
 @ExtendWith(OutputCaptureExtension.class)
@@ -68,11 +71,20 @@ class JevArticleEvaluatorTests {
 		.options(wireMockConfig().dynamicPort().gzipDisabled(true))
 		.build();
 
+	/** 끊긴 연결에서의 회복 시험이 쓰는 HTTPS 전용 서버 — ALPN 으로 HTTP/2 를 협상할 수 있다 */
+	@RegisterExtension
+	static WireMockExtension tls = WireMockExtension.newInstance()
+		.options(wireMockConfig().httpDisabled(true).dynamicHttpsPort().gzipDisabled(true))
+		.build();
+
 	private static final String PATH = "/api/v1/systemone";
 
 	private static final String KEY = "tsk-wiremock-only-0123456789";
 
 	private static final Duration SHORT = Duration.ofSeconds(1);
+
+	/** 끊긴 연결에서의 회복 시험의 마감 — 첫 요청의 TLS 핸드셰이크까지 넉넉히 덮는다 */
+	private static final Duration RECOVERY = Duration.ofSeconds(2);
 
 	private static final TagQuestions QUESTIONS = new TagQuestions(
 			List.of(new TopicCategory("economy", "경제", "경제",
@@ -220,6 +232,36 @@ class JevArticleEvaluatorTests {
 		server.stubFor(post(PATH).willReturn(json(200, ANSWER)));
 
 		assertThat(evaluator(SHORT).evaluate(INPUT, QUESTIONS)).isInstanceOf(Evaluation.class);
+	}
+
+	@Test
+	void recoversOnANewConnectionAfterTheDeadline() throws IOException {
+		tls.stubFor(post(PATH).willReturn(json(200, ANSWER)));
+
+		try (StallingRelay relay = new StallingRelay(tls.getHttpsPort())) {
+			JevArticleEvaluator evaluator = overTls(relay);
+
+			assertThat(evaluator.evaluate(INPUT, QUESTIONS)).isInstanceOf(Evaluation.class);
+			relay.stallExisting();
+			assertThat(evaluator.evaluate(INPUT, QUESTIONS))
+				.isEqualTo(new EvaluationFailure(TRANSIENT, "Jev 응답 마감(2초)을 넘었다"));
+			assertThat(evaluator.evaluate(INPUT, QUESTIONS)).isInstanceOf(Evaluation.class);
+			assertThat(relay.acceptedConnections()).isEqualTo(2);
+		}
+	}
+
+	@Test
+	void reusesOneConnectionWhileJevAnswers() throws IOException {
+		tls.stubFor(post(PATH).willReturn(json(200, ANSWER)));
+
+		try (StallingRelay relay = new StallingRelay(tls.getHttpsPort())) {
+			JevArticleEvaluator evaluator = overTls(relay);
+
+			assertThat(evaluator.evaluate(INPUT, QUESTIONS)).isInstanceOf(Evaluation.class);
+			assertThat(evaluator.evaluate(INPUT, QUESTIONS)).isInstanceOf(Evaluation.class);
+			assertThat(evaluator.evaluate(INPUT, QUESTIONS)).isInstanceOf(Evaluation.class);
+			assertThat(relay.acceptedConnections()).isEqualTo(1);
+		}
 	}
 
 	@Test
@@ -418,6 +460,12 @@ class JevArticleEvaluatorTests {
 
 	private JevArticleEvaluator evaluator(Duration deadline) {
 		return evaluator(URI.create(server.baseUrl() + "/api/"), deadline);
+	}
+
+	/** 정지 중계를 거쳐 WireMock HTTPS(HTTP/2 를 협상할 수 있다)를 부르는 평가기 */
+	private JevArticleEvaluator overTls(StallingRelay relay) {
+		return TrustingTls.whileDefault(
+				() -> evaluator(URI.create("https://localhost:" + relay.port() + "/api/"), RECOVERY));
 	}
 
 	private JevArticleEvaluator evaluator(URI baseUrl, Duration deadline) {

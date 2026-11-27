@@ -32,3 +32,7 @@
 | 대안 | 기각 이유 |
 |---|---|
 | Spring AI 가 주는 OkHttp 전송을 그대로 쓰고 리다이렉트 추종 · 본문 상한 없음을 감수한다 | 주소가 공급자 호스트로 고정이라 실제 위험은 공급자 쪽 사고에 한정되지만, 사용자 키의 길이 운영자 키의 길보다 느슨해진다. 이미 있는 방어를 쓰지 않을 이유가 구현 비용뿐이다 |
+
+## 후속 기록
+
+- 2026-11-27: 결정 절 "리다이렉트를 따르지 않고, 프록시를 쓰지 않고"와 맥락 절의 Jev · 외부 임베딩 구성 — [ADR-0352](0352-external-api-http-clients-come-from-one-platform-configuration-pinned-to-http-1-1-so-a-connection-past-its-deadline-is-dropped.md) · [`platform` Spec](../specs/platform.md#externalhttpclients)

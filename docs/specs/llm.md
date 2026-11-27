@@ -607,7 +607,7 @@ v1 구현(`adapter/out/sdk`):
 - `OpenRouterProviderClient` — `LlmProviderClient` 의 구현. 생성은 `OpenAiCompatibleChat` 으로 보내고 라우팅을 싣는다(llm-R91). 키 조회(`GET /key`)는 SDK 밖에서 같은 전송으로 보내 확인한다(llm-R38 · R57). 상태 코드와 오류 본문의 `error.metadata.error_type` 만 읽는다(llm-R47)
 - `AnthropicProviderClient` — `LlmProviderClient` 의 구현. Anthropic SDK 의 클라이언트를 직접 조립해 쥐고(llm-R53 · R12), 모델 목록 조회로 확인한다(llm-R38). 생성은 그 SDK 클라이언트로 만든 Spring AI 채팅 모델로 보내고(llm-R21 ~ R23), SDK 예외에서 분류에 쓸 것만 읽는다(llm-R46 · R50)
 - `ProviderFailure` — 공급자 요청 하나가 답을 받지 못한 까닭(종류 · 문구 · `retry-after` · 마감 초과). 공급자 클라이언트의 확인 · 생성이 함께 쓰는 값이다. 확인 요청과 생성 요청은 같은 실패 읽기를 쓴다(llm-R44)
-- `JdkTransport` — 공급자로 가는 HTTP 전송의 정본(llm-R13). JDK `HttpClient` 로 보내고 응답 본문은 `platform` 의 `CappedBody` 로 받는다. 요청 하나의 마감은 생성자 인자다
+- `JdkTransport` — 공급자로 가는 HTTP 전송의 정본(llm-R13). `platform` 의 공용 구성 `ExternalHttpClients` 로 만든 JDK `HttpClient` 로 보내고 응답 본문은 `platform` 의 `CappedBody` 로 받는다. 요청 하나의 마감은 생성자 인자다
 - `OpenAiSdkHttpClient` · `AnthropicSdkHttpClient` — 두 SDK 의 HTTP 클라이언트 인터페이스를 `JdkTransport` 로 구현한다. SDK 의 요청 · 응답을 옮기기만 한다
 - `SdkProviderClientsConfiguration` — `SdkProviderClients` 의 결선. 모든 profile, 두 역할 공통
 
@@ -812,8 +812,7 @@ v1 구현(`adapter/out/sdk`):
 - **llm-R56** — Spring AI 의 스타터 · 자동 구성을 쓰지 않는다. 그래서 전역 채팅 모델 빈과 `spring.ai.*` 설정이 없다
 - **llm-R57** — 공급자로 가는 전송은 `JdkTransport` 하나다. 두 SDK 의 요청과, SDK 에 없는 OpenRouter 의 키 조회가 모두 이 전송으로 간다
 - **llm-R58** — 전송은 아래와 같이 보내고 받는다.
-  - 리다이렉트를 따르지 않는다
-  - 프록시를 쓰지 않는다
+  - 클라이언트를 `platform` 의 공용 구성 `ExternalHttpClients` 로 만든다 — HTTP/1.1 이고, 리다이렉트를 따르지 않고 프록시를 쓰지 않는다([platform Spec](platform.md#externalhttpclients) platform-R135)
   - 응답 본문을 1 MiB(`JdkTransport.MAX_RESPONSE_BYTES`)까지만 받는다
   - 응답을 조각으로 받지 않고(스트리밍 없음) 본문을 끝까지 받은 뒤 넘긴다
   - 마감(llm-R41)을 헤더와 본문 전부에 건다
@@ -1023,3 +1022,4 @@ v1 구현(`adapter/out/sdk`):
 | [0272](../adr/0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md) | 입력 토큰 예산은 안전 상한이고, 다이제스트 분량은 최대 후보 수 단계가 정한다 |
 | [0311](../adr/0311-a-change-report-input-fits-the-smaller-of-the-model-budget-and-the-weekly-or-monthly-cap-by-a-share-for-earlier-reports-and-a-fixed-trimming-order.md) | 변화 리포트의 입력은 모델 예산과 주간 · 월간 리포트 상한 가운데 작은 값 안으로, 직전 글의 몫과 정한 순서의 덜어 내기로 맞춘다 |
 | [0313](../adr/0313-the-input-token-estimate-is-an-llm-public-type.md) | 입력 토큰 어림은 `llm` 의 공개 타입이 정본이다 |
+| [0352](../adr/0352-external-api-http-clients-come-from-one-platform-configuration-pinned-to-http-1-1-so-a-connection-past-its-deadline-is-dropped.md) | 외부 API 를 부르는 JDK 클라이언트는 platform 공용 구성 하나로 만들고 HTTP/1.1 로 고정한다 — 마감에 걸린 연결을 버린다 |

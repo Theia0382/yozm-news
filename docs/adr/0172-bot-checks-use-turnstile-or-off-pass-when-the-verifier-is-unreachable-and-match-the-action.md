@@ -34,3 +34,7 @@
 | 시험 비밀 키에도 `action` 대조를 지킨다 | 공식 시험 키로는 모든 확인이 거부되어, 운영자 · 개발자가 시험 키로 켜 본 인스턴스의 로그인이 막힌다 |
 | `hostname` 도 대조한다 | 앱이 인스턴스의 바깥 주소를 알아야 해 운영 설정이 하나 는다. 위젯의 호스트 이름 제한은 Cloudflare 대시보드가 건다 |
 | 로컬 개발에서 공개 API 가 `LOCAL` 을 알리고 화면이 고정 토큰을 보낸다 | 공개 API 열거에 개발 전용 값이 생겨 명세 · 생성 타입 · 화면 분기가 늘고, 사이트 키 없는 켬을 로컬에서만 받으려면 설정 판정이 대체물 유무에 기대야 한다 |
+
+## 후속 기록
+
+- 2026-11-27: 결정 절 "주소는 코드 상수, 마감 · 본문 상한 · 리다이렉트 없음"의 검증기 클라이언트 — [ADR-0352](0352-external-api-http-clients-come-from-one-platform-configuration-pinned-to-http-1-1-so-a-connection-past-its-deadline-is-dropped.md) · [`platform` Spec](../specs/platform.md#externalhttpclients)

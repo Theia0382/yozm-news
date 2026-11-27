@@ -353,6 +353,7 @@
 | [0349](0349-test-jvm-heap-cap-stays-at-least-twice-the-measured-live-heap.md) | 테스트 JVM 의 힙 상한은 잰 살아 있는 힙 최대의 두 배 이상으로 둔다 | 승인 |
 | [0350](0350-test-jvm-exits-on-out-of-memory-without-a-default-heap-dump.md) | 테스트 JVM 은 메모리가 모자라면 바로 끝나고, 힙 덤프는 기본으로 남기지 않는다 | 승인 |
 | [0351](0351-non-web-test-contexts-are-generic-application-contexts.md) | 웹이 아닌 시험 컨텍스트는 GenericApplicationContext 로 만든다 | 승인 |
+| [0352](0352-external-api-http-clients-come-from-one-platform-configuration-pinned-to-http-1-1-so-a-connection-past-its-deadline-is-dropped.md) | 외부 API 를 부르는 JDK 클라이언트는 platform 공용 구성 하나로 만들고 HTTP/1.1 로 고정한다 — 마감에 걸린 연결을 버린다 | 승인 |
 
 ## 운영 규칙
 
