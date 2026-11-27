@@ -32,3 +32,7 @@
 | 모델 목록 조회 | 인증 없이 열려 있어 틀린 키를 가리지 못한다 |
 | 최소 생성 요청 | 검증마다 사용자 비용이 들고 모델을 골라야 한다(ADR-0154 의 기각 사유와 같다) |
 | 키 조회 응답의 한도 · 사용량까지 읽어 소진을 미리 알린다 | 다른 공급자의 검증과 뜻이 달라지고, 소진은 생성에서 드러나는 규칙(ADR-0154)과 겹친다 |
+
+## 후속 기록
+
+- 2026-11-27: 결정 절 "전송은 같은 전송 하나다(리다이렉트 · 프록시 없음 · 본문 상한 · 마감)"의 리다이렉트 · 프록시 없음 — [ADR-0352](0352-external-api-http-clients-come-from-one-platform-configuration-pinned-to-http-1-1-so-a-connection-past-its-deadline-is-dropped.md) · [`platform` Spec](../specs/platform.md#externalhttpclients)
